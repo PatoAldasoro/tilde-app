@@ -15,10 +15,12 @@ type DialogContentProps = Omit<ComponentProps<typeof DialogPrimitive.Content>, "
   title: ReactNode;
   description?: ReactNode;
   size?: "sm" | "md" | "lg";
+  /** Sin botón de cierre: el diálogo exige elegir una de sus acciones. */
+  hideClose?: boolean;
 };
 
 /** Diálogo modal del diseño: foco atrapado, Esc cierra y el foco vuelve al disparador. */
-export function DialogContent({ title, description, size = "md", className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }: DialogContentProps) {
+export function DialogContent({ title, description, size = "md", hideClose, className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }: DialogContentProps) {
   const t = useTranslations();
   const returnFocus = useReturnFocus();
   return (
@@ -45,9 +47,11 @@ export function DialogContent({ title, description, size = "md", className, chil
                 <DialogPrimitive.Description className="dialog-desc">{description}</DialogPrimitive.Description>
               ) : null}
             </div>
-            <DialogPrimitive.Close className="btn btn-ghost btn-icon" aria-label={t("close")}>
-              <X size={20} />
-            </DialogPrimitive.Close>
+            {hideClose ? null : (
+              <DialogPrimitive.Close className="btn btn-ghost btn-icon" aria-label={t("close")}>
+                <X size={20} />
+              </DialogPrimitive.Close>
+            )}
           </div>
           {children}
         </DialogPrimitive.Content>

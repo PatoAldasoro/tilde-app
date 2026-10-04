@@ -3,6 +3,7 @@
 import { Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { StudyTimerRunner } from "@/components/study/timer-runner";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { cn } from "@/lib/utils";
 import { Drawer } from "./drawer";
@@ -22,6 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
   return (
     <ShellContext.Provider value={value}>
+      <StudyTimerRunner />
       {children}
       <Drawer
         open={drawerOpen}

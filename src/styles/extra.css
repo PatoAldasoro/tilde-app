@@ -97,3 +97,10 @@ span.ev { cursor: default; }
 .block-pop-head .m .lucide { display: inline-block; vertical-align: -2px; }
 /* Slots are always reachable by touch: show the "+" hint on focus too. */
 .slot-btn:focus-visible::after { content: "+"; position: absolute; left: 8px; top: 3px; font-size: 13px; color: var(--color-text-subtle); }
+
+/* ---------- Sesiones ---------- */
+.round-btn[aria-disabled="true"] { color: var(--color-text-disabled); background: transparent; border-color: var(--color-border); cursor: not-allowed; }
+.focus-mode:focus-visible { outline: none; }
+.focus-side .side-panel-head { border-bottom: 0; padding: 0 var(--space-3) var(--space-2); }
+.focus-side .side-panel-body { padding: 0; overflow: visible; }
+.switch .lucide { flex: none; }

@@ -69,3 +69,17 @@ comportamiento manda la consigna.**
       las semanas hasta `until_date`, igual que las clases.
     - Horas con selector propio en pasos de 30 minutos entre 07:00 y 23:00 (siempre 24 h).
     - Los huecos de la grilla se activan con puntero o touch; con teclado se usa el botón "Agregar".
+20. **Sesiones de estudio.**
+    - El timer guarda el instante en que termina la fase (`phaseEndsAt`) y calcula el restante contra el reloj
+      (`src/lib/domain/timer.ts`). Si pasaron varias fases sin ticks (pestaña dormida), las recorre todas y cada
+      fase nueva empieza donde terminó la anterior.
+    - El estado vive en un store fuera de React (`src/lib/study-store.ts`) y se persiste en `localStorage`
+      (`tilde-study`): sigue corriendo al cambiar de sección y se recupera al recargar. El título de la pestaña
+      muestra "18:24 · Foco · Tilde".
+    - El interruptor de sonido también se guarda ahí (es una preferencia del dispositivo, no del perfil).
+    - "Terminar sesión" y el fin del último foco abren el resumen, que exige guardar o descartar. Se guardan los
+      tiempos **reales** de foco y descanso (las pausas no cuentan) y las tareas con `completed_at` entre el inicio
+      y el fin, tildadas desde cualquier sección.
+    - El historial muestra foco por semana (8 semanas, lunes a domingo, según el día de inicio en la zona del
+      usuario) y por materia, con las barras del diseño (HTML + CSS, sin librería).
+    - Sin descanso largo y sin pestaña "Amigos" (ver 2).

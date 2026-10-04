@@ -456,5 +456,15 @@
   "repeat_none_on": "No se repite · {date}",
   "schedule_grid": "Horario de la semana",
   "day_column": "{weekday} {date}",
-  "day_column_holiday": "{weekday} {date} · {holiday}"
+  "day_column_holiday": "{weekday} {date} · {holiday}",
+  "session_finished": "Sesión terminada",
+  "see_summary": "Ver resumen",
+  "session_discarded": "Sesión descartada",
+  "preset_pomodoro": "Pomodoro 25/5",
+  "timer_title": "{time} · {phase} · Tilde",
+  "timer_status": "{phase}, {time}",
+  "history_loading": "Cargando el historial",
+  "sessions_tabs": "Secciones de Sesiones de estudio",
+  "summary_tasks_none": "Ninguna tarea tildada durante la sesión.",
+  "bar_week": "{week}: {value}"
 }

@@ -456,5 +456,15 @@
   "repeat_none_on": "Does not repeat · {date}",
   "schedule_grid": "Weekly schedule",
   "day_column": "{weekday} {date}",
-  "day_column_holiday": "{weekday} {date} · {holiday}"
+  "day_column_holiday": "{weekday} {date} · {holiday}",
+  "session_finished": "Session finished",
+  "see_summary": "See summary",
+  "session_discarded": "Session discarded",
+  "preset_pomodoro": "Pomodoro 25/5",
+  "timer_title": "{time} · {phase} · Tilde",
+  "timer_status": "{phase}, {time}",
+  "history_loading": "Loading history",
+  "sessions_tabs": "Study sessions sections",
+  "summary_tasks_none": "No tasks checked off during the session.",
+  "bar_week": "{week}: {value}"
 }
