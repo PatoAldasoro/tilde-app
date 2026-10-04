@@ -76,6 +76,12 @@ Opcional: sin estas variables, en los documentos de una materia queda solo "Pega
 3. `NEXT_PUBLIC_GOOGLE_APP_ID` es el **número del proyecto** (Panel → Información del proyecto, o la primera
    parte del Client ID antes del guion).
 
+> **Estado:** el Picker está implementado (`src/lib/google-picker.ts`) siguiendo la documentación de Google,
+> pero **no se pudo probar de punta a punta** porque necesita estas credenciales. Al cargarlas, verificar:
+> que el popup de Google pida solo "ver y administrar los archivos que abras con esta app", que el selector
+> se abra sobre el panel de la materia y que los archivos elegidos aparezcan en la lista. "Pegar link" sí está
+> cubierto por tests.
+
 Cómo funciona: el token del Picker se pide aparte del login con Google Identity Services
 (`google.accounts.oauth2.initTokenClient`, scope `drive.file` únicamente) cada vez que se abre el selector.
 No se usa el `provider_token` de Supabase, que no se renueva. Tilde solo guarda la referencia

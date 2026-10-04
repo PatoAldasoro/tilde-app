@@ -33,3 +33,15 @@
 :root[data-theme="dark"] .theme-icon-dark { display: inline-block; }
 :root[data-theme="dark"] .theme-icon-light { display: none; }
 main:focus { outline: none; }
+
+/* Non-modal sheet: the layer must not block the page behind it. */
+.sheet-layer { pointer-events: none; }
+.sheet-layer .sheet { pointer-events: auto; }
+
+/* Help tooltips opened by tap (touch has no hover). */
+@media (hover: none) { [data-tip].tip-open::after { opacity: 1; transform: translate(-50%, 0); } }
+[data-tip][data-tip-pos="right"]::after { left: 0; transform: none; }
+
+/* Grades table: the subject cell is a row header (<th scope="row">) but looks like the other cells. */
+.grades tbody th { height: 56px; padding: 0 var(--space-4); border-bottom: 1px solid var(--color-border); background: transparent; color: inherit; font-size: inherit; font-weight: var(--weight-regular); text-align: left; white-space: normal; }
+.grades tbody tr:last-child th { border-bottom: 0; }

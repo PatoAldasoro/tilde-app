@@ -15,6 +15,9 @@ export function useReturnFocus() {
     onCloseAutoFocus: (event: Event) => {
       if (event.defaultPrevented) return;
       event.preventDefault();
+      // Si se cerró tocando otro control, el foco ya está ahí: no se lo quitamos.
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
       if (previous.current?.isConnected) previous.current.focus();
     },
   };

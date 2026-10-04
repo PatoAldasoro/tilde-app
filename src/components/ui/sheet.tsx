@@ -7,7 +7,13 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useReturnFocus } from "./use-return-focus";
 
-export const Sheet = DialogPrimitive.Root;
+/**
+ * Panel no modal: no atrapa el foco ni bloquea la página, y se cierra con Esc, con su botón
+ * o al tocar afuera. Así convive con el selector de Google Drive, que vive en un iframe aparte.
+ */
+export function Sheet(props: ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root modal={false} {...props} />;
+}
 
 type SheetContentProps = Omit<ComponentProps<typeof DialogPrimitive.Content>, "title"> & {
   /** Nombre accesible del panel. */
@@ -23,7 +29,6 @@ export function SheetContent({ label, head, className, children, ...props }: She
   return (
     <DialogPrimitive.Portal>
       <div className="sheet-layer" role="presentation">
-        <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content className={cn("sheet", className)} aria-describedby={undefined} {...returnFocus} {...props}>
           <div className="sheet-head">
             <DialogPrimitive.Title className={head ? "visually-hidden" : "sheet-title"}>{label}</DialogPrimitive.Title>
