@@ -402,5 +402,20 @@
   "first_run_ghost1": "Análisis Matemático II",
   "first_run_ghost1_meta": "Com. 1 · 2C 2026",
   "first_run_ghost2": "Sistemas Operativos",
-  "no_term": "Sin cuatrimestre"
+  "no_term": "Sin cuatrimestre",
+  "clear_date": "Quitar fecha",
+  "no_date": "Sin fecha",
+  "calendar_of": "Calendario de {month}",
+  "linked_fields_hint": "El título, la materia y la fecha se cambian desde el Calendario.",
+  "tasks_loading": "Cargando tareas",
+  "subject_filter_empty": "Primero hace falta agregar una materia.",
+  "remove_subtask": "Quitar subtarea: {title}",
+  "select_task": "Seleccionar: {title}",
+  "dnd_instructions": "Para levantar la tarea, presionar Espacio o Enter. Con las flechas se mueve; Espacio la suelta y Escape cancela.",
+  "dnd_picked": "«{title}» levantada.",
+  "dnd_over": "Posición {position} de {total}, {day}.",
+  "dnd_blocked": "Las tareas con fecha límite no se mueven a otro día.",
+  "dnd_dropped": "«{title}» quedó en la posición {position}, {day}.",
+  "dnd_cancelled": "Movimiento cancelado.",
+  "today_summary": "{day} · {weekday} {date}"
 }

@@ -402,5 +402,20 @@
   "first_run_ghost1": "Calculus II",
   "first_run_ghost1_meta": "Section 1 · T2 2026",
   "first_run_ghost2": "Operating Systems",
-  "no_term": "No term"
+  "no_term": "No term",
+  "clear_date": "Clear date",
+  "no_date": "No date",
+  "calendar_of": "{month} calendar",
+  "linked_fields_hint": "Change its title, course and date from the Calendar.",
+  "tasks_loading": "Loading tasks",
+  "subject_filter_empty": "Add a course first.",
+  "remove_subtask": "Remove subtask: {title}",
+  "select_task": "Select: {title}",
+  "dnd_instructions": "To pick up the task, press Space or Enter. Use the arrow keys to move it; Space drops it and Escape cancels.",
+  "dnd_picked": "Picked up “{title}”.",
+  "dnd_over": "Position {position} of {total}, {day}.",
+  "dnd_blocked": "Tasks with a deadline can’t be moved to another day.",
+  "dnd_dropped": "“{title}” dropped at position {position}, {day}.",
+  "dnd_cancelled": "Move cancelled.",
+  "today_summary": "{day} · {weekday} {date}"
 }

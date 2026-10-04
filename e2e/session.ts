@@ -17,3 +17,12 @@ export async function removeUser(user: TestUser | undefined) {
 }
 
 export { adminClient };
+
+/** "Hoy" fijo para los tests: martes 10/03/2026, 15:00 en Buenos Aires. Siempre en el pasado real. */
+export const TEST_NOW = new Date("2026-03-10T15:00:00-03:00");
+export const TEST_TODAY = "2026-03-10";
+
+/** Fija el reloj del navegador (el tiempo sigue corriendo desde ahí). */
+export async function freezeToday(context: BrowserContext) {
+  await context.clock.install({ time: TEST_NOW });
+}

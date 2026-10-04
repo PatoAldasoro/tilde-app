@@ -45,3 +45,34 @@ main:focus { outline: none; }
 /* Grades table: the subject cell is a row header (<th scope="row">) but looks like the other cells. */
 .grades tbody th { height: 56px; padding: 0 var(--space-4); border-bottom: 1px solid var(--color-border); background: transparent; color: inherit; font-size: inherit; font-weight: var(--weight-regular); text-align: left; white-space: normal; }
 .grades tbody tr:last-child th { border-bottom: 0; }
+
+/* ---------- Date field + mini calendar (always DD/MM/AAAA, Monday first) ---------- */
+.date-field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); text-align: left; font-variant-numeric: tabular-nums; cursor: pointer; }
+.date-field .lucide { color: var(--color-text-subtle); flex: none; }
+.date-field.is-empty > span { color: var(--color-text-subtle); }
+.date-field:disabled { cursor: not-allowed; }
+.mini-cal { width: 296px; padding: var(--space-2); }
+.mini-cal-head { display: flex; align-items: center; gap: var(--space-1); margin-bottom: var(--space-1); }
+.mini-cal-title { flex: 1; padding: 0 var(--space-2); font-weight: var(--weight-semibold); font-size: var(--text-body-s); text-transform: capitalize; }
+.mini-cal-grid { display: grid; grid-template-columns: repeat(7, var(--hit-target)); }
+.mini-cal-wd { height: 28px; display: grid; place-items: center; font-size: 11px; color: var(--color-text-subtle); }
+.mini-day { width: var(--hit-target); height: var(--hit-target); display: grid; place-items: center; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+.mini-day:hover { background: var(--color-surface-hover); }
+.mini-day.is-out { color: var(--color-text-disabled); }
+.mini-day[aria-current="date"] { color: var(--color-accent-text); font-weight: var(--weight-semibold); box-shadow: inset 0 0 0 1px var(--color-accent); }
+.mini-day[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary); font-weight: var(--weight-semibold); box-shadow: none; }
+.mini-day:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.mini-day:disabled { color: var(--color-text-disabled); cursor: not-allowed; background: transparent; }
+.mini-cal-foot { display: flex; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
+
+/* ---------- Tareas: glue for @dnd-kit ---------- */
+.task.is-dragging-source { background: transparent; border: 1.5px dashed var(--color-border-strong); box-shadow: none; }
+.task.is-dragging-source > * { visibility: hidden; }
+.drag-overlay { cursor: grabbing; }
+.drag-overlay .task { margin: 0; }
+.task-meta .chip { max-width: 220px; }
+.select-gap { width: var(--space-2); flex: none; }
+.side-gap { width: 32px; flex: none; }
+
+/* chip-toggle used as a radio (subject filter, priority picker) */
+.chip-toggle[aria-checked="true"] { background: var(--s-soft, var(--color-accent-soft)); border-color: var(--s-solid, var(--color-accent)); color: var(--s-on-soft, var(--color-accent-text)); font-weight: var(--weight-medium); }

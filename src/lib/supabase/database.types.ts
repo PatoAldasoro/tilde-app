@@ -228,6 +228,9 @@ isOneToOne: false
           Functions: {
             "is_color_key":
 { Args: { "value": string }; Returns: boolean
+                           },
+"set_task_order":
+{ Args: { "sort_orders": (number)[],"task_ids": (string)[] }; Returns: undefined
                            }
           }
           Enums: {
