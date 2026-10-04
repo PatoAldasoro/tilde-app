@@ -76,3 +76,13 @@ main:focus { outline: none; }
 
 /* chip-toggle used as a radio (subject filter, priority picker) */
 .chip-toggle[aria-checked="true"] { background: var(--s-soft, var(--color-accent-soft)); border-color: var(--s-solid, var(--color-accent)); color: var(--s-on-soft, var(--color-accent-text)); font-weight: var(--weight-medium); }
+
+/* ---------- Calendario: rows as real ARIA rows (display: contents keeps the 7-column grid) ---------- */
+.cal-row { display: contents; }
+.cal-grid .cal-row .cal-cell { border-top: 1px solid var(--color-border); }
+.cal-grid .cal-row:first-child .cal-cell { border-top: 0; }
+.cal-wd .cal-row > div { padding: var(--space-2) var(--space-3); font-size: var(--text-caption); color: var(--color-text-subtle); text-transform: capitalize; }
+.cal-wd { display: grid; }
+span.ev { cursor: default; }
+.day-list .menu-item { cursor: pointer; }
+.cal-skeleton { height: 520px; border-radius: var(--radius-md); }

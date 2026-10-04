@@ -28,7 +28,7 @@ export type Database = {
                     "category": string,"confirmed": boolean,"created_at": string,"date": string,"id": string,"lead_days": number | null,"subject_id": string | null,"title": string,"updated_at": string,"user_id": string
                   }
                   Insert: {
-                    "category": string,"confirmed"?: boolean,"created_at"?: string,"date": string,"id"?: string,"lead_days"?: number | null,"subject_id"?: string | null,"title": string,"updated_at"?: string,"user_id"?: string
+                    "category": string,"confirmed"?: boolean,"created_at"?: string,"date": string,"id"?: string,"lead_days"?: number | null,"subject_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Update: {
                     "category"?: string,"confirmed"?: boolean,"created_at"?: string,"date"?: string,"id"?: string,"lead_days"?: number | null,"subject_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string

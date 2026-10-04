@@ -112,7 +112,8 @@ create table public.calendar_events (
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   subject_id uuid,
   category text not null check (category in ('parcial', 'final', 'tp', 'recuperatorio', 'feriado')),
-  title text not null check (char_length(btrim(title)) between 1 and 200),
+  -- Opcional: vacío = se muestra "Categoría · Materia".
+  title text not null default '' check (char_length(title) <= 200),
   date date not null,
   -- Solo tiene sentido en recuperatorios: false = tentativo (atenuado).
   confirmed boolean not null default true,
