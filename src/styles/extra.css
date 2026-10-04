@@ -1,0 +1,35 @@
+/* Additions on top of the ported design CSS: glue for Radix primitives and for
+   components the static prototype did not need. Uses only tokens from tokens.css. */
+
+.popover { z-index: var(--z-popover); }
+.popover:focus-visible { outline: none; }
+.menu-item { cursor: pointer; user-select: none; }
+.menu-item[data-highlighted] { background: var(--color-surface-hover); outline: none; }
+.menu-item.danger[data-highlighted] { background: var(--color-danger-soft); }
+.menu-item[data-disabled] { color: var(--color-text-disabled); cursor: not-allowed; background: transparent; }
+
+.dialog:focus-visible, .sheet:focus-visible, .drawer:focus-visible { outline: none; }
+.sheet-title { flex: 1; min-width: 0; font-size: var(--text-title-s); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Skip link becomes visible on keyboard focus. */
+.skip-link { position: absolute; left: var(--space-3); top: var(--space-3); z-index: var(--z-focus-mode); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--text-body-s); font-weight: var(--weight-medium); text-decoration: none; transform: translateY(-200%); }
+.skip-link:focus-visible { transform: none; outline: none; box-shadow: var(--shadow-focus); }
+
+.avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.profile-name, .profile-mail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Loading skeletons */
+.skeleton { border-radius: var(--radius-sm); background: var(--color-skeleton); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+@keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } .spin { animation-duration: 2.4s; } }
+
+/* Inline error banner */
+.notice { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-sunken); color: var(--color-text-muted); font-size: var(--text-body-s); }
+.notice-danger { background: var(--color-danger-soft); color: var(--color-danger-text); }
+.notice .grow { flex: 1; min-width: 0; }
+
+/* Theme toggle on the landing: both icons are rendered, CSS shows the right one (no hydration flash). */
+.theme-icon-dark { display: none; }
+:root[data-theme="dark"] .theme-icon-dark { display: inline-block; }
+:root[data-theme="dark"] .theme-icon-light { display: none; }
+main:focus { outline: none; }

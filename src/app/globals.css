@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "../styles/theme.css";
+@import "../styles/tokens.css";
+@import "../styles/tilde.css" layer(components);
+@import "../styles/extra.css" layer(components);
+
+/* Tema: <html data-theme="light|dark">. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
