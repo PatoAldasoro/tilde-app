@@ -86,3 +86,14 @@ main:focus { outline: none; }
 span.ev { cursor: default; }
 .day-list .menu-item { cursor: pointer; }
 .cal-skeleton { height: 520px; border-radius: var(--radius-md); }
+
+/* ---------- Horario ---------- */
+.sched { position: relative; }
+.select.is-invalid { border-color: var(--color-danger); box-shadow: 0 0 0 3px var(--color-danger-soft); }
+.sched-empty { position: absolute; inset: 64px 0 0 0; display: grid; place-items: center; pointer-events: none; }
+.sched-empty .panel { pointer-events: auto; text-align: center; max-width: 420px; box-shadow: var(--shadow-popover); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: var(--space-8); }
+.sched-empty .empty-title { font-size: 28px; }
+.sched-block .b-title.is-compact { -webkit-line-clamp: 1; }
+.block-pop-head .m .lucide { display: inline-block; vertical-align: -2px; }
+/* Slots are always reachable by touch: show the "+" hint on focus too. */
+.slot-btn:focus-visible::after { content: "+"; position: absolute; left: 8px; top: 3px; font-size: 13px; color: var(--color-text-subtle); }

@@ -64,6 +64,8 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 
 ## Convenciones
 
+- Las clases de `tilde.css` no deben llamarse igual que una utilidad de Tailwind (la utilidad gana: por eso el
+  bloque del Horario es `.sched-block` y no `.block`).
 - Componentes cliente con `"use client"`; las páginas (`page.tsx`) son de servidor y solo arman metadata + vista.
 - Mutaciones: `useOptimistic` de `src/lib/queries/table.ts` (aplica en caché, revierte si falla).
 - Los ids se generan en el cliente (`crypto.randomUUID()`), así el optimista y la base coinciden.

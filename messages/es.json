@@ -445,5 +445,16 @@
   "recup_state_label": "{label} — {category}, {state}. {hint}",
   "edit_named": "Editar: {name}",
   "day_dates": "{weekday} {date}",
-  "day_dates_count": "{weekday} {date}, {count}"
+  "day_dates_count": "{weekday} {date}, {count}",
+  "schedule_loading": "Cargando el horario",
+  "no_subjects_for_class": "Primero hace falta agregar una materia en Inicio.",
+  "title_required": "Falta el título.",
+  "days_required": "Hay que elegir al menos un día.",
+  "slot_deleted": "Horario eliminado",
+  "activity_deleted": "{title} eliminada",
+  "week_range": "{from} – {to} · {year}",
+  "repeat_none_on": "No se repite · {date}",
+  "schedule_grid": "Horario de la semana",
+  "day_column": "{weekday} {date}",
+  "day_column_holiday": "{weekday} {date} · {holiday}"
 }

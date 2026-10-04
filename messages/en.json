@@ -445,5 +445,16 @@
   "recup_state_label": "{label} — {category}, {state}. {hint}",
   "edit_named": "Edit: {name}",
   "day_dates": "{weekday} {date}",
-  "day_dates_count": "{weekday} {date}, {count}"
+  "day_dates_count": "{weekday} {date}, {count}",
+  "schedule_loading": "Loading the schedule",
+  "no_subjects_for_class": "Add a course on Home first.",
+  "title_required": "A title is needed.",
+  "days_required": "Pick at least one day.",
+  "slot_deleted": "Time slot deleted",
+  "activity_deleted": "{title} deleted",
+  "week_range": "{from} – {to} · {year}",
+  "repeat_none_on": "Does not repeat · {date}",
+  "schedule_grid": "Weekly schedule",
+  "day_column": "{weekday} {date}",
+  "day_column_holiday": "{weekday} {date} · {holiday}"
 }

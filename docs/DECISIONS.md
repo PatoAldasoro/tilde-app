@@ -61,3 +61,11 @@ comportamiento manda la consigna.**
     El progreso del día y su contador usan unidades (subtareas), igual que el de las materias.
 18. **Orden de tareas.** Un `sort_order` global por tarea. Reordenar reparte entre las tareas del día los mismos valores
     que ya tenían, así no cambia su posición respecto de otros días. "Ordenar por prioridad" es una acción puntual.
+19. **Horario.** `occurrencesForWeek(weekStart, blocks, events, exceptions, holidays)` recibe solo los bloques de
+    materias no archivadas (`blocksOfActiveSubjects`) y las fechas feriado (nacionales + manuales del Calendario).
+    - Una ocurrencia tiene una sola excepción: `skip` (omitida) o `keep` (hubo clase aunque sea feriado).
+      "Restaurar" una omitida borra la excepción; en un feriado crea el `keep`.
+    - Las actividades recurrentes no tienen fecha de inicio por defecto (`start_date` queda `null`): se ven en todas
+      las semanas hasta `until_date`, igual que las clases.
+    - Horas con selector propio en pasos de 30 minutos entre 07:00 y 23:00 (siempre 24 h).
+    - Los huecos de la grilla se activan con puntero o touch; con teclado se usa el botón "Agregar".
