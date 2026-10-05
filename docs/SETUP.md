@@ -94,6 +94,11 @@ No se usa el `provider_token` de Supabase, que no se renueva. Tilde solo guarda 
    `SUPABASE_SERVICE_ROLE_KEY`.**
 3. Tras el primer deploy, volver a los pasos 1.4, 2.3 y 3.2 y reemplazar `<tu-app>.vercel.app` por el dominio real.
 
+4. **Ping diario contra la pausa de Supabase.** `vercel.json` programa un cron que llama a `/api/keepalive` una vez
+   por día (el máximo del plan Hobby); esa ruta hace una consulta mínima (`select now()`) para que el proyecto
+   registre actividad. Opcional: cargar `CRON_SECRET` (cualquier texto largo) para que solo Vercel pueda llamarla.
+   Se ve en **Settings → Cron Jobs** y se puede probar entrando a `https://<tu-app>.vercel.app/api/keepalive`.
+
 > El plan **Hobby de Vercel es solo para uso personal y no comercial**. Si el proyecto se monetiza hay que
 > pasar a un plan pago (o a otro hosting).
 

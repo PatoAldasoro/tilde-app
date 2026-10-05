@@ -61,3 +61,11 @@ test("la landing es indexable en ambos idiomas", async ({ page, request }) => {
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("/en</loc>");
 });
+
+test("el ping de keep-alive consulta la base y responde ok", async ({ request }) => {
+  const response = await request.get("/api/keepalive");
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.ok).toBe(true);
+  expect(Number.isNaN(Date.parse(body.at))).toBe(false);
+});

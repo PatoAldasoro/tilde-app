@@ -229,6 +229,9 @@ isOneToOne: false
             "is_color_key":
 { Args: { "value": string }; Returns: boolean
                            },
+"keepalive":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "set_task_order":
 { Args: { "sort_orders": (number)[],"task_ids": (string)[] }; Returns: undefined
                            }
