@@ -405,10 +405,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .sched-head { display: grid; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
 .sched-dayhead { min-height: 64px; padding: var(--space-2) var(--space-3); border-left: 1px solid var(--color-border); display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
 .sched-dayhead .d { display: flex; align-items: baseline; gap: var(--space-2); }
-.sched-dayhead .wd { font-size: var(--text-caption); color: var(--color-text-subtle); text-transform: capitalize; }
-.sched-dayhead .dn { font-size: var(--text-title-s); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
-.sched-dayhead.is-today .dn { color: var(--color-on-accent-fill); background: var(--color-accent-fill); border-radius: var(--radius-sm); padding: 0 6px; }
-.sched-dayhead.is-today .wd { color: var(--color-accent-text); font-weight: var(--weight-medium); }
+.sched-dayhead .wd { font-size: var(--text-title-s); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); text-transform: capitalize; }
+.sched-dayhead .dn { font-size: var(--text-caption); color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+.sched-dayhead.is-today .wd { color: var(--color-on-accent-fill); background: var(--color-accent-fill); border-radius: var(--radius-sm); padding: 0 6px; }
+.sched-dayhead.is-today .dn { color: var(--color-accent-text); font-weight: var(--weight-medium); }
 .holiday-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 22px; padding: 0 7px; border-radius: var(--radius-xs); background: var(--color-holiday-bg); color: var(--color-holiday-text); border: 1px solid var(--color-holiday-border); font-size: 11px; font-weight: var(--weight-medium); }
 .holiday-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sched-scroll { overflow-y: auto; max-height: calc(100vh - 230px); min-height: 420px; position: relative; }
@@ -573,6 +573,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .ev.cat-tp .ev-label::before { content: none; }
 .ev.cat-recuperatorio { border-width: 1px; border-style: solid; border-color: color-mix(in srgb, var(--s-solid) 45%, transparent); background: color-mix(in srgb, var(--s-soft) 45%, transparent); color: var(--color-text-muted); font-weight: var(--weight-regular); }
 .ev.cat-recuperatorio.is-confirmed { background: var(--s-soft); color: var(--s-on-soft); border-color: var(--s-solid); font-weight: var(--weight-medium); }
+.ev.cat-evento { border: 1px solid transparent; border-left: 3px solid var(--s-solid); border-radius: 3px 5px 5px 3px; background: var(--s-soft); color: var(--s-on-soft); font-weight: var(--weight-regular); }
 .ev.cat-feriado { --ev-border: var(--color-holiday-border); background: var(--color-holiday-bg); color: var(--color-holiday-text); border: 1px solid var(--color-holiday-border); }
 .ev .ev-edit { flex: none; width: 22px; height: 22px; margin-right: -4px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: inherit; padding: 0; opacity: 0.9; }
 .ev .ev-edit:hover { background: rgba(127,127,127,.18); }
@@ -587,7 +588,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .day-list-head .t { font-weight: var(--weight-semibold); text-transform: capitalize; }
 .day-list-row { display: flex; align-items: center; gap: var(--space-2); }
 .day-list-row .ev { min-height: 40px; font-size: var(--text-caption); }
-.cat-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.cat-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
 .cat-option { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); min-height: 76px; border-radius: var(--radius-md); border: 1px solid var(--color-border-strong); background: var(--color-surface); font-size: var(--text-caption); font-weight: var(--weight-medium); text-align: left; }
 .cat-option:hover { background: var(--color-surface-hover); }
 .cat-option[aria-checked="true"] { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }

@@ -14,7 +14,7 @@ export const useScheduleExceptions = () => useRows("schedule_exceptions");
 export type BlockInput = Pick<ScheduleBlockRow, "subject_id" | "weekday" | "start_time" | "end_time" | "room">;
 export type ActivityInput = Pick<
   ScheduleEventRow,
-  "title" | "color_key" | "start_time" | "end_time" | "recurrence" | "weekdays" | "date" | "start_date" | "until_date"
+  "title" | "color_key" | "icon" | "start_time" | "end_time" | "recurrence" | "weekdays" | "date" | "start_date" | "until_date"
 >;
 type ExceptionTarget = { type: "block" | "event"; id: string; date: IsoDate };
 

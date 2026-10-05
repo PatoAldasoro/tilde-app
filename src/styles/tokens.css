@@ -89,7 +89,8 @@
 @media (max-width: 1199px) { :root { --gutter: 24px; } }
 
 /* ---------- Light ---------- */
-:root, :root[data-theme="light"] {
+/* [data-theme] también vale en un elemento cualquiera: así se leen los colores del otro tema (exportar el horario). */
+:root, :root[data-theme="light"], [data-theme="light"] {
   color-scheme: light;
   --color-bg: #FAF9F7;
   --color-surface: #FFFFFF;
@@ -215,7 +216,7 @@
 }
 
 /* ---------- Dark (designed separately: elevation = lighter surface, borders quieter, accent brighter with ink text) ---------- */
-:root[data-theme="dark"] {
+:root[data-theme="dark"], [data-theme="dark"] {
   color-scheme: dark;
   --color-bg: #131211;
   --color-surface: #1B1A18;

@@ -3,6 +3,7 @@
 import { BookOpen, Info, Plus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { SubjectMark } from "@/components/subject-icon";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
 import { HelpTip } from "@/components/ui/help-tip";
@@ -70,7 +71,7 @@ export function GradesView({ subjects, onAddSubject }: GradesViewProps) {
                 <tr key={subject.id} className={cn(subjectClass(subject.color_key), isArchived(subject) && "is-archived")}>
                   <th scope="row">
                     <div className="subject-cell">
-                      <span className="dot" aria-hidden="true" />
+                      <SubjectMark icon={subject.icon} size={16} />
                       <strong>{subject.name}</strong>
                       {isArchived(subject) ? <span className="badge">{t("archived_tag")}</span> : null}
                     </div>

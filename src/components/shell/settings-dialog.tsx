@@ -8,6 +8,7 @@ import { useProfile, useSessionUser, useUpdateProfile } from "@/components/provi
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
+import { Switch } from "@/components/ui/switch";
 import { localePrefix } from "@/i18n/routing";
 import type { Weekday } from "@/lib/domain/dates";
 import { getSupabase } from "@/lib/supabase/client";
@@ -17,7 +18,7 @@ const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 
 type SettingsDialogProps = { open: boolean; onOpenChange: (open: boolean) => void };
 
-/** Ajustes: idioma, tema, días visibles del Horario, anticipación de las entregas y cerrar sesión. */
+/** Ajustes: idioma, tema, días visibles del Horario, anticipación de las entregas, menú por borde y cerrar sesión. */
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -93,6 +94,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               />
               <span>{t("default_lead_suffix")}</span>
             </div>
+          </Field>
+          <Field label={t("menu")} hint={t("edge_menu_hint")}>
+            <Switch checked={profile.edge_menu} onChange={(value) => updateProfile.mutate({ edge_menu: value })}>
+              {t("edge_menu")}
+            </Switch>
           </Field>
           <div className="menu-sep" />
           <div className="flex flex-wrap items-center justify-between gap-3">

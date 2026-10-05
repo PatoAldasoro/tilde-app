@@ -1,5 +1,6 @@
 /** Validación (Zod) de lo que se escribe en los formularios antes de guardarlo. */
 import { z } from "zod";
+import { ICON_KEYS } from "@/lib/domain/icons";
 import { SUBJECT_COLORS } from "@/lib/domain/subjects";
 
 const optionalText = (max: number) =>
@@ -32,6 +33,7 @@ export const subjectFormSchema = z.object({
   term_year: optionalInt(2000, 2100),
   credits: optionalInt(0, 99),
   color_key: z.enum(SUBJECT_COLORS),
+  icon: z.enum(ICON_KEYS).nullable(),
 });
 
 export type SubjectFormInput = z.input<typeof subjectFormSchema>;

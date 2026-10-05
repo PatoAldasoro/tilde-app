@@ -12,6 +12,7 @@ export type SubjectDocumentRow = Row<"subject_documents">;
 export type TaskRow = Row<"tasks">;
 export type SubtaskRow = Row<"subtasks">;
 export type CalendarEventRow = Row<"calendar_events">;
+export type CalendarFeedRow = Row<"calendar_feeds">;
 export type ScheduleBlockRow = Row<"schedule_blocks">;
 export type ScheduleEventRow = Row<"schedule_events">;
 export type ScheduleExceptionRow = Row<"schedule_exceptions">;

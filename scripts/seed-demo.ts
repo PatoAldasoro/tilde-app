@@ -44,6 +44,7 @@ async function main() {
     period: number,
     credits: number,
     color: string,
+    icon: string,
     course: number | null,
     final: number | null,
     archived: boolean,
@@ -56,20 +57,21 @@ async function main() {
     term_period: period,
     credits,
     color_key: color,
+    icon,
     grade_course: course,
     grade_final: final,
     archived_at: archived ? at(rel("2026-07-20")) : null,
     created_at: new Date(Date.UTC(2026, 6, 1, 12, order)).toISOString(),
   });
   const subjects = await insert("subjects", [
-    subject("Lógica Computacional", "Com. 2", "Mariana Ferreyra", 2, 6, "cobalto", 8, null, false, 1),
-    subject("Programación Orientada a Objetos", "Com. 1", "Diego Salvatierra", 2, 8, "pino", 9, null, false, 2),
-    subject("Física II", "Com. 3", "Laura Benítez", 2, 8, "mandarina", null, null, false, 3),
-    subject("Diseño y Procesamiento de Documentos XML", "Com. 1", "Pablo Rinaldi", 2, 4, "uva", null, null, false, 4),
-    subject("Química", "Com. 4", "Silvia Acosta", 2, 6, "turquesa", null, null, false, 5),
-    subject("Inglés técnico", "Com. 5", "Ana Quiroga", 2, 2, "fucsia", 9, 8, false, 6),
-    subject("Álgebra", "Com. 1", "Gustavo Medina", 1, 8, "frambuesa", 8, 9, true, 7),
-    subject("Introducción a la Programación", "Com. 3", "Valeria Ortiz", 1, 6, "ambar", 7, 7, true, 8),
+    subject("Lógica Computacional", "Com. 2", "Mariana Ferreyra", 2, 6, "cobalto", "square-function", 8, null, false, 1),
+    subject("Programación Orientada a Objetos", "Com. 1", "Diego Salvatierra", 2, 8, "pino", "code", 9, null, false, 2),
+    subject("Física II", "Com. 3", "Laura Benítez", 2, 8, "mandarina", "atom", null, null, false, 3),
+    subject("Diseño y Procesamiento de Documentos XML", "Com. 1", "Pablo Rinaldi", 2, 4, "uva", "terminal", null, null, false, 4),
+    subject("Química", "Com. 4", "Silvia Acosta", 2, 6, "turquesa", "flask-conical", null, null, false, 5),
+    subject("Inglés técnico", "Com. 5", "Ana Quiroga", 2, 2, "fucsia", "languages", 9, 8, false, 6),
+    subject("Álgebra", "Com. 1", "Gustavo Medina", 1, 8, "frambuesa", "sigma", 8, 9, true, 7),
+    subject("Introducción a la Programación", "Com. 3", "Valeria Ortiz", 1, 6, "ambar", "cpu", 7, 7, true, 8),
   ]);
   const id = (name: string) => {
     const found = subjects.find((row) => row.name.startsWith(name));
@@ -114,9 +116,10 @@ async function main() {
     block(quimica, 5, "08:00", "10:00", "Lab. de Química"),
     block(ingles, 5, "14:00", "15:30", "Aula 12"),
   ]);
-  const activity = (title: string, color_key: string, start_time: string, end_time: string, weekdays: number[], date: string | null, until_date: string | null) => ({
+  const activity = (title: string, color_key: string, icon: string | null, start_time: string, end_time: string, weekdays: number[], date: string | null, until_date: string | null) => ({
     title,
     color_key,
+    icon,
     start_time,
     end_time,
     recurrence: date ? "none" : "weekdays",
@@ -126,11 +129,11 @@ async function main() {
     until_date,
   });
   await insert("schedule_events", [
-    activity("Vóley", "lima", "21:00", "23:00", [1, 3], null, null),
-    activity("Cerámica", "cacao", "19:00", "21:00", [2], null, null),
-    activity("Ayudantía de Álgebra", "frambuesa", "14:00", "16:00", [4], null, rel("2026-11-26")),
-    activity("Consulta Física II", "mandarina", "10:00", "11:30", [], rel("2026-10-15"), null),
-    activity("Viaje a la facu", "grafito", "12:30", "14:00", [2], null, null),
+    activity("Vóley", "lima", "volleyball", "21:00", "23:00", [1, 3], null, null),
+    activity("Cerámica", "cacao", "palette", "19:00", "21:00", [2], null, null),
+    activity("Ayudantía de Álgebra", "frambuesa", "users", "14:00", "16:00", [4], null, rel("2026-11-26")),
+    activity("Consulta Física II", "mandarina", null, "10:00", "11:30", [], rel("2026-10-15"), null),
+    activity("Viaje a la facu", "grafito", "bus", "12:30", "14:00", [2], null, null),
   ]);
   // La clase de XML del miércoles se omite esta semana.
   const xmlBlock = blocks.find((row) => row.subject_id === xml)!;

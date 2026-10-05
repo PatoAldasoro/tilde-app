@@ -29,6 +29,7 @@ export type ScheduleEvent = {
   id: string;
   title: string;
   color_key: string;
+  icon?: string | null;
   start_time: string;
   end_time: string;
   recurrence: string;
@@ -186,4 +187,44 @@ export function gridPosition(start: number, end: number): { top: number; height:
   const from = Math.max(GRID_START, Math.min(start, GRID_END));
   const to = Math.max(from, Math.min(end, GRID_END));
   return { top: (from - GRID_START) / GRID_STEP, height: (to - from) / GRID_STEP };
+}
+
+// ---------- semana tipo (para exportar el horario) ----------
+
+type WeekItemBase = {
+  /** Único dentro de la semana: `${kind}:${id}:${weekday}`. */
+  key: string;
+  /** 1 = lunes … 7 = domingo. */
+  weekday: number;
+  start: number;
+  end: number;
+  col: number;
+  cols: number;
+};
+
+export type WeekItem = WeekItemBase & ({ kind: "class"; block: ScheduleBlock } | { kind: "event"; event: ScheduleEvent });
+
+/**
+ * La semana "tipo": lo que se repite todas las semanas, sin fechas. Entran las clases y las
+ * actividades recurrentes que siguen vigentes; no entran las actividades de una sola fecha,
+ * las excepciones ni los feriados.
+ *
+ * @param blocks clases (pasar solo las de materias no archivadas: ver blocksOfActiveSubjects)
+ */
+export function typicalWeek(blocks: readonly ScheduleBlock[], events: readonly ScheduleEvent[], today: IsoDate): WeekItem[] {
+  const recurring = events.filter((event) => event.recurrence !== "none" && (!event.until_date || event.until_date >= today));
+  const result: WeekItem[] = [];
+  for (let weekday = 1; weekday <= 7; weekday += 1) {
+    const day: WeekItem[] = [];
+    for (const block of blocks) {
+      if (block.weekday !== weekday) continue;
+      day.push({ kind: "class", key: `class:${block.id}:${weekday}`, weekday, block, start: timeToMinutes(block.start_time), end: timeToMinutes(block.end_time), col: 0, cols: 1 });
+    }
+    for (const event of recurring) {
+      if (event.recurrence === "weekdays" && !event.weekdays.includes(weekday)) continue;
+      day.push({ kind: "event", key: `event:${event.id}:${weekday}`, weekday, event, start: timeToMinutes(event.start_time), end: timeToMinutes(event.end_time), col: 0, cols: 1 });
+    }
+    result.push(...layoutOverlaps(day));
+  }
+  return result;
 }

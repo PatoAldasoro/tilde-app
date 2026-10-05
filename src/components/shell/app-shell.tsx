@@ -2,8 +2,10 @@
 
 import { Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { useProfile } from "@/components/providers";
 import { StudyTimerRunner } from "@/components/study/timer-runner";
+import { useAutoCloseOnLeave, useEdgeIntent } from "@/hooks/use-edge-menu";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { cn } from "@/lib/utils";
 import { Drawer } from "./drawer";
@@ -15,11 +17,20 @@ const ShellContext = createContext<ShellValue | null>(null);
 
 /** Marco de la app con sesión: drawer de navegación y diálogo de Ajustes. */
 export function AppShell({ children }: { children: ReactNode }) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const edgeMenu = useProfile().edge_menu;
+  // "edge": lo abrió el mouse contra el borde izquierdo (se cierra solo al alejarse).
+  const [drawer, setDrawer] = useState<"closed" | "open" | "edge">("closed");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const drawerOpen = drawer !== "closed";
+  const setDrawerOpen = useCallback((open: boolean) => setDrawer(open ? "open" : "closed"), []);
+  const openByEdge = useCallback(() => setDrawer((current) => (current === "closed" ? "edge" : current)), []);
+  const closeDrawer = useCallback(() => setDrawer("closed"), []);
+  const keepOpen = useCallback(() => setDrawer((current) => (current === "edge" ? "open" : current)), []);
+  useEdgeIntent(edgeMenu && !drawerOpen, openByEdge);
+  useAutoCloseOnLeave(drawer === "edge", "drawer", closeDrawer, keepOpen);
   const value = useMemo<ShellValue>(
     () => ({ drawerOpen, openDrawer: () => setDrawerOpen(true), openSettings: () => setSettingsOpen(true) }),
-    [drawerOpen],
+    [drawerOpen, setDrawerOpen],
   );
   return (
     <ShellContext.Provider value={value}>

@@ -7,6 +7,7 @@ import { useId, useState, type KeyboardEvent } from "react";
 import { Progress } from "@/components/ui/progress";
 import { diffDays, formatDayMonth, weekdayOf, type IsoDate } from "@/lib/domain/dates";
 import { progressOf } from "@/lib/domain/progress";
+import type { SubjectBadge } from "@/lib/domain/subjects";
 import { isCompleted, isDaily, type DayTask } from "@/lib/domain/tasks";
 import type { Task } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ type DayGroupProps = {
   day: IsoDate;
   today: IsoDate;
   entries: DayTask[];
-  subjects: Map<string, { name: string; color_key: string }>;
+  subjects: Map<string, SubjectBadge>;
   expanded: Set<string>;
   selecting: boolean;
   selected: Set<string>;

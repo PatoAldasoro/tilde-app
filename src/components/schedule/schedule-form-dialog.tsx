@@ -4,6 +4,7 @@ import { BookOpen, Calendar, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent } from "react";
 import { ColorSwatches } from "@/components/home/color-swatches";
+import { IconPicker } from "@/components/icon-picker";
 import { useToday } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
@@ -14,7 +15,8 @@ import { TimeSelect } from "@/components/ui/time-select";
 import { toast } from "@/components/ui/toast";
 import type { IsoDate } from "@/lib/domain/dates";
 import { GRID_END, GRID_START, GRID_STEP, type Recurrence } from "@/lib/domain/schedule";
-import { isArchived, type ColorKey } from "@/lib/domain/subjects";
+import type { IconKey } from "@/lib/domain/icons";
+import { isArchived, subjectClass, type ColorKey } from "@/lib/domain/subjects";
 import { minutesToTime, normalizeTime, timeToMinutes } from "@/lib/domain/time";
 import { useScheduleMutations } from "@/lib/queries/schedule";
 import type { ScheduleBlockRow, ScheduleEventRow, SubjectRow } from "@/lib/supabase/types";
@@ -76,6 +78,7 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
   // Actividad
   const [title, setTitle] = useState(activity?.title ?? "");
   const [color, setColor] = useState<ColorKey>((activity?.color_key as ColorKey | undefined) ?? "lima");
+  const [icon, setIcon] = useState<IconKey | null>((activity?.icon as IconKey | null | undefined) ?? null);
   const [recurrence, setRecurrence] = useState<Recurrence>((activity?.recurrence as Recurrence | undefined) ?? "none");
   const [weekdays, setWeekdays] = useState<number[]>(activity?.weekdays.length ? activity.weekdays : [preset?.weekday ?? 1]);
   const [date, setDate] = useState<IsoDate>(activity?.date ?? preset?.date ?? today);
@@ -131,6 +134,7 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
     const input = {
       title: title.trim(),
       color_key: color,
+      icon,
       start_time: start,
       end_time: end,
       recurrence,
@@ -290,6 +294,9 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
             </Field>
             <Field className="span-2" label={t("color")} labelId={`${id}-color`}>
               <ColorSwatches value={color} onChange={setColor} labelledBy={`${id}-color`} />
+            </Field>
+            <Field className="span-2" label={t("icon")} labelId={`${id}-icon-label`} optionalLabel={t("optional")}>
+              <IconPicker id={`${id}-icon`} value={icon} onChange={setIcon} colorClass={subjectClass(color)} labelledBy={`${id}-icon-label`} />
             </Field>
             <Field className="span-2" label={t("repeat")}>
               <Segmented

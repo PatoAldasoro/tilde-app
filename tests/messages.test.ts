@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import en from "../messages/en.json";
 import es from "../messages/es.json";
+import { CALENDAR_CATEGORIES } from "../src/lib/domain/calendar";
+import { ICON_KEYS, iconLabelKey } from "../src/lib/domain/icons";
 
 const placeholders = (message: string) =>
   [...message.matchAll(/\{(\w+)\s*[,}]/g)].map((m) => m[1]).sort();
@@ -15,6 +17,15 @@ describe("mensajes", () => {
       const empty = Object.entries(messages).filter(([, value]) => value.trim() === "").map(([key]) => key);
       expect(empty, `claves vacías en ${locale}`).toEqual([]);
     }
+  });
+
+  it("cada ícono y cada categoría del calendario tienen su nombre", () => {
+    const missing = [
+      ...ICON_KEYS.map((icon) => iconLabelKey(icon)),
+      ...CALENDAR_CATEGORIES.flatMap((category) => [`cat_${category}`, `cat_hint_${category}`]),
+    ].filter((key) => !(key in es));
+    expect(missing).toEqual([]);
+    expect(new Set(ICON_KEYS).size).toBe(ICON_KEYS.length);
   });
 
   it("cada clave usa las mismas variables en ambos idiomas", () => {

@@ -25,16 +25,22 @@ export type Database = {
           Tables: {
             "calendar_events": {
                   Row: {
-                    "category": string,"confirmed": boolean,"created_at": string,"date": string,"id": string,"lead_days": number | null,"subject_id": string | null,"title": string,"updated_at": string,"user_id": string
+                    "category": string,"confirmed": boolean,"created_at": string,"date": string,"external_id": string | null,"feed_id": string | null,"id": string,"lead_days": number | null,"start_time": string | null,"subject_id": string | null,"title": string,"updated_at": string,"user_id": string
                   }
                   Insert: {
-                    "category": string,"confirmed"?: boolean,"created_at"?: string,"date": string,"id"?: string,"lead_days"?: number | null,"subject_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string
+                    "category": string,"confirmed"?: boolean,"created_at"?: string,"date": string,"external_id"?: string | null,"feed_id"?: string | null,"id"?: string,"lead_days"?: number | null,"start_time"?: string | null,"subject_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Update: {
-                    "category"?: string,"confirmed"?: boolean,"created_at"?: string,"date"?: string,"id"?: string,"lead_days"?: number | null,"subject_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string
+                    "category"?: string,"confirmed"?: boolean,"created_at"?: string,"date"?: string,"external_id"?: string | null,"feed_id"?: string | null,"id"?: string,"lead_days"?: number | null,"start_time"?: string | null,"subject_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "calendar_events_feed_fk"
+      columns: ["feed_id","user_id"]
+isOneToOne: false
+      referencedRelation: "calendar_feeds"
+      referencedColumns: ["id","user_id"]
+    },{
       foreignKeyName: "calendar_events_subject_id_user_id_fkey"
       columns: ["subject_id","user_id"]
 isOneToOne: false
@@ -42,15 +48,28 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
-                },"profiles": {
+                },"calendar_feeds": {
                   Row: {
-                    "created_at": string,"default_task_lead_days": number,"locale": string,"theme": string,"timezone": string,"updated_at": string,"user_id": string,"visible_weekdays": (number)[]
+                    "created_at": string,"id": string,"last_synced_at": string | null,"name": string,"skipped": (string)[],"url": string,"user_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"default_task_lead_days"?: number,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id": string,"visible_weekdays"?: (number)[]
+                    "created_at"?: string,"id"?: string,"last_synced_at"?: string | null,"name": string,"skipped"?: (string)[],"url": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"default_task_lead_days"?: number,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id"?: string,"visible_weekdays"?: (number)[]
+                    "created_at"?: string,"id"?: string,"last_synced_at"?: string | null,"name"?: string,"skipped"?: (string)[],"url"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"profiles": {
+                  Row: {
+                    "created_at": string,"default_task_lead_days": number,"edge_menu": boolean,"locale": string,"theme": string,"timezone": string,"updated_at": string,"user_id": string,"visible_weekdays": (number)[]
+                  }
+                  Insert: {
+                    "created_at"?: string,"default_task_lead_days"?: number,"edge_menu"?: boolean,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id": string,"visible_weekdays"?: (number)[]
+                  }
+                  Update: {
+                    "created_at"?: string,"default_task_lead_days"?: number,"edge_menu"?: boolean,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id"?: string,"visible_weekdays"?: (number)[]
                   }
                   Relationships: [
                     
@@ -76,13 +95,13 @@ isOneToOne: false
                   ]
                 },"schedule_events": {
                   Row: {
-                    "color_key": string,"created_at": string,"date": string | null,"end_time": string,"id": string,"recurrence": string,"start_date": string | null,"start_time": string,"title": string,"until_date": string | null,"user_id": string,"weekdays": (number)[]
+                    "color_key": string,"created_at": string,"date": string | null,"end_time": string,"icon": string | null,"id": string,"recurrence": string,"start_date": string | null,"start_time": string,"title": string,"until_date": string | null,"user_id": string,"weekdays": (number)[]
                   }
                   Insert: {
-                    "color_key": string,"created_at"?: string,"date"?: string | null,"end_time": string,"id"?: string,"recurrence"?: string,"start_date"?: string | null,"start_time": string,"title": string,"until_date"?: string | null,"user_id"?: string,"weekdays"?: (number)[]
+                    "color_key": string,"created_at"?: string,"date"?: string | null,"end_time": string,"icon"?: string | null,"id"?: string,"recurrence"?: string,"start_date"?: string | null,"start_time": string,"title": string,"until_date"?: string | null,"user_id"?: string,"weekdays"?: (number)[]
                   }
                   Update: {
-                    "color_key"?: string,"created_at"?: string,"date"?: string | null,"end_time"?: string,"id"?: string,"recurrence"?: string,"start_date"?: string | null,"start_time"?: string,"title"?: string,"until_date"?: string | null,"user_id"?: string,"weekdays"?: (number)[]
+                    "color_key"?: string,"created_at"?: string,"date"?: string | null,"end_time"?: string,"icon"?: string | null,"id"?: string,"recurrence"?: string,"start_date"?: string | null,"start_time"?: string,"title"?: string,"until_date"?: string | null,"user_id"?: string,"weekdays"?: (number)[]
                   }
                   Relationships: [
                     
@@ -165,13 +184,13 @@ isOneToOne: false
                   ]
                 },"subjects": {
                   Row: {
-                    "archived_at": string | null,"color_key": string,"commission": string | null,"created_at": string,"credits": number | null,"grade_course": number | null,"grade_final": number | null,"id": string,"name": string,"teacher": string | null,"term_period": number | null,"term_year": number | null,"updated_at": string,"user_id": string
+                    "archived_at": string | null,"color_key": string,"commission": string | null,"created_at": string,"credits": number | null,"grade_course": number | null,"grade_final": number | null,"icon": string | null,"id": string,"name": string,"teacher": string | null,"term_period": number | null,"term_year": number | null,"updated_at": string,"user_id": string
                   }
                   Insert: {
-                    "archived_at"?: string | null,"color_key": string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"id"?: string,"name": string,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
+                    "archived_at"?: string | null,"color_key": string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"icon"?: string | null,"id"?: string,"name": string,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
                   }
                   Update: {
-                    "archived_at"?: string | null,"color_key"?: string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"id"?: string,"name"?: string,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
+                    "archived_at"?: string | null,"color_key"?: string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"icon"?: string | null,"id"?: string,"name"?: string,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     

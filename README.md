@@ -4,10 +4,15 @@ Webapp para estudiantes universitarios. Se cargan las **materias** y todo lo dem
 horario, tareas, calendario, notas y sesiones de estudio. El color de cada materia la identifica en toda la app.
 
 - **Inicio** — materias (con documentos de Drive y progreso de sus tareas), notas con promedios y archivadas.
-- **Horario** — grilla semanal de 07:00 a 23:00 con clases, actividades recurrentes, excepciones y feriados.
+- **Horario** — grilla semanal de 07:00 a 23:00 con clases, actividades recurrentes, excepciones y feriados. Se
+  exporta como imagen 16:9 (horizontal o vertical) para usar de fondo de pantalla.
 - **Tareas** — lista por día con subtareas, prioridad, arrastre de pendientes, entregas con anticipación y drag & drop.
+  Se pueden importar desde un JSON (por ejemplo, un plan armado por una IA).
 - **Calendario** — vista mensual con parciales, finales, TP (que generan su tarea), recuperatorios y feriados nacionales.
-- **Sesiones de estudio** — timer con presets, modo foco, tareas de hoy e historial.
+  Importa fechas de un archivo `.ics` o de un calendario vinculado (Google Calendar, Outlook, iCloud).
+- **Sesiones de estudio** — timer con presets, modo foco, tareas de hoy (con sus subtareas) e historial.
+
+Cada materia (y cada actividad del horario) puede llevar un ícono además de su color.
 
 Pensada para desktop y tablets en modo escritorio (1024 a 1440 px, con touch). En español e inglés, con tema claro y oscuro.
 
@@ -57,7 +62,9 @@ Sin Supabase configurado la landing funciona igual, pero no se puede iniciar ses
 
 - **Unitarios (Vitest).** Toda la lógica de negocio vive en funciones puras en `src/lib/domain/` y se testea ahí:
   `tasksForDay` (tarea diaria, arrastre, ventana, vencida, completada), progreso por unidades, promedios,
-  `occurrencesForWeek` (recurrencias, excepciones, feriados, superposiciones), timer por timestamps y feriados.
+  `occurrencesForWeek` (recurrencias, excepciones, feriados, superposiciones), timer por timestamps, feriados,
+  el lector de `.ics` (zonas horarias y repeticiones), la importación de tareas y de fechas, la geometría del
+  fondo exportado y la detección del gesto hacia el borde.
 - **RLS (`tests/rls.test.ts`).** Dos usuarios reales contra el Supabase local: uno no puede leer, modificar, borrar ni
   colgar filas de los datos del otro. Si el Supabase local no está levantado, el test se saltea con un aviso.
 - **E2E (Playwright).** Corren contra la app y el Supabase local. Como el login de Google no se puede automatizar, la
@@ -114,5 +121,8 @@ conflictos entre el diseño y la consigna), en [docs/DECISIONS.md](docs/DECISION
   Mientras tanto "Pegar link" cubre el caso.
 - **Feriados de 2027.** El calendario oficial todavía no está publicado; los trasladables se calculan con la Ley 27.399.
   Hay que volver a verificarlos (ver `data/README.md`).
+- **Calendario vinculado.** La descarga por el servidor está probada contra calendarios públicos reales de Google
+  Calendar; falta probarla con la dirección secreta de un calendario personal (misma forma de dirección y de archivo).
 - **Fuera de alcance:** amigos y lo social, layouts mobile, notificaciones, kanban, modo offline, notas parciales
-  múltiples por materia, días no laborables y puentes, importación y exportación.
+  múltiples por materia, días no laborables y puentes, exportación de datos y escribir en Google Calendar (la
+  vinculación es de una sola vía: Tilde lee).

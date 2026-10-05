@@ -28,7 +28,7 @@ npm run dev
    ```bash
    npx supabase login
    npx supabase link --project-ref <project-ref>
-   npx supabase db push
+   npx supabase db push        # volver a correrlo cada vez que el repo sume una migración, antes de desplegar
    ```
 
    Crea todas las tablas con RLS y el trigger que arma el perfil al registrarse.

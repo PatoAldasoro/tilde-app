@@ -3,6 +3,7 @@
 import { Archive, ArchiveRestore, Calendar, Ellipsis, FileText, Pencil, Trash2, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId } from "react";
+import { SubjectTile } from "@/components/subject-icon";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Progress } from "@/components/ui/progress";
 import type { Progress as ProgressValue } from "@/lib/domain/progress";
@@ -33,6 +34,7 @@ export function SubjectCard({ subject, progress, taskCounts, documentCount, onOp
     <article className={cn("subject-card", subjectClass(subject.color_key), archived && "is-archived")} aria-labelledby={titleId}>
       <button type="button" className="card-open" aria-label={t("open_subject", { name: subject.name })} onClick={onOpen} />
       <div className="card-top">
+        <SubjectTile icon={subject.icon} />
         <h3 className="card-title" id={titleId}>
           {subject.name}
         </h3>

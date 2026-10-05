@@ -1,11 +1,12 @@
 /**
  * Calendario: categorías cerradas, orden de los chips del día y la tarea que genera un TP.
- * Las clases del Horario no aparecen acá.
+ * Las clases del Horario no aparecen acá. "evento" es la categoría genérica: la usan sobre todo
+ * las fechas importadas de otro calendario que no son parcial, final, TP ni recuperatorio.
  */
 import type { IsoDate } from "./dates";
 import type { Holiday } from "./holidays";
 
-export const CALENDAR_CATEGORIES = ["parcial", "final", "tp", "recuperatorio", "feriado"] as const;
+export const CALENDAR_CATEGORIES = ["parcial", "final", "tp", "recuperatorio", "feriado", "evento"] as const;
 export type CalendarCategory = (typeof CALENDAR_CATEGORIES)[number];
 
 export type CalendarEvent = {
@@ -16,6 +17,8 @@ export type CalendarEvent = {
   date: IsoDate;
   confirmed: boolean;
   lead_days: number | null;
+  /** Hora opcional ("HH:MM" o "HH:MM:SS"); null = todo el día. */
+  start_time?: string | null;
 };
 
 /** Cuántos chips entran en una celda antes de "+N más". */
@@ -24,7 +27,7 @@ export const MAX_CHIPS = 3;
 /** Lo que se dibuja en un día: un feriado nacional (no se guarda en la base) o un evento del usuario. */
 export type DayItem = { kind: "holiday"; holiday: Holiday } | { kind: "event"; event: CalendarEvent };
 
-const RANK: Record<string, number> = { feriado: 0, final: 1, parcial: 2, recuperatorio: 3, tp: 4 };
+const RANK: Record<string, number> = { feriado: 0, final: 1, parcial: 2, recuperatorio: 3, tp: 4, evento: 5 };
 
 const itemRank = (item: DayItem) => (item.kind === "holiday" ? -1 : (RANK[item.event.category] ?? 9));
 
@@ -38,7 +41,8 @@ export function itemsByDate(events: readonly CalendarEvent[], holidays: readonly
   };
   holidays.forEach((holiday) => push(holiday.date, { kind: "holiday", holiday }));
   events.forEach((event) => push(event.date, { kind: "event", event }));
-  for (const list of map.values()) list.sort((a, b) => itemRank(a) - itemRank(b));
+  const timeOf = (item: DayItem) => (item.kind === "event" ? (item.event.start_time ?? "") : "");
+  for (const list of map.values()) list.sort((a, b) => itemRank(a) - itemRank(b) || timeOf(a).localeCompare(timeOf(b)));
   return map;
 }
 

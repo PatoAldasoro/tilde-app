@@ -20,6 +20,9 @@ export function isColorKey(value: unknown): value is ColorKey {
   return typeof value === "string" && (SUBJECT_COLORS as readonly string[]).includes(value);
 }
 
+/** Lo mínimo para dibujar una materia: nombre, color e ícono (opcional). */
+export type SubjectBadge = { name: string; color_key: string; icon?: string | null };
+
 /** Clase CSS que expone --s-solid, --s-vivid, --s-soft… para un color de la paleta. */
 export function subjectClass(colorKey: string | null | undefined): string {
   return `subj-${isColorKey(colorKey) ? colorKey : "grafito"}`;

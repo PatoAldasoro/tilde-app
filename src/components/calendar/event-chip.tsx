@@ -3,10 +3,12 @@
 import { ListChecks, Pencil, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { SubjectIcon, SubjectTile } from "@/components/subject-icon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { CalendarCategory, DayItem } from "@/lib/domain/calendar";
 import { formatDayMonth, weekdayOf } from "@/lib/domain/dates";
-import { subjectClass } from "@/lib/domain/subjects";
+import { subjectClass, type SubjectBadge } from "@/lib/domain/subjects";
+import { normalizeTime } from "@/lib/domain/time";
 import type { CalendarEventRow } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { useEventLabel, useHolidayName } from "./labels";
@@ -21,11 +23,9 @@ export type ChipActions = {
   linkedLeadDays: (event: CalendarEventRow) => number | null;
 };
 
-type SubjectInfo = { name: string; color_key: string };
-
 type ItemChipProps = {
   item: DayItem;
-  subjects: Map<string, SubjectInfo>;
+  subjects: Map<string, SubjectBadge>;
   actions: ChipActions;
   /** En la lista del día el chip no abre su propio popover (ya hay un lápiz al lado). */
   plain?: boolean;
@@ -70,6 +70,8 @@ export function ItemChip({ item, subjects, actions, plain }: ItemChipProps) {
   const color = category === "feriado" ? "" : subjectClass(subject?.color_key);
   const label = eventLabel(event, subject?.name);
   const categoryName = t(`cat_${category}`);
+  const time = event.start_time ? normalizeTime(event.start_time) : null;
+  const icon = category === "feriado" ? null : subject?.icon;
 
   // Recuperatorio: el chip es un interruptor (tentativo ↔ confirmado) y el lápiz, siempre visible, edita.
   if (category === "recuperatorio") {
@@ -84,6 +86,7 @@ export function ItemChip({ item, subjects, actions, plain }: ItemChipProps) {
           title={label}
           onClick={() => actions.onToggleConfirmed(event)}
         >
+          <SubjectIcon icon={icon} size={12} />
           <span className="ev-label">{label}</span>
         </button>
         <button type="button" className="ev-edit-abs" aria-label={t("edit_named", { name: label })} onClick={() => actions.onEdit(event)}>
@@ -97,6 +100,8 @@ export function ItemChip({ item, subjects, actions, plain }: ItemChipProps) {
   if (plain) {
     return (
       <span className={className} title={label}>
+        <SubjectIcon icon={icon} size={13} />
+        {time ? <span className="ev-time tnum">{time}</span> : null}
         <span className="ev-label">{label}</span>
       </span>
     );
@@ -112,17 +117,23 @@ export function ItemChip({ item, subjects, actions, plain }: ItemChipProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={className} aria-label={t("event_label", { label, category: categoryName })} title={label}>
+        <button
+          type="button"
+          className={className}
+          aria-label={t("event_label", { label: time ? `${time} ${label}` : label, category: categoryName })}
+          title={time ? `${time} · ${label}` : label}
+        >
+          <SubjectIcon icon={icon} size={12} />
           <span className="ev-label">{label}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent>
         <div className={cn("block-pop-head", color || "subj-grafito")}>
-          <span className="sw" />
+          {icon ? <SubjectTile icon={icon} size="sm" /> : <span className="sw" />}
           <div className="min-w-0">
             <div className="t">{label}</div>
             <div className="m">
-              {categoryName} · {weekday} {formatDayMonth(event.date)}
+              {[categoryName, `${weekday} ${formatDayMonth(event.date)}`, time].filter(Boolean).join(" · ")}
             </div>
             {leadDays !== null ? (
               <div className="m mt-1.5 flex items-center gap-1">

@@ -1,11 +1,12 @@
 "use client";
 
-import { CalendarClock, CalendarDays, CalendarOff, CalendarX2, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Repeat, Trash2, Undo2 } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarOff, CalendarX2, ChevronLeft, ChevronRight, ImageDown, MapPin, Pencil, Plus, Repeat, Trash2, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useHolidayName } from "@/components/calendar/labels";
 import { useNowMinutes, useProfile, useToday, useUpdateProfile } from "@/components/providers";
 import { PageFrame } from "@/components/shell/app-shell";
+import { SubjectIcon, SubjectTile } from "@/components/subject-icon";
 import { Button } from "@/components/ui/button";
 import { confirm } from "@/components/ui/confirm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,10 +22,11 @@ import {
   GRID_STEP,
   gridPosition,
   occurrencesForWeek,
+  typicalWeek,
   type Occurrence,
   type ScheduleEvent,
 } from "@/lib/domain/schedule";
-import { subjectClass } from "@/lib/domain/subjects";
+import { subjectClass, type SubjectBadge } from "@/lib/domain/subjects";
 import { minutesToTime } from "@/lib/domain/time";
 import { useCalendarEvents } from "@/lib/queries/calendar";
 import { useHolidays } from "@/lib/queries/holidays";
@@ -33,6 +35,7 @@ import { useSubjects } from "@/lib/queries/subjects";
 import type { ScheduleBlockRow, ScheduleEventRow } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { ScheduleFormDialog, type ScheduleFormTarget } from "./schedule-form-dialog";
+import { WallpaperDialog } from "./wallpaper-dialog";
 
 /** Alto de un slot de 30 minutos, igual a --schedule-slot-height. */
 const SLOT_PX = 26;
@@ -40,7 +43,6 @@ const ALL_WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 const SLOTS = Array.from({ length: (GRID_END - GRID_START) / GRID_STEP }, (_, index) => GRID_START + index * GRID_STEP);
 const HOURS = Array.from({ length: (GRID_END - GRID_START) / 60 }, (_, index) => GRID_START + index * 60);
 
-type SubjectInfo = { name: string; color_key: string };
 
 /** Horario: grilla semanal de 07:00 a 23:00 con clases, actividades, excepciones y feriados. */
 export function ScheduleView() {
@@ -60,13 +62,14 @@ export function ScheduleView() {
 
   const [weekOffset, setWeekOffset] = useState(0);
   const [form, setForm] = useState<ScheduleFormTarget | null>(null);
+  const [exporting, setExporting] = useState(false);
   const weekStart = useMemo(() => addDays(startOfWeek(today), weekOffset * 7), [today, weekOffset]);
   const weekEnd = addDays(weekStart, 6);
   const years = useMemo(() => yearsAround(weekStart, addDays(weekStart, 6)), [weekStart]);
   const nationalHolidays = useHolidays(years);
 
   const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
-  const subjectMap = useMemo(() => new Map<string, SubjectInfo>(subjects.map((subject) => [subject.id, subject])), [subjects]);
+  const subjectMap = useMemo(() => new Map<string, SubjectBadge>(subjects.map((subject) => [subject.id, subject])), [subjects]);
   const blocks = useMemo(() => blocksOfActiveSubjects(blocksQuery.data ?? [], subjects), [blocksQuery.data, subjects]);
   const activities = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
   // Feriados: los nacionales más los manuales cargados en el Calendario.
@@ -81,6 +84,9 @@ export function ScheduleView() {
     }
     return map;
   }, [weekStart, blocks, activities, exceptionsQuery.data, holidayByDate]);
+
+  // Lo que se exporta como fondo de pantalla: la semana tipo, sin fechas ni excepciones.
+  const week = useMemo(() => typicalWeek(blocks, activities, today), [blocks, activities, today]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -158,10 +164,16 @@ export function ScheduleView() {
       title={t("nav_schedule")}
       width="wide"
       actions={
-        <Button variant="primary" onClick={() => setForm({ mode: "new", tab: "class" })}>
-          <Plus size={18} />
-          {t("add")}
-        </Button>
+        <>
+          <Button variant="ghost" onClick={() => setExporting(true)}>
+            <ImageDown size={18} />
+            {t("export")}
+          </Button>
+          <Button variant="primary" onClick={() => setForm({ mode: "new", tab: "class" })}>
+            <Plus size={18} />
+            {t("add")}
+          </Button>
+        </>
       }
     >
       <div className="sched-toolbar">
@@ -347,6 +359,7 @@ export function ScheduleView() {
       </div>
 
       <ScheduleFormDialog target={form} subjects={subjects} onClose={() => setForm(null)} />
+      <WallpaperDialog open={exporting} onOpenChange={setExporting} week={week} subjects={subjectMap} weekdays={days} />
     </PageFrame>
   );
 }
@@ -360,7 +373,7 @@ function occurrenceTarget(occurrence: Occurrence) {
 type BlockButtonProps = {
   occurrence: Occurrence;
   title: string;
-  subject?: SubjectInfo;
+  subject?: SubjectBadge;
   dayLabel: string;
   holiday: string | null;
   repeatLabel: string | null;
@@ -376,6 +389,7 @@ function BlockButton({ occurrence, title, subject, dayLabel, holiday, repeatLabe
   const [open, setOpen] = useState(false);
   const isEvent = occurrence.kind === "event";
   const color = subjectClass(isEvent ? occurrence.event.color_key : subject?.color_key);
+  const icon = isEvent ? occurrence.event.icon : subject?.icon;
   const room = occurrence.kind === "class" ? occurrence.block.room : null;
   const repeats = isEvent && occurrence.event.recurrence !== "none";
   const inactive = occurrence.status !== "normal";
@@ -407,14 +421,17 @@ function BlockButton({ occurrence, title, subject, dayLabel, holiday, repeatLabe
         >
           {compact ? (
             <span className="b-meta">
-              {isEvent ? <span className="b-dot" /> : null}
+              {icon ? <SubjectIcon icon={icon} size={13} /> : isEvent ? <span className="b-dot" /> : null}
               <strong className="b-title is-compact">{title}</strong>
             </span>
           ) : (
             <>
-              <span className="b-title">{title}</span>
+              <span className="b-title">
+                <SubjectIcon icon={icon} size={14} />
+                {title}
+              </span>
               <span className="b-meta">
-                {isEvent ? repeats ? <Repeat size={12} className="flex-none" /> : <span className="b-dot" /> : null}
+                {isEvent ? repeats ? <Repeat size={12} className="flex-none" /> : icon ? null : <span className="b-dot" /> : null}
                 <span>{time}</span>
               </span>
               {room && height > 56 ? (
@@ -430,7 +447,7 @@ function BlockButton({ occurrence, title, subject, dayLabel, holiday, repeatLabe
       </PopoverTrigger>
       <PopoverContent>
         <div className={cn("block-pop-head", color)}>
-          <span className="sw" />
+          {icon ? <SubjectTile icon={icon} size="sm" /> : <span className="sw" />}
           <div className="min-w-0">
             <div className="t">{title}</div>
             <div className="m">{[dayLabel, time, room].filter(Boolean).join(" · ")}</div>

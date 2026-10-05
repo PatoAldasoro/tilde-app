@@ -12,11 +12,12 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ArrowDownWideNarrow, Calendar, CircleCheckBig, Ellipsis, GripVertical, ListChecks, SquareCheck, Trash2 } from "lucide-react";
+import { ArrowDownWideNarrow, Calendar, CircleCheckBig, Ellipsis, GripVertical, Import, ListChecks, SquareCheck, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useToday } from "@/components/providers";
 import { PageFrame } from "@/components/shell/app-shell";
+import { SubjectMark } from "@/components/subject-icon";
 import { Button } from "@/components/ui/button";
 import { confirm } from "@/components/ui/confirm";
 import { DateField } from "@/components/ui/date-field";
@@ -47,6 +48,7 @@ import { useTaskMutations, useTasks } from "@/lib/queries/tasks";
 import { cn } from "@/lib/utils";
 import { DayGroup, type RowHandlers } from "./day-group";
 import { useDayLabel } from "./labels";
+import { TaskImportDialog } from "./task-import-dialog";
 import { TaskRow } from "./task-row";
 import { TaskSheet } from "./task-sheet";
 import { taskCollision, taskKeyboardCoordinates, type DragData, type DropData } from "./tasks-dnd";
@@ -90,6 +92,7 @@ export function TasksView() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
   useFlip(listRef, drag === null);
@@ -293,6 +296,10 @@ export function TasksView() {
               <SquareCheck size={18} />
               {t("select")}
             </Button>
+            <Button variant="ghost" onClick={() => setImporting(true)}>
+              <Import size={18} />
+              {t("import")}
+            </Button>
             <Menu>
               <MenuTrigger className="btn btn-ghost btn-icon" aria-label={t("more_options")}>
                 <Ellipsis size={20} />
@@ -345,7 +352,7 @@ export function TasksView() {
                 title={subject.name}
                 onClick={() => setSubjectFilter(subject.id)}
               >
-                <span className="dot" />
+                <SubjectMark icon={subject.icon} size={16} />
                 <span className="max-w-[180px] truncate">{subject.name}</span>
               </button>
             ))}
@@ -482,6 +489,7 @@ export function TasksView() {
         </div>
       ) : null}
 
+      <TaskImportDialog open={importing} onOpenChange={setImporting} subjects={subjects} />
       <TaskSheet task={openTask} subjects={subjects} onClose={() => setOpenTaskId(null)} onDelete={(task) => void deleteTasks([task.id])} />
     </PageFrame>
   );

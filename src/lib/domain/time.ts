@@ -27,3 +27,18 @@ export function timeOptions(fromMinutes: number, toMinutes: number, step = 30): 
   for (let m = fromMinutes; m <= toMinutes; m += step) out.push(minutesToTime(m));
   return out;
 }
+
+/**
+ * Hora escrita a mano: "14:30", "9:05", "1430", "930" o "14". Devuelve "HH:MM", null si
+ * el campo está vacío o "invalid" si no es una hora.
+ */
+export function parseTimeInput(text: string): string | null | "invalid" {
+  const value = text.trim();
+  if (value === "") return null;
+  const match = /^(\d{1,2})(?:[:.h]?(\d{2}))?$/.exec(value);
+  if (!match) return "invalid";
+  const hours = Number(match[1]);
+  const minutes = Number(match[2] ?? 0);
+  if (hours > 23 || minutes > 59) return "invalid";
+  return `${pad(hours)}:${pad(minutes)}`;
+}

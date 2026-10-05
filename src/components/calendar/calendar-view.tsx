@@ -1,7 +1,8 @@
 "use client";
 
-import { CalendarPlus, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Import, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useQueries } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
 import { useProfile, useToday } from "@/components/providers";
 import { PageFrame } from "@/components/shell/app-shell";
@@ -12,27 +13,68 @@ import { LoadError } from "@/components/ui/query-state";
 import { toast } from "@/components/ui/toast";
 import { useRouter } from "@/i18n/navigation";
 import { CALENDAR_CATEGORIES, itemsByDate, linkedTaskFields, splitChips, type DayItem } from "@/lib/domain/calendar";
+import { importNews, importRange, nextSkipped, planCalendarImport, type ImportPlan } from "@/lib/domain/calendar-import";
 import { addMonths, dateParts, formatDayMonth, monthMatrix, weekdayOf, type IsoDate } from "@/lib/domain/dates";
 import { yearsAround } from "@/lib/domain/holidays";
-import { useCalendarEvents, useCalendarMutations } from "@/lib/queries/calendar";
+import { parseIcs, type IcsOccurrence } from "@/lib/domain/ics";
+import { activeSubjects, type SubjectBadge } from "@/lib/domain/subjects";
+import { fetchFeedIcs, useCalendarEvents, useCalendarFeeds, useCalendarMutations } from "@/lib/queries/calendar";
 import { useHolidays } from "@/lib/queries/holidays";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTasks } from "@/lib/queries/tasks";
-import type { CalendarEventRow } from "@/lib/supabase/types";
+import type { CalendarEventRow, CalendarFeedRow } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
+import { CalendarImportDialog, type ImportSource } from "./calendar-import-dialog";
 import { ItemChip, type ChipActions } from "./event-chip";
 import { EventFormDialog, type EventFormTarget } from "./event-form-dialog";
 import { useEventLabel, useHolidayName } from "./labels";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
+/** Cada cuánto se vuelve a leer un calendario vinculado mientras la app está abierta. */
+const FEED_STALE_MS = 6 * 60 * 60 * 1000;
+
+type FeedNews = { feed: CalendarFeedRow; ics: string; plan: ImportPlan; occurrences: IcsOccurrence[]; count: number };
+
+/**
+ * Lee en segundo plano los calendarios vinculados y devuelve los que traen fechas nuevas o con
+ * cambios. Nunca importa nada solo: las novedades se avisan y se revisan.
+ */
+function useFeedNews(feeds: CalendarFeedRow[], events: CalendarEventRow[], subjects: { id: string; name: string }[], today: string, timeZone: string): FeedNews[] {
+  const downloads = useQueries({
+    queries: feeds.map((feed) => ({
+      queryKey: ["feed-ics", feed.id, feed.url],
+      queryFn: () => fetchFeedIcs(feed.url),
+      staleTime: FEED_STALE_MS,
+      gcTime: FEED_STALE_MS * 2,
+      retry: false,
+      refetchOnWindowFocus: false,
+    })),
+    combine: (results) => results.map((result) => result.data),
+  });
+  return useMemo(
+    () =>
+      feeds.flatMap((feed, index) => {
+        const ics = downloads[index];
+        if (!ics) return [];
+        const parsed = parseIcs(ics, { timeZone, ...importRange(today, false) });
+        if (!parsed.ok) return [];
+        const plan = planCalendarImport(parsed.occurrences, events, subjects, feed.skipped);
+        const count = importNews(plan);
+        return count > 0 ? [{ feed, ics, plan, occurrences: parsed.occurrences, count }] : [];
+      }),
+    [feeds, downloads, events, subjects, today, timeZone],
+  );
+}
 
 /** Calendario: vista mensual (lunes primero) con parciales, finales, TP, recuperatorios y feriados. */
 export function CalendarView() {
   const t = useTranslations();
   const today = useToday();
   const router = useRouter();
-  const defaultLead = useProfile().default_task_lead_days;
+  const profile = useProfile();
+  const defaultLead = profile.default_task_lead_days;
   const eventsQuery = useCalendarEvents();
+  const feedsQuery = useCalendarFeeds();
   const subjectsQuery = useSubjects();
   const tasksQuery = useTasks();
   const mutations = useCalendarMutations();
@@ -40,6 +82,8 @@ export function CalendarView() {
 
   const [shown, setShown] = useState<{ year: number; month: number } | null>(null);
   const [form, setForm] = useState<EventFormTarget | null>(null);
+  const [importing, setImporting] = useState<{ source: ImportSource | null } | null>(null);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const current = dateParts(today);
   const { year, month } = shown ?? current;
   const weeks = useMemo(() => monthMatrix(year, month), [year, month]);
@@ -47,7 +91,11 @@ export function CalendarView() {
 
   const events = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
   const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
-  const subjectMap = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject])), [subjects]);
+  const subjectMap = useMemo(() => new Map<string, SubjectBadge>(subjects.map((subject) => [subject.id, subject])), [subjects]);
+  const feeds = useMemo(() => feedsQuery.data ?? [], [feedsQuery.data]);
+  const active = useMemo(() => activeSubjects(subjects), [subjects]);
+  // Hasta que carguen las fechas no se comparan: todo parecería nuevo.
+  const news = useFeedNews(eventsQuery.isSuccess ? feeds : [], events, active, today, profile.timezone).filter((item) => !dismissed.has(item.feed.id));
   const byDate = useMemo(() => itemsByDate(events, holidays), [events, holidays]);
   const linkedLead = useMemo(
     () => new Map((tasksQuery.data ?? []).filter((task) => task.source_calendar_event_id).map((task) => [task.source_calendar_event_id!, task.lead_days ?? 0])),
@@ -70,7 +118,7 @@ export function CalendarView() {
       danger: true,
     });
     if (!ok) return;
-    mutations.remove(event.id);
+    mutations.remove([event.id]);
     setForm(null);
     toast(t("date_deleted"));
   }
@@ -96,10 +144,16 @@ export function CalendarView() {
       title={t("nav_calendar")}
       width="wide"
       actions={
-        <Button variant="primary" onClick={() => setForm({ date: today })}>
-          <CalendarPlus size={18} />
-          {t("add_date")}
-        </Button>
+        <>
+          <Button variant="ghost" onClick={() => setImporting({ source: null })}>
+            <Import size={18} />
+            {t("import")}
+          </Button>
+          <Button variant="primary" onClick={() => setForm({ date: today })}>
+            <CalendarPlus size={18} />
+            {t("add_date")}
+          </Button>
+        </>
       }
     >
       <div className="cal-head">
@@ -127,6 +181,25 @@ export function CalendarView() {
       </div>
 
       {eventsQuery.isError ? <LoadError onRetry={() => void eventsQuery.refetch()} /> : null}
+      {news.map(({ feed, ics, plan, occurrences, count }) => (
+        <div className="archived-banner" role="status" key={feed.id}>
+          <RefreshCw size={18} className="flex-none" />
+          <span className="min-w-0 flex-1">{t("feed_news", { name: feed.name, n: count })}</span>
+          <Button onClick={() => setImporting({ source: { kind: "feed", feed, ics } })}>
+            {t("feed_review")}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Las fechas nuevas quedan omitidas; un cambio de fecha sin aplicar solo se oculta por ahora.
+              mutations.markFeedSynced(feed.id, nextSkipped(plan, new Set(), feed.skipped, occurrences));
+              setDismissed((current) => new Set(current).add(feed.id));
+            }}
+          >
+            {t("feed_dismiss")}
+          </Button>
+        </div>
+      ))}
       {eventsQuery.isSuccess && events.length === 0 ? (
         <div className="archived-banner">
           <CalendarPlus size={18} className="flex-none" />
@@ -212,6 +285,14 @@ export function CalendarView() {
       </div>
 
       <EventFormDialog target={form} subjects={subjects} onClose={() => setForm(null)} onDelete={(event) => void remove(event)} />
+      <CalendarImportDialog
+        open={importing !== null}
+        onOpenChange={(open) => !open && setImporting(null)}
+        subjects={subjects}
+        events={events}
+        feeds={feeds}
+        initialSource={importing?.source}
+      />
     </PageFrame>
   );
 }
@@ -219,7 +300,7 @@ export function CalendarView() {
 type DayPopoverProps = {
   day: IsoDate;
   items: DayItem[];
-  subjects: Map<string, { name: string; color_key: string }>;
+  subjects: Map<string, SubjectBadge>;
   actions: ChipActions;
   onAdd: () => void;
   children: ReactNode;

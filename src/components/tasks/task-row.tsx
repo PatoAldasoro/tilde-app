@@ -7,11 +7,12 @@ import { SubjectChip } from "@/components/subject-chip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/toast";
 import { formatDayMonth, type IsoDate } from "@/lib/domain/dates";
+import type { SubjectBadge } from "@/lib/domain/subjects";
 import { dueStatus, isCompleted, pendingSubtasks } from "@/lib/domain/tasks";
 import type { Priority, Task } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
-const PRIORITY_CLASS: Record<Priority, string> = { none: "", low: "p1", medium: "p2", high: "p3" };
+export const PRIORITY_CLASS: Record<Priority, string> = { none: "", low: "p1", medium: "p2", high: "p3" };
 export const PRIORITY_LABEL = { none: "prio_none", low: "prio_low", medium: "prio_med", high: "prio_high" } as const;
 
 /** Bandera de prioridad: rellena en media y alta, contorno en baja (no depende solo del color). */
@@ -20,7 +21,15 @@ export function PriorityFlag({ priority, size = 16 }: { priority: Priority; size
 }
 
 /** Checkbox de una tarea: bloqueado (con el motivo) mientras tenga subtareas pendientes. */
-export function TaskCheckbox({ task, onToggle, size }: { task: Task; onToggle: () => void; size?: "sm" | "md" }) {
+type TaskCheckboxProps = {
+  task: Task;
+  onToggle: () => void;
+  size?: "sm" | "md";
+  /** Se intentó completar con subtareas pendientes. */
+  onBlocked?: () => void;
+};
+
+export function TaskCheckbox({ task, onToggle, size, onBlocked }: TaskCheckboxProps) {
   const t = useTranslations();
   const left = pendingSubtasks(task);
   const blocked = !isCompleted(task) && left > 0;
@@ -34,6 +43,7 @@ export function TaskCheckbox({ task, onToggle, size }: { task: Task; onToggle: (
       onBlocked={() => {
         // En táctil no hay hover: además del tooltip, se avisa con un toast.
         if (reason && window.matchMedia("(hover: none)").matches) toast(reason);
+        onBlocked?.();
       }}
       onChange={onToggle}
     />
@@ -45,7 +55,7 @@ export type TaskRowProps = {
   day: IsoDate;
   today: IsoDate;
   carriedDays: number;
-  subject?: { name: string; color_key: string };
+  subject?: SubjectBadge;
   expanded: boolean;
   selecting: boolean;
   selected: boolean;

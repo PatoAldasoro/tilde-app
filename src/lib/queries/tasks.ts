@@ -108,6 +108,36 @@ export function useTaskMutations() {
         return row;
       },
 
+      /** Crea varias tareas de una vez (importación), al final de la lista, con sus subtareas. Devuelve sus ids. */
+      createMany(inputs: (NewTask & { subtasks?: string[] })[]): string[] {
+        const firstOrder = nextSortOrder(cachedTasks());
+        const stamp = Date.now();
+        // created_at escalonado: conserva el orden del archivo ante un sort_order igual.
+        const tasks = inputs.map((input, index) => ({
+          ...buildTaskRow(user.id, input, firstOrder + index),
+          created_at: new Date(stamp + index).toISOString(),
+        }));
+        const subtasks: SubtaskRow[] = inputs.flatMap((input, index) =>
+          (input.subtasks ?? []).map((title, position) => ({
+            id: newId(),
+            user_id: user.id,
+            task_id: tasks[index].id,
+            title,
+            sort_order: position + 1,
+            completed_at: null,
+            created_at: new Date(stamp + position).toISOString(),
+          })),
+        );
+        void write(
+          { tasks: (rows) => [...rows, ...tasks], subtasks: (rows) => [...rows, ...subtasks] },
+          async () => {
+            await insertRows("tasks", tasks);
+            await insertRows("subtasks", subtasks);
+          },
+        );
+        return tasks.map((task) => task.id);
+      },
+
       update(id: string, patch: Update<"tasks">) {
         void write({ tasks: (rows) => patchById(rows, id, patch as Partial<TaskRow>) }, () => updateRow("tasks", id, patch));
       },

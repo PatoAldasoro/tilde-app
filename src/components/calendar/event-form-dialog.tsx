@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/toast";
 import { CALENDAR_CATEGORIES, generatesTask, linkedTaskFields, taskSyncFor, type CalendarCategory } from "@/lib/domain/calendar";
 import type { IsoDate } from "@/lib/domain/dates";
 import { isArchived, subjectClass } from "@/lib/domain/subjects";
+import { normalizeTime, parseTimeInput } from "@/lib/domain/time";
 import { useCalendarMutations } from "@/lib/queries/calendar";
 import type { CalendarEventRow, SubjectRow } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,8 @@ function EventForm({ event, initialDate, subjects, onDone, onDelete }: EventForm
   const [title, setTitle] = useState(event?.title ?? "");
   const [date, setDate] = useState<IsoDate>(initialDate);
   const [lead, setLead] = useState(String(event?.lead_days ?? defaultLead));
+  const [time, setTime] = useState(event?.start_time ? normalizeTime(event.start_time) : "");
+  const [timeInvalid, setTimeInvalid] = useState(false);
 
   const isHoliday = category === "feriado";
   const subject = isHoliday ? undefined : subjects.find((item) => item.id === subjectId);
@@ -86,12 +89,19 @@ function EventForm({ event, initialDate, subjects, onDone, onDelete }: EventForm
 
   function submit(formEvent: FormEvent) {
     formEvent.preventDefault();
+    const startTime = parseTimeInput(time);
+    if (startTime === "invalid") {
+      setTimeInvalid(true);
+      document.getElementById(`${id}-time`)?.focus();
+      return;
+    }
     const leadDays = Math.max(0, Math.min(60, Math.trunc(Number(lead)) || 0));
     const input = {
       category,
       subject_id: isHoliday ? null : subjectId || null,
       title: title.trim(),
       date,
+      start_time: startTime,
       lead_days: generatesTask(category) ? leadDays : null,
     };
     const hasTask = event ? Boolean(mutations.linkedTask(event.id)) : false;
@@ -153,8 +163,25 @@ function EventForm({ event, initialDate, subjects, onDone, onDelete }: EventForm
           <Field label={t("date")} htmlFor={`${id}-date`}>
             <DateField id={`${id}-date`} value={date} today={today} onChange={(next) => next && setDate(next)} />
           </Field>
+          <Field label={t("time")} htmlFor={`${id}-time`} optionalLabel={t("optional")} error={timeInvalid ? t("time_invalid") : undefined} errorId={`${id}-time-error`}>
+            <input
+              id={`${id}-time`}
+              className="input tnum"
+              inputMode="numeric"
+              maxLength={5}
+              value={time}
+              placeholder="HH:MM"
+              autoComplete="off"
+              aria-invalid={timeInvalid || undefined}
+              aria-describedby={timeInvalid ? `${id}-time-error` : undefined}
+              onChange={(changeEvent) => {
+                setTime(changeEvent.target.value);
+                setTimeInvalid(false);
+              }}
+            />
+          </Field>
           {generatesTask(category) ? (
-            <Field label={t("in_your_list")} htmlFor={`${id}-lead`}>
+            <Field className="span-2" label={t("in_your_list")} htmlFor={`${id}-lead`}>
               <div className="lead-row">
                 <span>{t("appear_before_a")}</span>
                 <input

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useProfile, useToday } from "@/components/providers";
 import { SubjectChip } from "@/components/subject-chip";
+import { SubjectMark } from "@/components/subject-icon";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
 import { Progress } from "@/components/ui/progress";
@@ -109,7 +110,7 @@ export function HistoryView({ onStart }: { onStart: () => void }) {
               return (
                 <div className={cn("hbar", subject && subjectClass(subject.color_key))} key={entry.subjectId ?? "none"}>
                   <span className="name">
-                    <i className={cn("dot", !subject && "bg-border-strong")} />
+                    <SubjectMark icon={subject?.icon} size={14} dotClassName={subject ? undefined : "bg-border-strong"} />
                     <span>{subject?.name ?? t("no_subject")}</span>
                   </span>
                   <span className="val">{duration(entry.focusSeconds)}</span>

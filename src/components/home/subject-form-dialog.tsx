@@ -2,12 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent } from "react";
+import { IconPicker } from "@/components/icon-picker";
 import { useToday } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
-import { firstFreeColor, type ColorKey } from "@/lib/domain/subjects";
+import type { IconKey } from "@/lib/domain/icons";
+import { firstFreeColor, subjectClass, type ColorKey } from "@/lib/domain/subjects";
 import { useSubjectMutations } from "@/lib/queries/subjects";
 import { subjectFormSchema } from "@/lib/schemas";
 import type { SubjectRow } from "@/lib/supabase/types";
@@ -56,6 +58,7 @@ function SubjectForm({ subject, activeColors, onDone }: { subject: SubjectRow | 
   const [year, setYear] = useState(subject ? String(subject.term_year ?? "") : String(suggested.year));
   const [credits, setCredits] = useState(subject?.credits != null ? String(subject.credits) : "");
   const [color, setColor] = useState<ColorKey>((subject?.color_key as ColorKey | undefined) ?? firstFreeColor(activeColors));
+  const [icon, setIcon] = useState<IconKey | null>((subject?.icon as IconKey | null | undefined) ?? null);
   const [errors, setErrors] = useState<FormErrors>({});
 
   function submit(event: FormEvent) {
@@ -68,6 +71,7 @@ function SubjectForm({ subject, activeColors, onDone }: { subject: SubjectRow | 
       term_year: year,
       credits,
       color_key: color,
+      icon,
     });
     if (!parsed.success) {
       const fields = new Set(parsed.error.issues.map((issue) => issue.path[0]));
@@ -170,6 +174,9 @@ function SubjectForm({ subject, activeColors, onDone }: { subject: SubjectRow | 
           </Field>
           <Field className="span-2" label={t("color")} labelId={`${id}-color`} hint={t("color_hint")}>
             <ColorSwatches value={color} onChange={setColor} labelledBy={`${id}-color`} />
+          </Field>
+          <Field className="span-2" label={t("icon")} labelId={`${id}-icon-label`} optionalLabel={t("optional")} hint={t("icon_hint")}>
+            <IconPicker id={`${id}-icon`} value={icon} onChange={setIcon} colorClass={subjectClass(color)} labelledBy={`${id}-icon-label`} />
           </Field>
         </div>
       </DialogBody>

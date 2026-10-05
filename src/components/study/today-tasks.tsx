@@ -1,14 +1,16 @@
 "use client";
 
+import { ChevronDown, ListTodo } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useToday } from "@/components/providers";
 import { SubjectChip } from "@/components/subject-chip";
 import { TaskCheckbox } from "@/components/tasks/task-row";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeletons } from "@/components/ui/query-state";
 import { Switch } from "@/components/ui/switch";
 import { isArchived } from "@/lib/domain/subjects";
-import { isCompleted, tasksForDay } from "@/lib/domain/tasks";
+import { isCompleted, pendingSubtasks, tasksForDay } from "@/lib/domain/tasks";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTaskMutations, useTasks } from "@/lib/queries/tasks";
 import { studyStore, useStudy } from "@/lib/study-store";
@@ -22,6 +24,7 @@ export function TodayTasks() {
   const tasksQuery = useTasks();
   const subjectsQuery = useSubjects();
   const mutations = useTaskMutations();
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
   const subjectMap = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject])), [subjects]);
@@ -33,6 +36,15 @@ export function TodayTasks() {
     return setup.filterBySubject && setup.subjectId ? list.filter((entry) => entry.task.subject_id === setup.subjectId) : list;
   }, [tasksQuery.data, subjects, today, setup.filterBySubject, setup.subjectId]);
   const done = entries.filter((entry) => isCompleted(entry.task)).length;
+
+  const setOpen = (taskId: string, open: boolean) =>
+    setExpanded((current) => {
+      if (current.has(taskId) === open) return current;
+      const next = new Set(current);
+      if (open) next.add(taskId);
+      else next.delete(taskId);
+      return next;
+    });
 
   return (
     <>
@@ -65,11 +77,55 @@ export function TodayTasks() {
         ) : null}
         {entries.map(({ task }) => {
           const subject = task.subject_id ? subjectMap.get(task.subject_id) : undefined;
+          const total = task.subtasks.length;
+          const left = pendingSubtasks(task);
+          const open = total > 0 && expanded.has(task.id);
           return (
-            <div key={task.id} className={cn("mini-task", isCompleted(task) && "is-done")}>
-              <TaskCheckbox task={task} size="sm" onToggle={() => mutations.toggle(task)} />
-              <span className="mt-title">{task.title}</span>
-              {subject ? <SubjectChip subject={subject} /> : null}
+            <div key={task.id} className="mini-task-group">
+              <div className={cn("mini-task", isCompleted(task) && "is-done")}>
+                {/* Bloqueada por subtareas pendientes: al tocarla se despliegan para poder tildarlas. */}
+                <TaskCheckbox task={task} size="sm" onToggle={() => mutations.toggle(task)} onBlocked={() => setOpen(task.id, true)} />
+                {/* Si no entran lado a lado (tarea con subtareas), la materia baja a un segundo renglón. */}
+                <span className="mt-main">
+                  <span className="mt-title">{task.title}</span>
+                  {subject ? <SubjectChip subject={subject} /> : null}
+                </span>
+                {total > 0 ? (
+                  <>
+                    <span
+                      className={cn("subcount", left === 0 && "is-complete")}
+                      aria-label={t("subtasks_progress", { done: total - left, total })}
+                    >
+                      <ListTodo size={14} />
+                      {total - left}/{total}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-icon btn-sm expand-btn"
+                      aria-expanded={open}
+                      aria-label={`${open ? t("collapse_subtasks") : t("expand_subtasks")}: ${task.title}`}
+                      onClick={() => setOpen(task.id, !open)}
+                    >
+                      <ChevronDown size={18} />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+              {open ? (
+                <div className="mini-subtasks">
+                  {task.subtasks.map((subtask) => (
+                    <div key={subtask.id} className={cn("subtask", subtask.completed_at && "is-done")}>
+                      <Checkbox
+                        size="sm"
+                        checked={subtask.completed_at !== null}
+                        label={subtask.title}
+                        onChange={() => mutations.toggleSubtask(task, subtask.id)}
+                      />
+                      <span className="subtask-title">{subtask.title}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           );
         })}

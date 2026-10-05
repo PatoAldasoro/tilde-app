@@ -5,7 +5,8 @@
 Webapp para estudiantes universitarios: se cargan materias y todo lo demás (horario, tareas, calendario,
 notas, sesiones de estudio) gira alrededor de ellas. La consigna original está en `docs/PROMPT.md`; el
 diseño, en `design/DESIGN.md` y `design/prototype/`. **En lo visual manda el diseño; en el comportamiento,
-la consigna.** Los conflictos y las decisiones propias se anotan en `docs/DECISIONS.md`.
+la consigna.** Los conflictos y las decisiones propias se anotan en `docs/DECISIONS.md`, que también registra los
+cambios pedidos después de la entrega (desde el punto 22): esos mandan sobre el diseño y la consigna.
 
 ## Stack
 
@@ -31,7 +32,8 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 ## Estructura
 
 - `src/app/[locale]/` — rutas. `/` landing (estática, indexable en `/` y `/en`); `/app`, `/app/schedule`,
-  `/app/todo`, `/app/calendar`, `/app/study`. Fuera del segmento de idioma: `/auth/callback`, `/api/*`.
+  `/app/todo`, `/app/calendar`, `/app/study`. Fuera del segmento de idioma: `/auth/callback`, `/api/*`
+  (`holidays`, `keepalive`, `ical`: descarga de calendarios vinculados).
 - `src/lib/domain/` — **toda la lógica de negocio, en funciones puras** con tests al lado (`*.test.ts`).
 - `src/lib/queries/` — hooks de datos (TanStack Query + Supabase del navegador, pasan por RLS).
 - `src/components/ui/` — primitivas; `src/components/<sección>/` — pantallas.
@@ -48,6 +50,8 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
    y a `tests/rls.test.ts`.
 3. **Íconos: solo `lucide-react`.** Sin emojis, sin otras librerías, sin SVG a mano. Excepciones: la "G" de
    Google (`google-button.tsx`) y el logo (`logo.tsx`). Los gráficos (barras del historial, anillo del timer) no son íconos.
+   Los íconos que se pueden elegir para una materia o actividad son una lista cerrada: `src/lib/domain/icons.ts`
+   (clave) + `src/components/subject-icon.tsx` (componente) + un mensaje `icon_<clave>` en cada idioma.
 4. **Ningún texto hardcodeado** en componentes: todo en `messages/*.json`, en ambos idiomas (lo verifica
    `tests/messages.test.ts`). Tono: cercano, sin voseo, botones en infinitivo. Inglés en variante US.
 5. **Fechas:** los días son `YYYY-MM-DD` (`date`) y las horas `HH:MM` (`time`), sin zona horaria. Nunca `new Date()`
@@ -60,7 +64,10 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 8. **Secretos:** nunca en el repo. `.env.local` está ignorado; `.env.example` documenta las variables.
    `SUPABASE_SERVICE_ROLE_KEY` solo en scripts y tests locales (`scripts/lib/test-session.ts`), nunca en producción.
 9. **Fuera de alcance:** amigos y lo social, mobile, notificaciones, kanban, offline, notas parciales múltiples,
-   días no laborables y puentes, importación y exportación.
+   días no laborables y puentes, exportación de datos y escribir en calendarios externos. Sí hay: importar tareas
+   (JSON), importar fechas (.ics o calendario vinculado, siempre con vista previa) y exportar el horario como imagen.
+10. **Servidor:** `/api/ical` es lo único que descarga una dirección dada por el usuario. Solo acepta los servicios
+    de `normalizeFeedUrl` (`src/lib/domain/calendar-import.ts`) y exige sesión; no ampliar esa lista a "cualquier URL".
 
 ## Convenciones
 

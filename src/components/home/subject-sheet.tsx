@@ -3,6 +3,8 @@
 import { Archive, ArchiveRestore, ExternalLink, File, FileSpreadsheet, FileText, FolderOpen, Image as ImageIcon, Link as LinkIcon, Presentation, Trash2, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { IconPicker } from "@/components/icon-picker";
+import { SubjectTile } from "@/components/subject-icon";
 import { Button } from "@/components/ui/button";
 import { CommitInput } from "@/components/ui/commit-input";
 import { Field } from "@/components/ui/field";
@@ -49,7 +51,7 @@ export function SubjectSheet({ subject, documents, onClose, onArchive, onDelete 
           className={subjectClass(subject.color_key)}
           head={
             <>
-              <span className="size-3.5 flex-none rounded-xs bg-(--s-vivid)" aria-hidden="true" />
+              {subject.icon ? <SubjectTile icon={subject.icon} /> : <span className="size-3.5 flex-none rounded-xs bg-(--s-vivid)" aria-hidden="true" />}
               <h2 className="sheet-title" aria-hidden="true">
                 {subject.name}
               </h2>
@@ -162,6 +164,15 @@ function SubjectDetails({ subject }: { subject: SubjectRow }) {
       </div>
       <Field label={t("color")} labelId={`${id}-color`}>
         <ColorSwatches value={subject.color_key} labelledBy={`${id}-color`} onChange={(color: ColorKey) => update(subject.id, { color_key: color })} />
+      </Field>
+      <Field label={t("icon")} labelId={`${id}-icon-label`} optionalLabel={t("optional")}>
+        <IconPicker
+          id={`${id}-icon`}
+          value={subject.icon}
+          colorClass={subjectClass(subject.color_key)}
+          labelledBy={`${id}-icon-label`}
+          onChange={(icon) => update(subject.id, { icon })}
+        />
       </Field>
     </section>
   );

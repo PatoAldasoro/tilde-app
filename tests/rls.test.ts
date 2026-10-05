@@ -29,7 +29,7 @@ describe.skipIf(!reachable)("RLS", () => {
   let asAlice: Client;
   let asBob: Client;
   let anon: Client;
-  const ids = { subject: "", task: "", subtask: "", event: "", block: "", activity: "", exception: "", session: "", sessionTask: "", document: "" };
+  const ids = { subject: "", task: "", subtask: "", event: "", block: "", activity: "", exception: "", session: "", sessionTask: "", document: "", feed: "" };
 
   beforeAll(async () => {
     const stamp = Date.now();
@@ -52,8 +52,19 @@ describe.skipIf(!reachable)("RLS", () => {
         .select("id")
         .single(),
     ).id;
+    ids.feed = one(
+      await asAlice
+        .from("calendar_feeds")
+        .insert({ name: "Facultad", url: "https://calendar.google.com/calendar/ical/alice/private-secreto/basic.ics" })
+        .select("id")
+        .single(),
+    ).id;
     ids.event = one(
-      await asAlice.from("calendar_events").insert({ subject_id: ids.subject, category: "tp", title: "TP 1", date: "2026-10-20", lead_days: 3 }).select("id").single(),
+      await asAlice
+        .from("calendar_events")
+        .insert({ subject_id: ids.subject, category: "tp", title: "TP 1", date: "2026-10-20", lead_days: 3, feed_id: ids.feed, external_id: "ics:tp1@facultad" })
+        .select("id")
+        .single(),
     ).id;
     ids.task = one(
       await asAlice.from("tasks").insert({ subject_id: ids.subject, title: "Leer capítulo 1", planned_date: "2026-10-13" }).select("id").single(),
@@ -93,6 +104,7 @@ describe.skipIf(!reachable)("RLS", () => {
     ["subjects", "subject"],
     ["subject_documents", "document"],
     ["calendar_events", "event"],
+    ["calendar_feeds", "feed"],
     ["tasks", "task"],
     ["subtasks", "subtask"],
     ["schedule_blocks", "block"],
@@ -159,6 +171,9 @@ describe.skipIf(!reachable)("RLS", () => {
     expect(subtask.error).not.toBeNull();
     const profile = await asBob.from("profiles").insert({ user_id: alice.id });
     expect(profile.error).not.toBeNull();
+    // Tampoco puede asociar una fecha suya al calendario vinculado de Alice.
+    const event = await asBob.from("calendar_events").insert({ category: "evento", title: "Intrusa", date: "2026-10-20", feed_id: ids.feed });
+    expect(event.error).not.toBeNull();
   });
 
   it("una fila propia no se puede pasar a otro usuario", async () => {

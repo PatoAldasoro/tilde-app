@@ -91,3 +91,62 @@ comportamiento manda la consigna.**
       adelantado el cliente de Supabase creería que la sesión venció.
     - Se rinden las dos variantes de cada imagen y el CSS muestra la del tema activo (`data-theme`); la oculta no
       se descarga (`loading="lazy"`).
+
+## Cambios pedidos después de la entrega (05/10/2026)
+
+Pedidos directos del usuario. Donde chocan con el diseño o con la consigna original, **mandan estos**.
+
+22. **Subtareas en "Tareas de hoy" (Sesiones).** La lista chica al lado del timer no dejaba ver las subtareas, y una
+    tarea con subtareas pendientes no se puede completar: quedaba trabada. Ahora cada tarea con subtareas muestra
+    su contador y un botón para desplegarlas (también en el modo foco); tocar la casilla bloqueada las despliega.
+23. **Encabezado del Horario.** Cambia el diseño: el **día** (Lun, Mar…) va grande y en negrita, la fecha chica al
+    lado, y el resaltado de "hoy" pasa del número al día.
+24. **Íconos de materias y actividades.** Columna `icon` (clave de Lucide en kebab-case) en `subjects` y
+    `schedule_events`. La lista es cerrada (64 íconos, `src/lib/domain/icons.ts`) para que el selector sea una
+    grilla y no un buscador; la base solo valida la forma de la clave, así se pueden sumar íconos sin migración.
+    Sin ícono, todo se ve como antes (punto de color). Aparece en: tarjeta y panel de la materia, chips de tareas,
+    filtro "Por materia", bloques y popovers del Horario, chips del Calendario, notas, historial y el fondo exportado.
+25. **Importar tareas (JSON).** Pensado para pegar la respuesta de una IA: el diálogo arma el pedido (con el formato,
+    las materias propias y la fecha de hoy) y acepta la respuesta tal cual, con texto alrededor o en un bloque de código.
+    - Formato recomendado: `{ "tasks": [{ "title", "date", "due", "lead_days", "subject", "priority", "subtasks" }] }`.
+      Se aceptan variantes razonables (lista suelta, agrupado por día o por fecha, claves en español).
+    - `date` = día en que se hace (tarea diaria). Con `due` es una entrega: aparece desde `date` (o con `lead_days`,
+      o con la anticipación del perfil) hasta la fecha límite. Sin fecha, queda para hoy.
+    - Una materia que no existe no frena nada: la tarea entra sin materia y se avisa. Lo que no se entiende se lista
+      y el resto se importa igual. Máximo 500 tareas por vez. El toast permite deshacer.
+26. **Importar fechas al Calendario (.ics).** El lector es propio (`src/lib/domain/ics.ts`, sin dependencias).
+    - Hace falta una **sexta categoría, "Evento"**, para lo que no es parcial, final, TP, recuperatorio ni feriado
+      (un cumpleaños, un turno). Se dibuja con una barra a la izquierda. La categoría y la materia se proponen a partir
+      del título y se pueden cambiar antes de importar.
+    - Las fechas del Calendario ganan una **hora opcional** (`start_time`): los eventos importados la traen y se
+      puede cargar a mano. Se ve en el detalle y en la lista del día.
+    - Cada fecha importada guarda `external_id`: reimportar no duplica; si cambió de día u hora se ofrece como
+      "Cambió de fecha" y solo actualiza eso (la categoría, la materia y el título que tenga en Tilde no se pisan).
+    - Los eventos que se repiten van en una sola fila y **sin marcar**: lo de todas las semanas va en el Horario.
+    - Un TP importado crea su tarea, como cualquier TP. Por defecto se importa de hoy a un año.
+27. **Vincular Google Calendar: por la dirección secreta .ics, no con OAuth.**
+    - Con OAuth, el permiso de lectura de Calendar es un scope "sensible": para que entre cualquier persona Google
+      exige verificar la app, y el token del navegador dura una hora y no se renueva solo, así que tampoco habría
+      sincronización real. La dirección privada .ics no necesita configurar nada en Google Cloud, no vence y
+      también sirve para Outlook e iCloud.
+    - `/api/ical` la descarga en el servidor (el navegador no puede por CORS). Para que no sea una pasarela abierta:
+      exige sesión, solo acepta `calendar.google.com`, `outlook.office365.com`, `outlook.live.com` y `*.icloud.com`,
+      valida cada redirección, corta a los 6 MB y a los 10 s, y no guarda ni registra nada.
+    - La dirección se guarda en `calendar_feeds` (RLS): funciona como una contraseña y solo la ve su dueño.
+    - Al abrir el Calendario se vuelve a leer en segundo plano (cada 6 h como mucho) y **se avisa** si hay fechas
+      nuevas o con cambios. **Nunca se importa nada solo.** Lo ofrecido y no elegido, y lo que se borra después,
+      queda en `skipped` y no se vuelve a proponer marcado.
+    - Es de una sola vía: Tilde lee el calendario, no escribe en él.
+28. **Exportar el horario como fondo de pantalla.** PNG de 3840 × 2160 (horizontal) o 2160 × 3840 (vertical), dibujado
+    en un `<canvas>` con los tokens y las tipografías del diseño (sin librerías de captura: salen nítidos a cualquier
+    tamaño). Lleva un fondo (liso o con manchas de los colores de las materias) y, centrada, la tabla con la
+    **semana tipo**: clases y actividades recurrentes vigentes, sin fechas, sin excepciones ni feriados y sin las
+    actividades de un solo día. Se dibujan los días visibles del Horario y solo el rango de horas ocupado. El tema
+    (claro u oscuro) se elige aparte del de la app.
+29. **Menú por el borde izquierdo.** Llevar el mouse al borde abre el menú solo si parece intencional
+    (`src/lib/domain/edge-intent.ts`): un tramo largo y casi horizontal hacia la izquierda más una pausa corta contra
+    el borde (90 ms), o una llegada lenta y una pausa larga (480 ms). No cuenta llegar en diagonal o bordeando, con
+    un botón apretado (arrastre, selección), con un diálogo abierto, recién escrito en un campo, ni si el puntero
+    sale de la ventana. Después de abrirse hay que alejarse 96 px para que vuelva a estar disponible. Un menú
+    abierto así se cierra solo al alejar el mouse, salvo que se lo use. Es solo para mouse, y se apaga en Ajustes
+    (`profiles.edge_menu`). El botón del menú sigue ahí: nada depende solo del hover.
