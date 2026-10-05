@@ -466,5 +466,12 @@
   "history_loading": "Loading history",
   "sessions_tabs": "Study sessions sections",
   "summary_tasks_none": "No tasks checked off during the session.",
-  "bar_week": "{week}: {value}"
+  "bar_week": "{week}: {value}",
+  "shot_alt_subjects": "Tilde’s Home screen showing this term’s courses, each with its color and progress.",
+  "shot_alt_schedule": "Tilde’s weekly schedule with classes and activities, a public holiday marked and a skipped class.",
+  "shot_alt_tasks": "Tilde’s to-do list grouped by day, with subtasks, priorities and deadlines.",
+  "shot_alt_calendar": "Tilde’s monthly calendar with midterms, finals, assignments and holidays.",
+  "shot_alt_grades": "Tilde’s grades table with the simple and weighted averages.",
+  "shot_alt_sessions": "A Tilde study session with the focus timer running and today’s tasks on the side.",
+  "landing_features": "Features"
 }

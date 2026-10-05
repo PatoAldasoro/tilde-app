@@ -83,3 +83,11 @@ comportamiento manda la consigna.**
     - El historial muestra foco por semana (8 semanas, lunes a domingo, según el día de inicio en la zona del
       usuario) y por materia, con las barras del diseño (HTML + CSS, sin librería).
     - Sin descanso largo y sin pestaña "Amigos" (ver 2).
+21. **Landing y capturas.** La landing es estática (SSG) en `/` y `/en`, con `hreflang`, `robots.txt` y `sitemap.xml`;
+    la app con sesión lleva `noindex`. Las capturas son reales: `npm run seed:demo` carga la cuenta demo y
+    `npm run screenshots` las toma con Playwright en claro y oscuro (`public/landing/<sección>-<tema>.png`).
+    - El "hoy" de la demo es fijo (martes 18/08/2026, semana del feriado del 17/08) y el script fija el reloj del
+      navegador en ese día, así las capturas salen siempre iguales. Tiene que ser una fecha pasada: con el reloj
+      adelantado el cliente de Supabase creería que la sesión venció.
+    - Se rinden las dos variantes de cada imagen y el CSS muestra la del tema activo (`data-theme`); la oculta no
+      se descarga (`loading="lazy"`).

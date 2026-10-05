@@ -104,3 +104,10 @@ span.ev { cursor: default; }
 .focus-side .side-panel-head { border-bottom: 0; padding: 0 var(--space-3) var(--space-2); }
 .focus-side .side-panel-body { padding: 0; overflow: visible; }
 .switch .lucide { flex: none; }
+
+/* ---------- Landing: real screenshots, one per theme ---------- */
+.shot img { display: block; width: 100%; height: auto; }
+.shot .shot-dark { display: none; }
+:root[data-theme="dark"] .shot .shot-dark { display: block; }
+:root[data-theme="dark"] .shot .shot-light { display: none; }
+.hero-mark { flex: none; }

@@ -466,5 +466,12 @@
   "history_loading": "Cargando el historial",
   "sessions_tabs": "Secciones de Sesiones de estudio",
   "summary_tasks_none": "Ninguna tarea tildada durante la sesión.",
-  "bar_week": "{week}: {value}"
+  "bar_week": "{week}: {value}",
+  "shot_alt_subjects": "Pantalla de Inicio de Tilde con las materias del cuatrimestre, cada una con su color y su progreso.",
+  "shot_alt_schedule": "Horario semanal de Tilde con clases y actividades, un feriado marcado y una clase omitida.",
+  "shot_alt_tasks": "Lista de tareas de Tilde agrupada por día, con subtareas, prioridades y fechas de entrega.",
+  "shot_alt_calendar": "Calendario mensual de Tilde con parciales, finales, trabajos prácticos y feriados.",
+  "shot_alt_grades": "Tabla de notas de Tilde con el promedio simple y el ponderado.",
+  "shot_alt_sessions": "Sesión de estudio de Tilde con el temporizador en foco y las tareas de hoy al costado.",
+  "landing_features": "Funcionalidades"
 }

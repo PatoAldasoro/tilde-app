@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { AppProviders, type SessionUser } from "@/components/providers";
@@ -7,6 +8,9 @@ import { isLocale, routing } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = { children: ReactNode; params: Promise<{ locale: string }> };
+
+/** La app con sesión no se indexa. */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /** Todo /app pide sesión. Carga el usuario y su perfil una vez, en el servidor. */
 export default async function AppLayout({ children, params }: Props) {
