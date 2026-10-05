@@ -5,7 +5,8 @@ horario, tareas, calendario, notas y sesiones de estudio. El color de cada mater
 
 - **Inicio** — materias (con documentos de Drive y progreso de sus tareas), notas con promedios y archivadas.
 - **Horario** — grilla semanal de 07:00 a 23:00 con clases, actividades recurrentes, excepciones y feriados. Se
-  exporta como imagen 16:9 (horizontal o vertical) para usar de fondo de pantalla.
+  exporta como imagen para usar de fondo de pantalla (horizontal 16:9 o 16:10, vertical 9:16 o 9:19,5; tema,
+  fondo y estilo de los bloques a elección).
 - **Tareas** — lista por día con subtareas, prioridad, arrastre de pendientes, entregas con anticipación y drag & drop.
   Se pueden importar desde un JSON (por ejemplo, un plan armado por una IA).
 - **Calendario** — vista mensual con parciales, finales, TP (que generan su tarea), recuperatorios y feriados nacionales.

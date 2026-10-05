@@ -137,12 +137,25 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
       nuevas o con cambios. **Nunca se importa nada solo.** Lo ofrecido y no elegido, y lo que se borra después,
       queda en `skipped` y no se vuelve a proponer marcado.
     - Es de una sola vía: Tilde lee el calendario, no escribe en él.
-28. **Exportar el horario como fondo de pantalla.** PNG de 3840 × 2160 (horizontal) o 2160 × 3840 (vertical), dibujado
-    en un `<canvas>` con los tokens y las tipografías del diseño (sin librerías de captura: salen nítidos a cualquier
-    tamaño). Lleva un fondo (liso o con manchas de los colores de las materias) y, centrada, la tabla con la
-    **semana tipo**: clases y actividades recurrentes vigentes, sin fechas, sin excepciones ni feriados y sin las
-    actividades de un solo día. Se dibujan los días visibles del Horario y solo el rango de horas ocupado. El tema
-    (claro u oscuro) se elige aparte del de la app.
+28. **Exportar el horario como fondo de pantalla.** PNG dibujado en un `<canvas>` con los tokens y las tipografías
+    del diseño (sin librerías de captura: sale nítido a cualquier tamaño). La estructura sigue los dos diseños que
+    hizo el usuario para el horario exportado (06/10/2026); los colores y la tipografía son los de la app.
+    - **Contenido:** la semana tipo (clases y actividades recurrentes vigentes), sin fechas, sin excepciones ni
+      feriados y sin las actividades de un solo día. Se dibujan los días visibles del Horario y solo el rango de
+      horas ocupado.
+    - **Tabla a pantalla casi completa**, con una fila por media hora (las horas enteras, más marcadas) y una fila
+      de cierre con la hora en que termina el horario. En vertical cubre el 90 % del alto.
+    - **Bloques:** ícono y nombre, el aula en una pastilla y la comisión de la materia en la esquina. No llevan
+      horario escrito: lo da la grilla. En horizontal el contenido va a la izquierda; en vertical (columnas
+      angostas), centrado y con el ícono arriba. Pueden ser plenos (color de la materia de fondo, como en los
+      diseños del usuario) o suaves (como en el Horario de la app).
+    - **Formatos:** 16:9 (3840 × 2160) y 16:10 (3840 × 2400) en horizontal; 9:16 (2160 × 3840) y 9:19,5
+      (2160 × 4680) en vertical. Los dos nuevos son las proporciones de los diseños del usuario: una notebook
+      recorta los costados de una imagen 16:9, y un teléfono actual hace lo mismo con una 9:16.
+    - **Fondo:** liso (el del tema), con manchas de los colores de las materias, o un color a elección (selector
+      de color del navegador más su código). Ese color es contenido de quien exporta, no un color de la interfaz:
+      es la única excepción a "solo tokens". El tema (claro u oscuro) se elige aparte del de la app.
+    - Las opciones se recuerdan en el dispositivo (`localStorage`, `tilde-wallpaper`).
 29. **Menú por el borde izquierdo.** Llevar el mouse al borde abre el menú solo si parece intencional
     (`src/lib/domain/edge-intent.ts`): un tramo largo y casi horizontal hacia la izquierda más una pausa corta contra
     el borde (90 ms), o una llegada lenta y una pausa larga (480 ms). No cuenta llegar en diagonal o bordeando, con

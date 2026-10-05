@@ -315,7 +315,7 @@ async function pngSize(path: string): Promise<[number, number]> {
   return [file.readUInt32BE(16), file.readUInt32BE(20)];
 }
 
-test("horario: el día manda en el encabezado y se exporta como fondo 16:9 sin fechas", async ({ page }) => {
+test("horario: el día manda en el encabezado y se exporta como fondo de pantalla", async ({ page }) => {
   await db.from("schedule_blocks").insert([
     { subject_id: subjectId, weekday: 1, start_time: "08:00", end_time: "10:00", room: "Aula 110" },
     { subject_id: subjectId, weekday: 4, start_time: "18:00", end_time: "20:00" },
@@ -340,14 +340,22 @@ test("horario: el día manda en el encabezado y se exporta como fondo 16:9 sin f
   expect(await background(".wd")).not.toBe("rgba(0, 0, 0, 0)");
   expect(await background(".dn")).toBe("rgba(0, 0, 0, 0)");
 
-  // Exportar: horizontal 3840 × 2160.
+  // Exportar: por defecto horizontal 16:9 (3840 × 2160), fondo liso y bloques plenos.
   await page.getByRole("button", { name: "Exportar" }).click();
   const dialog = page.getByRole("dialog", { name: "Exportar el horario" });
   const canvas = dialog.getByTestId("wallpaper-canvas");
+  await expect(dialog.getByRole("radio", { name: "Horizontal 16:9" })).toHaveAttribute("aria-checked", "true");
+  await expect(dialog.getByRole("radio", { name: "Liso" })).toHaveAttribute("aria-checked", "true");
   await expect(dialog.getByText("3840 × 2160 px · PNG")).toBeVisible();
-  await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([3840, 2160]);
+  const size = () => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height]);
+  await expect.poll(size).toEqual([3840, 2160]);
 
-  // La imagen tiene fondo y contenido: muchos colores distintos, no un lienzo vacío.
+  /** Color de un punto de la imagen, en fracciones del ancho y del alto. */
+  const pixel = (fx: number, fy: number) =>
+    canvas.evaluate(
+      (element: HTMLCanvasElement, [x, y]) => [...element.getContext("2d")!.getImageData(Math.round(element.width * x), Math.round(element.height * y), 1, 1).data.slice(0, 3)],
+      [fx, fy],
+    );
   const colors = () =>
     canvas.evaluate((element: HTMLCanvasElement) => {
       const context = element.getContext("2d")!;
@@ -357,30 +365,69 @@ test("horario: el día manda en el encabezado y se exporta como fondo 16:9 sin f
       }
       return seen.size;
     });
-  await expect.poll(colors).toBeGreaterThan(40);
-  const withGlow = await colors();
-  await dialog.getByRole("radio", { name: "Liso" }).click();
-  await expect.poll(colors).toBeLessThan(withGlow);
+
+  // Fondo "Con color": manchas con los colores de las materias (muchos más tonos que el liso).
+  const plain = await colors();
+  expect(plain).toBeGreaterThan(5);
   await dialog.getByRole("radio", { name: "Con color" }).click();
+  await expect.poll(colors).toBeGreaterThan(plain + 40);
+
+  // Fondo a elección: cualquier color, escribiendo su código o con el selector.
+  await dialog.getByRole("radio", { name: "A elección" }).click();
+  const hex = dialog.getByLabel("Color del fondo", { exact: true });
+  await hex.fill("0055aa");
+  await hex.press("Enter");
+  await expect(hex).toHaveValue("#0055AA");
+  await expect.poll(() => pixel(0.005, 0.01)).toEqual([0, 85, 170]);
+  await dialog.getByLabel("Elegir el color del fondo").fill("#ff8800");
+  await expect(hex).toHaveValue("#FF8800");
+  await expect.poll(() => pixel(0.005, 0.01)).toEqual([255, 136, 0]);
+  // Lo que no es un color no se acepta.
+  await hex.fill("naranja");
+  await hex.press("Enter");
+  await expect(hex).toHaveValue("#FF8800");
+
+  // La tabla ocupa casi toda la imagen: a un 4 % del borde lateral ya no es fondo.
+  expect(await pixel(0.04, 0.5)).not.toEqual([255, 136, 0]);
+  expect(await pixel(0.96, 0.5)).not.toEqual([255, 136, 0]);
+
+  // Bloques plenos (el color de la materia de fondo) o suaves, como en la app.
+  const blockColor = () => pixel(0.25, 0.2); // lunes de 08:00 a 10:00: Física II
+  const solid = await blockColor();
+  await dialog.getByRole("radio", { name: "Suaves" }).click();
+  await expect.poll(blockColor).not.toEqual(solid);
+  await dialog.getByRole("radio", { name: "Plenos" }).click();
+  await expect.poll(blockColor).toEqual(solid);
 
   const [landscape] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Descargar imagen" }).click()]);
   expect(landscape.suggestedFilename()).toBe("tilde-horario-16x9.png");
   expect(await pngSize(await landscape.path())).toEqual([3840, 2160]);
   await expect(page.locator(".toast")).toContainText("Imagen descargada");
 
-  // Vertical para el teléfono: 2160 × 3840, en oscuro.
+  // Las opciones se recuerdan. Vertical para el teléfono: cubre casi todo el alto de la pantalla.
+  await page.getByRole("button", { name: "Exportar" }).click();
+  await expect(dialog.getByRole("radio", { name: "A elección" })).toHaveAttribute("aria-checked", "true");
+  await expect(hex).toHaveValue("#FF8800");
+  await dialog.getByRole("radio", { name: "Vertical 9:19,5" }).click();
+  await dialog.getByRole("radio", { name: "Oscuro" }).click();
+  await expect(dialog.getByText("2160 × 4680 px · PNG")).toBeVisible();
+  await expect.poll(size).toEqual([2160, 4680]);
+  await expect.poll(() => pixel(0.5, 0.02)).toEqual([255, 136, 0]);
+  expect(await pixel(0.9, 0.06)).not.toEqual([255, 136, 0]);
+  expect(await pixel(0.9, 0.94)).not.toEqual([255, 136, 0]);
+  // En oscuro la tabla es oscura aunque la app esté en claro (última fila, siempre vacía).
+  await expect.poll(async () => Math.max(...(await pixel(0.88, 0.935)))).toBeLessThan(60);
+  const [phone] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Descargar imagen" }).click()]);
+  expect(phone.suggestedFilename()).toBe("tilde-horario-9x19.5.png");
+  expect(await pngSize(await phone.path())).toEqual([2160, 4680]);
+
+  // Los otros dos formatos.
   await page.getByRole("button", { name: "Exportar" }).click();
   await dialog.getByRole("radio", { name: "Vertical 9:16" }).click();
-  await dialog.getByRole("radio", { name: "Oscuro" }).click();
-  await expect(dialog.getByText("2160 × 3840 px · PNG")).toBeVisible();
-  await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([2160, 3840]);
-  // En oscuro la esquina de la tabla es oscura aunque la app esté en claro.
-  await expect
-    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => Math.max(...element.getContext("2d")!.getImageData(element.width / 2, element.height / 2, 1, 1).data.slice(0, 3))))
-    .toBeLessThan(90);
-  const [portrait] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Descargar imagen" }).click()]);
-  expect(portrait.suggestedFilename()).toBe("tilde-horario-9x16.png");
-  expect(await pngSize(await portrait.path())).toEqual([2160, 3840]);
+  await expect.poll(size).toEqual([2160, 3840]);
+  await dialog.getByRole("radio", { name: "Horizontal 16:10" }).click();
+  await expect(dialog.getByText("3840 × 2400 px · PNG")).toBeVisible();
+  await expect.poll(size).toEqual([3840, 2400]);
 });
 
 test("horario: sin nada que se repita no hay qué exportar", async ({ page }) => {

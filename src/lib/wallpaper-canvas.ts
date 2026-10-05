@@ -1,16 +1,21 @@
 /**
  * Dibuja el horario en un <canvas> para exportarlo como fondo de pantalla. La geometría viene
- * de `domain/wallpaper.ts`; acá solo se pinta: fondo, tabla, días (sin fechas), horas y bloques.
- * Los colores salen de los tokens del diseño, leídos del DOM para el tema elegido.
+ * de `domain/wallpaper.ts`; acá solo se pinta: fondo, tabla, días (sin fechas), una fila por
+ * media hora y los bloques con su ícono, su aula y su comisión.
+ * Los colores salen de los tokens del diseño, leídos del DOM para el tema elegido; el único
+ * color libre es el del fondo personalizado, que elige quien exporta.
  */
+import type { WeekItem } from "@/lib/domain/schedule";
 import { SUBJECT_COLORS, isColorKey, type ColorKey } from "@/lib/domain/subjects";
 import { minutesToTime } from "@/lib/domain/time";
 import type { Rect, WallpaperLayout } from "@/lib/domain/wallpaper";
-import type { WeekItem } from "@/lib/domain/schedule";
 
-export type WallpaperBackground = "glow" | "plain";
+/** Liso (el fondo del tema), con manchas de los colores de las materias, o un color a elección. */
+export type WallpaperBackground = "plain" | "glow" | "custom";
+/** Bloques de color pleno o suaves, como en el Horario de la app. */
+export type WallpaperBlockStyle = "solid" | "soft";
 
-type SubjectColors = { solid: string; vivid: string; soft: string; onSoft: string };
+type SubjectColors = { solid: string; vivid: string; soft: string; onSoft: string; onSolid: string };
 
 export type WallpaperColors = {
   dark: boolean;
@@ -21,6 +26,7 @@ export type WallpaperColors = {
   text: string;
   textMuted: string;
   textSubtle: string;
+  textDisabled: string;
   accent: string;
   subjects: Record<ColorKey, SubjectColors>;
   fontSans: string;
@@ -38,6 +44,7 @@ export function readWallpaperColors(probe: HTMLElement, dark: boolean): Wallpape
         vivid: token(`--subject-${key}-vivid`),
         soft: token(`--subject-${key}-soft`),
         onSoft: token(`--subject-${key}-on-soft`),
+        onSolid: token(`--subject-${key}-on-solid`),
       },
     ]),
   ) as Record<ColorKey, SubjectColors>;
@@ -50,6 +57,7 @@ export function readWallpaperColors(probe: HTMLElement, dark: boolean): Wallpape
     text: token("--color-text"),
     textMuted: token("--color-text-muted"),
     textSubtle: token("--color-text-subtle"),
+    textDisabled: token("--color-text-disabled"),
     accent: token("--color-accent"),
     subjects,
     fontSans: token("--font-sans"),
@@ -59,7 +67,10 @@ export function readWallpaperColors(probe: HTMLElement, dark: boolean): Wallpape
 /** Lo que se escribe en cada bloque. */
 export type WallpaperBlockInfo = {
   title: string;
+  /** Aula: va en una pastilla debajo del nombre. */
   room: string | null;
+  /** Comisión: va en la esquina de arriba a la derecha. */
+  badge: string | null;
   colorKey: string;
   /** El <svg> del ícono ya dibujado en el DOM, o null. */
   icon: SVGElement | null;
@@ -68,16 +79,37 @@ export type WallpaperBlockInfo = {
 export type WallpaperOptions = {
   colors: WallpaperColors;
   background: WallpaperBackground;
+  /** Color del fondo personalizado ("#rrggbb"). */
+  customColor: string;
+  blockStyle: WallpaperBlockStyle;
   /** Nombre corto de cada día, de lunes (índice 0) a domingo. */
   weekdayLabels: string[];
+  /** Rótulo de la columna de horas. */
+  timeLabel: string;
   info: (item: WeekItem) => WallpaperBlockInfo;
+};
+
+type Context = CanvasRenderingContext2D;
+
+const hexChannels = (color: string) => {
+  const hex = /^#([0-9a-f]{6})$/i.exec(color)?.[1];
+  return hex ? [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16)) : null;
 };
 
 /** Agrega transparencia a un color hexadecimal de los tokens. */
 function withAlpha(color: string, alpha: number): string {
-  const hex = /^#([0-9a-f]{6})$/i.exec(color)?.[1];
-  if (!hex) return color;
-  return `#${hex}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`;
+  return hexChannels(color) ? `${color}${Math.round(alpha * 255).toString(16).padStart(2, "0")}` : color;
+}
+
+/** ¿Es un color oscuro? (para elegir cuánto oscurecer la pastilla que va encima) */
+function isDarkColor(color: string): boolean {
+  const channels = hexChannels(color);
+  return channels ? (0.299 * channels[0] + 0.587 * channels[1] + 0.114 * channels[2]) / 255 < 0.5 : false;
+}
+
+/** Separación entre letras, donde el navegador la soporta en canvas. */
+function setLetterSpacing(ctx: Context, px: number) {
+  if ("letterSpacing" in ctx) (ctx as Context & { letterSpacing: string }).letterSpacing = `${px.toFixed(2)}px`;
 }
 
 /** Las formas de un ícono de Lucide (viewBox de 24) como trazos de canvas. */
@@ -121,7 +153,7 @@ function iconPaths(svg: SVGElement): Path2D[] {
   return paths;
 }
 
-function drawIcon(ctx: CanvasRenderingContext2D, svg: SVGElement, x: number, y: number, size: number, color: string) {
+function drawIcon(ctx: Context, svg: SVGElement, x: number, y: number, size: number, color: string) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(size / 24, size / 24);
@@ -135,22 +167,20 @@ function drawIcon(ctx: CanvasRenderingContext2D, svg: SVGElement, x: number, y: 
 }
 
 /**
- * Parte un texto en renglones que entren en `maxWidth` (el primero puede tener una sangría).
- * Devuelve null si alguna palabra no entra entera.
+ * Parte un texto en renglones sin cortar palabras; `widthOf` da el ancho disponible de cada
+ * renglón. Devuelve null si alguna palabra no entra entera.
  */
-function wrapWords(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, firstIndent: number): string[] | null {
+function wrapWords(ctx: Context, text: string, widthOf: (line: number) => number): string[] | null {
   const lines: string[] = [];
   let line = "";
   for (const word of text.split(/\s+/).filter(Boolean)) {
-    const available = maxWidth - (lines.length === 0 ? firstIndent : 0);
     const candidate = line ? `${line} ${word}` : word;
-    if (ctx.measureText(candidate).width <= available) {
+    if (ctx.measureText(candidate).width <= widthOf(lines.length)) {
       line = candidate;
       continue;
     }
-    if (!line) return null;
-    lines.push(line);
-    if (ctx.measureText(word).width > maxWidth) return null;
+    if (line) lines.push(line);
+    if (ctx.measureText(word).width > widthOf(lines.length)) return null;
     line = word;
   }
   if (line) lines.push(line);
@@ -158,43 +188,45 @@ function wrapWords(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
 }
 
 /** Recorta un renglón con puntos suspensivos hasta que entre. */
-function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+function ellipsize(ctx: Context, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) return text;
   let cut = text;
   while (cut.length > 1 && ctx.measureText(`${cut.trimEnd()}…`).width > maxWidth) cut = cut.slice(0, -1);
   return `${cut.trimEnd()}…`;
 }
 
-/** Igual que wrapWords pero cortando las palabras que no entran (último recurso). */
-function wrapAnywhere(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, firstIndent: number, maxLines: number): string[] {
+/** Último recurso: parte donde haga falta y termina en puntos suspensivos. */
+function wrapAnywhere(ctx: Context, text: string, widthOf: (line: number) => number, maxLines: number): string[] {
   const lines: string[] = [];
-  let line = "";
-  for (const char of text) {
-    const available = maxWidth - (lines.length === 0 ? firstIndent : 0);
-    if (ctx.measureText(line + char).width <= available || !line) {
-      line += char;
-      continue;
+  let rest = text.trim();
+  while (rest && lines.length < maxLines) {
+    const width = widthOf(lines.length);
+    if (lines.length === maxLines - 1 || ctx.measureText(rest).width <= width) {
+      lines.push(ellipsize(ctx, rest, width));
+      break;
     }
-    lines.push(line.trim());
-    line = char.trim();
-    if (lines.length === maxLines) break;
+    let cut = rest.length;
+    while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > width) cut -= 1;
+    // Mejor cortar en un espacio, si hay uno razonablemente cerca.
+    const space = rest.lastIndexOf(" ", cut);
+    if (space > cut * 0.5) cut = space;
+    lines.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
   }
-  if (lines.length < maxLines && line) lines.push(line.trim());
-  else if (line && lines.length === maxLines) lines[maxLines - 1] = ellipsize(ctx, `${lines[maxLines - 1]}…`, maxWidth);
   return lines;
 }
 
-function roundedRect(ctx: CanvasRenderingContext2D, rect: Rect, radius: number) {
+function roundedRect(ctx: Context, rect: Rect, radius: number) {
   ctx.beginPath();
-  ctx.roundRect(rect.x, rect.y, rect.width, rect.height, Math.min(radius, rect.width / 2, rect.height / 2));
+  ctx.roundRect(rect.x, rect.y, rect.width, rect.height, Math.max(0, Math.min(radius, rect.width / 2, rect.height / 2)));
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D, layout: WallpaperLayout, options: WallpaperOptions, palette: string[]) {
+function drawBackground(ctx: Context, layout: WallpaperLayout, options: WallpaperOptions, palette: string[]) {
   const { width, height } = layout;
   const { colors } = options;
-  ctx.fillStyle = colors.bg;
+  ctx.fillStyle = options.background === "custom" ? options.customColor : colors.bg;
   ctx.fillRect(0, 0, width, height);
-  if (options.background === "plain") return;
+  if (options.background !== "glow") return;
 
   // Manchas suaves con los colores de las materias del horario (o el acento si no hay ninguna).
   const tints = palette.length > 0 ? palette : [colors.accent];
@@ -217,6 +249,171 @@ function drawBackground(ctx: CanvasRenderingContext2D, layout: WallpaperLayout, 
   });
 }
 
+type BlockPaint = { rect: Rect; item: WeekItem; info: WallpaperBlockInfo; subject: SubjectColors };
+
+/**
+ * Un bloque: ícono y nombre, el aula en una pastilla y la comisión en la esquina. En horizontal
+ * el contenido va a la izquierda, con el ícono al lado del nombre; en vertical (columnas
+ * angostas) va centrado, con el ícono arriba. No lleva horario: lo da la grilla de media hora.
+ */
+function drawBlock(ctx: Context, layout: WallpaperLayout, options: WallpaperOptions, { rect, item, info, subject }: BlockPaint) {
+  const { colors } = options;
+  const u = layout.unit;
+  const portrait = layout.portrait;
+  const solid = options.blockStyle === "solid";
+  const isEvent = item.kind === "event";
+  const radius = 9 * u;
+  const font = (weight: number, size: number) => `${weight} ${Math.round(size)}px ${colors.fontSans}`;
+
+  // ----- fondo -----
+  roundedRect(ctx, rect, radius);
+  if (solid) {
+    ctx.fillStyle = subject.solid;
+    ctx.fill();
+  } else {
+    ctx.fillStyle = isEvent ? colors.surface : subject.soft;
+    ctx.fill();
+    ctx.save();
+    const stroke = (isEvent ? 2 : 1.5) * u;
+    ctx.lineWidth = stroke;
+    ctx.strokeStyle = isEvent ? subject.solid : withAlpha(subject.solid, 0.5);
+    if (isEvent) ctx.setLineDash([7 * u, 5 * u]);
+    roundedRect(ctx, { x: rect.x + stroke / 2, y: rect.y + stroke / 2, width: rect.width - stroke, height: rect.height - stroke }, radius);
+    ctx.stroke();
+    ctx.restore();
+  }
+  const ink = solid ? subject.onSolid : isEvent ? colors.text : subject.onSoft;
+  const iconInk = !solid && isEvent ? subject.solid : ink;
+  const chipFill = solid ? `rgba(0, 0, 0, ${isDarkColor(ink) ? 0.12 : 0.2})` : withAlpha(subject.solid, colors.dark ? 0.26 : 0.16);
+
+  ctx.save();
+  roundedRect(ctx, rect, radius);
+  ctx.clip();
+  ctx.textBaseline = "middle";
+
+  const padX = Math.min(12 * u, rect.width * 0.09);
+  const padY = Math.min(9 * u, rect.height * 0.12);
+  const innerWidth = rect.width - padX * 2;
+  const innerHeight = rect.height - padY * 2;
+  const maxTitle = Math.max(13 * u, Math.min(rect.width * (portrait ? 0.135 : 0.062), (portrait ? 21 : 23) * u));
+  const minTitle = Math.max(11 * u, maxTitle * 0.62);
+
+  // ----- comisión: esquina de arriba a la derecha -----
+  let badge: (Rect & { text: string; size: number }) | null = null;
+  if (info.badge) {
+    const size = Math.max(10 * u, Math.min(maxTitle * 0.64, 14 * u));
+    ctx.font = font(700, size);
+    const height = size * 1.75;
+    const text = ellipsize(ctx, info.badge, rect.width * 0.5);
+    const width = Math.max(height, ctx.measureText(text).width + size * 0.9);
+    const inset = Math.min(7 * u, rect.height * 0.1);
+    badge = { x: rect.x + rect.width - inset - width, y: rect.y + inset, width, height, text, size };
+    // En un bloque muy bajo o muy angosto la comisión taparía el nombre: no se dibuja.
+    if (height + inset * 2 > rect.height * 0.62 || width > rect.width * 0.55) badge = null;
+  }
+
+  // ----- nombre: el tamaño más grande con el que entra sin cortar palabras -----
+  const hasIcon = info.icon !== null;
+  const measure = (titleSize: number, reserve: number, withIcon: boolean) => {
+    const lineHeight = titleSize * 1.22;
+    const iconSize = titleSize * (portrait ? 1.45 : 1.12);
+    const indent = withIcon && !portrait ? iconSize + titleSize * 0.42 : 0;
+    const stack = withIcon && portrait ? iconSize + titleSize * 0.3 : 0;
+    // En horizontal el primer renglón comparte el ancho con el ícono y, si hace falta, con la comisión.
+    const widthOf = (line: number) => innerWidth - (line === 0 ? indent + reserve : 0);
+    return { lineHeight, iconSize, indent, stack, widthOf };
+  };
+  const fit = (reserve: number) => {
+    for (let titleSize = maxTitle; titleSize >= minTitle; titleSize -= u) {
+      ctx.font = font(600, titleSize);
+      const metrics = measure(titleSize, reserve, hasIcon);
+      const lines = wrapWords(ctx, info.title, metrics.widthOf);
+      if (lines && metrics.stack + lines.length * metrics.lineHeight <= innerHeight) return { titleSize, lines, withIcon: hasIcon, ...metrics };
+    }
+    // No entra ni al tamaño mínimo: se corta. Si el bloque es muy bajo, el ícono de arriba se va primero.
+    ctx.font = font(600, minTitle);
+    let withIcon = hasIcon;
+    let metrics = measure(minTitle, reserve, withIcon);
+    if (withIcon && portrait && metrics.stack + metrics.lineHeight > innerHeight) {
+      withIcon = false;
+      metrics = measure(minTitle, reserve, false);
+    }
+    const maxLines = Math.max(1, Math.floor((innerHeight - metrics.stack) / metrics.lineHeight));
+    const whole = wrapWords(ctx, info.title, metrics.widthOf);
+    const lines = whole && whole.length <= maxLines ? whole : wrapAnywhere(ctx, info.title, metrics.widthOf, maxLines);
+    return { titleSize: minTitle, lines, withIcon, ...metrics };
+  };
+
+  let layoutText = fit(0);
+  const roomSize = (titleSize: number) => Math.max(10.5 * u, titleSize * 0.72);
+  const contentHeight = (text: typeof layoutText, withRoom: boolean) =>
+    text.stack + text.lines.length * text.lineHeight + (withRoom ? text.titleSize * 0.34 + roomSize(text.titleSize) * 1.8 : 0);
+  let showRoom = Boolean(info.room) && contentHeight(layoutText, true) <= innerHeight;
+  let top = rect.y + (rect.height - contentHeight(layoutText, showRoom)) / 2;
+
+  if (badge && top < badge.y + badge.height + 2 * u) {
+    if (portrait) {
+      // Contenido centrado: si choca con la comisión, baja; si no hay lugar, la comisión no va.
+      const lowered = badge.y + badge.height + 3 * u;
+      if (lowered + contentHeight(layoutText, showRoom) <= rect.y + rect.height - padY) top = lowered;
+      else if (lowered + contentHeight(layoutText, false) <= rect.y + rect.height - padY) {
+        showRoom = false;
+        top = lowered;
+      } else badge = null;
+    } else {
+      // Contenido a la izquierda: el primer renglón le deja lugar.
+      layoutText = fit(badge.width + 8 * u);
+      showRoom = Boolean(info.room) && contentHeight(layoutText, true) <= innerHeight;
+      top = rect.y + (rect.height - contentHeight(layoutText, showRoom)) / 2;
+    }
+  }
+
+  const { titleSize, lines, lineHeight, iconSize, indent, stack, withIcon } = layoutText;
+  const centerX = rect.x + rect.width / 2;
+  let y = top;
+
+  if (withIcon && info.icon) {
+    if (portrait) drawIcon(ctx, info.icon, centerX - iconSize / 2, y, iconSize, iconInk);
+    else drawIcon(ctx, info.icon, rect.x + padX, y + (lineHeight - iconSize) / 2, iconSize, iconInk);
+  }
+  y += stack;
+
+  ctx.font = font(600, titleSize);
+  ctx.fillStyle = ink;
+  ctx.textAlign = portrait ? "center" : "left";
+  lines.forEach((line, index) => {
+    ctx.fillText(line, portrait ? centerX : rect.x + padX + (index === 0 ? indent : 0), y + lineHeight / 2 + titleSize * 0.04);
+    y += lineHeight;
+  });
+
+  if (showRoom && info.room) {
+    const size = roomSize(titleSize);
+    ctx.font = font(500, size);
+    const height = size * 1.8;
+    const text = ellipsize(ctx, info.room, innerWidth - size * 1.2);
+    const width = ctx.measureText(text).width + size * 1.2;
+    const x = portrait ? centerX - width / 2 : rect.x + padX;
+    y += titleSize * 0.34;
+    roundedRect(ctx, { x, y, width, height }, 5 * u);
+    ctx.fillStyle = chipFill;
+    ctx.fill();
+    ctx.fillStyle = ink;
+    ctx.textAlign = "left";
+    ctx.fillText(text, x + size * 0.6, y + height / 2 + size * 0.05);
+  }
+
+  if (badge) {
+    roundedRect(ctx, badge, 5 * u);
+    ctx.fillStyle = chipFill;
+    ctx.fill();
+    ctx.font = font(700, badge.size);
+    ctx.fillStyle = ink;
+    ctx.textAlign = "center";
+    ctx.fillText(badge.text, badge.x + badge.width / 2, badge.y + badge.height / 2 + badge.size * 0.05);
+  }
+  ctx.restore();
+}
+
 /** Pinta el fondo de pantalla completo en el canvas (que queda del tamaño del layout). */
 export function drawWallpaper(canvas: HTMLCanvasElement, layout: WallpaperLayout, options: WallpaperOptions) {
   const ctx = canvas.getContext("2d");
@@ -225,165 +422,107 @@ export function drawWallpaper(canvas: HTMLCanvasElement, layout: WallpaperLayout
   canvas.height = layout.height;
   const { colors } = options;
   const u = layout.unit;
-  const portrait = layout.format === "portrait";
+  const portrait = layout.portrait;
   const { table } = layout;
+  const bodyTop = table.y + layout.headerHeight;
   const bodyLeft = table.x + layout.timeColumnWidth;
   const columnWidth = layout.columns[0]?.width ?? 0;
+  const rowHeight = layout.rows[0]?.height ?? 0;
   const font = (weight: number, size: number) => `${weight} ${Math.round(size)}px ${colors.fontSans}`;
 
-  const infos = new Map(layout.blocks.map(({ item }) => [item.key, options.info(item)]));
   const colorOf = (key: string): SubjectColors => colors.subjects[isColorKey(key) ? key : "grafito"];
-  const palette = [...new Set([...infos.values()].map((info) => colorOf(info.colorKey).vivid))];
+  const paints: BlockPaint[] = layout.blocks.map(({ item, rect }) => {
+    const info = options.info(item);
+    return { item, rect, info, subject: colorOf(info.colorKey) };
+  });
+  drawBackground(ctx, layout, options, [...new Set(paints.map((paint) => paint.subject.vivid))]);
 
-  drawBackground(ctx, layout, options, palette);
-
-  // ----- tarjeta de la tabla -----
-  const radius = 26 * u;
+  // ----- la tabla -----
+  const radius = 14 * u;
   ctx.save();
-  ctx.shadowColor = colors.dark ? "rgba(0, 0, 0, 0.55)" : "rgba(30, 28, 25, 0.16)";
-  ctx.shadowBlur = 70 * u;
-  ctx.shadowOffsetY = 26 * u;
+  ctx.shadowColor = colors.dark ? "rgba(0, 0, 0, 0.45)" : "rgba(30, 28, 25, 0.12)";
+  ctx.shadowBlur = 48 * u;
+  ctx.shadowOffsetY = 16 * u;
   roundedRect(ctx, table, radius);
   ctx.fillStyle = colors.surface;
   ctx.fill();
   ctx.restore();
-  roundedRect(ctx, table, radius);
-  ctx.lineWidth = Math.max(1, u);
-  ctx.strokeStyle = colors.border;
-  ctx.stroke();
 
-  // ----- grilla: líneas de hora y de día -----
+  // ----- grilla: una línea por media hora (las de hora entera, más marcadas) y una por día -----
   ctx.save();
   roundedRect(ctx, table, radius);
   ctx.clip();
-  ctx.strokeStyle = colors.border;
-  ctx.lineWidth = Math.max(1, u);
-  ctx.beginPath();
-  for (const hour of layout.hours.slice(0, -1)) {
-    ctx.moveTo(hour.minutes === layout.startMinutes ? table.x : bodyLeft, hour.y);
-    ctx.lineTo(table.x + table.width, hour.y);
-  }
-  for (const column of layout.columns) {
-    ctx.moveTo(column.x, table.y);
-    ctx.lineTo(column.x, table.y + table.height);
-  }
-  ctx.stroke();
+  const line = Math.max(1, u);
+  ctx.lineWidth = line;
+  const stroke = (color: string, draw: () => void) => {
+    ctx.beginPath();
+    draw();
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  };
+  stroke(withAlpha(colors.border, 0.55), () => {
+    for (const row of layout.rows) {
+      if (row.isHour) continue;
+      ctx.moveTo(table.x, row.y);
+      ctx.lineTo(table.x + table.width, row.y);
+    }
+  });
+  stroke(colors.border, () => {
+    for (const row of layout.rows) {
+      if (!row.isHour || row.y === bodyTop) continue;
+      ctx.moveTo(table.x, row.y);
+      ctx.lineTo(table.x + table.width, row.y);
+    }
+    for (const column of layout.columns) {
+      ctx.moveTo(column.x, table.y);
+      ctx.lineTo(column.x, table.y + table.height);
+    }
+  });
+  stroke(colors.borderStrong, () => {
+    ctx.moveTo(table.x, bodyTop);
+    ctx.lineTo(table.x + table.width, bodyTop);
+  });
   ctx.restore();
+  roundedRect(ctx, table, radius);
+  ctx.lineWidth = line;
+  ctx.strokeStyle = colors.borderStrong;
+  ctx.stroke();
 
-  // ----- días: solo el nombre, sin fecha -----
-  const dayLabel = Math.min(columnWidth * (portrait ? 0.2 : 0.11), (portrait ? 34 : 30) * u);
-  ctx.font = font(600, dayLabel);
-  ctx.fillStyle = colors.text;
-  ctx.textAlign = "center";
+  // ----- encabezado: "Hora" y los días, sin fecha -----
   ctx.textBaseline = "middle";
-  for (const column of layout.columns) {
-    const label = options.weekdayLabels[column.weekday - 1] ?? "";
-    ctx.fillText(label.charAt(0).toUpperCase() + label.slice(1), column.x + column.width / 2, table.y + layout.headerHeight / 2 + u);
-  }
-
-  // ----- horas -----
-  const hourHeight = layout.hours.length > 1 ? layout.hours[1].y - layout.hours[0].y : 0;
-  const hourLabel = Math.min((portrait ? 21 : 17) * u, hourHeight * 0.34);
-  ctx.font = font(500, hourLabel);
+  ctx.textAlign = "center";
+  const headerY = table.y + layout.headerHeight / 2 + u;
+  const timeHeader = (portrait ? 13.5 : 12.5) * u;
+  ctx.font = font(600, timeHeader);
+  setLetterSpacing(ctx, timeHeader * 0.1);
   ctx.fillStyle = colors.textSubtle;
+  ctx.fillText(options.timeLabel.toUpperCase(), table.x + layout.timeColumnWidth / 2, headerY);
+  const dayLabel = Math.min(columnWidth * 0.2, (portrait ? 19 : 18) * u);
+  ctx.font = font(600, dayLabel);
+  setLetterSpacing(ctx, dayLabel * 0.07);
+  ctx.fillStyle = colors.textMuted;
+  for (const column of layout.columns) {
+    ctx.fillText((options.weekdayLabels[column.weekday - 1] ?? "").toUpperCase(), column.x + column.width / 2, headerY);
+  }
+  setLetterSpacing(ctx, 0);
+
+  // ----- horas: cada media hora, las enteras más fuertes -----
+  const timeSize = Math.min((portrait ? 19 : 15.5) * u, rowHeight * 0.56);
   ctx.textAlign = "right";
-  ctx.textBaseline = "top";
-  for (const hour of layout.hours.slice(0, -1)) {
-    ctx.fillText(minutesToTime(hour.minutes), bodyLeft - 14 * u, hour.y + 8 * u);
+  for (const row of layout.rows) {
+    ctx.font = font(row.isHour ? 600 : 400, timeSize);
+    ctx.fillStyle = row.isHour ? colors.textMuted : colors.textDisabled;
+    ctx.fillText(minutesToTime(row.minutes), bodyLeft - (portrait ? 16 : 13) * u, row.y + row.height / 2 + u);
   }
 
   // ----- bloques -----
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  for (const { item, rect } of layout.blocks) {
-    const info = infos.get(item.key)!;
-    const subject = colorOf(info.colorKey);
-    const isEvent = item.kind === "event";
-    const blockRadius = 10 * u;
-
-    roundedRect(ctx, rect, blockRadius);
-    ctx.fillStyle = isEvent ? colors.surface : subject.soft;
-    ctx.fill();
-    ctx.save();
-    const stroke = (isEvent ? 2 : 1.5) * u;
-    ctx.lineWidth = stroke;
-    ctx.strokeStyle = isEvent ? subject.solid : withAlpha(subject.solid, 0.5);
-    if (isEvent) ctx.setLineDash([7 * u, 5 * u]);
-    roundedRect(ctx, { x: rect.x + stroke / 2, y: rect.y + stroke / 2, width: rect.width - stroke, height: rect.height - stroke }, blockRadius);
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    roundedRect(ctx, rect, blockRadius);
-    ctx.clip();
-
-    const titleColor = isEvent ? colors.text : subject.onSoft;
-    const metaColor = isEvent ? colors.textMuted : withAlpha(subject.onSoft, 0.86);
-    const padX = Math.min(12 * u, rect.width * 0.08);
-    const padY = Math.min(10 * u, rect.height * 0.14);
-    const innerWidth = rect.width - padX * 2;
-    const innerHeight = rect.height - padY * 2;
-
-    // Tamaño del título: el más grande con el que entra sin partir palabras.
-    const maxTitle = Math.min(rect.width * (portrait ? 0.15 : 0.085), (portrait ? 30 : 24) * u);
-    const minTitle = Math.max((portrait ? 17 : 13) * u, maxTitle * 0.6);
-    const time = `${minutesToTime(item.start)}–${minutesToTime(item.end)}`;
-    let titleSize = maxTitle;
-    let lines: string[] | null = null;
-    let showTime = true;
-    for (; titleSize >= minTitle; titleSize -= u) {
-      ctx.font = font(600, titleSize);
-      const iconIndent = info.icon ? titleSize * 1.3 : 0;
-      const wrapped = wrapWords(ctx, info.title, innerWidth, iconIndent);
-      const metaHeight = titleSize * 0.8 * 1.35;
-      if (wrapped && wrapped.length * titleSize * 1.22 + metaHeight <= innerHeight) {
-        lines = wrapped;
-        break;
-      }
-    }
-    if (!lines) {
-      // No entra ni al mínimo: se corta donde haga falta y, si el bloque es muy bajo, se saca la hora.
-      titleSize = minTitle;
-      ctx.font = font(600, titleSize);
-      const iconIndent = info.icon ? titleSize * 1.3 : 0;
-      const lineHeight = titleSize * 1.22;
-      const metaHeight = titleSize * 0.8 * 1.35;
-      showTime = innerHeight >= lineHeight + metaHeight;
-      const maxLines = Math.max(1, Math.floor((innerHeight - (showTime ? metaHeight : 0)) / lineHeight));
-      const wrapped = wrapWords(ctx, info.title, innerWidth, iconIndent);
-      lines = wrapped && wrapped.length <= maxLines ? wrapped : wrapAnywhere(ctx, info.title, innerWidth, iconIndent, maxLines);
-    }
-
-    const lineHeight = titleSize * 1.22;
-    const metaSize = titleSize * 0.8;
-    const iconSize = titleSize * 1.05;
-    const iconIndent = info.icon ? titleSize * 1.3 : 0;
-    let y = rect.y + padY;
-    if (info.icon) drawIcon(ctx, info.icon, rect.x + padX, y + (lineHeight - iconSize) / 2 - titleSize * 0.08, iconSize, isEvent ? subject.solid : titleColor);
-    ctx.font = font(600, titleSize);
-    ctx.fillStyle = titleColor;
-    lines.forEach((line, index) => {
-      ctx.fillText(line, rect.x + padX + (index === 0 ? iconIndent : 0), y);
-      y += lineHeight;
-    });
-    if (showTime) {
-      ctx.font = font(500, metaSize);
-      ctx.fillStyle = metaColor;
-      y += metaSize * 0.1;
-      ctx.fillText(ellipsize(ctx, time, innerWidth), rect.x + padX, y);
-      y += metaSize * 1.35;
-      if (info.room && y + metaSize * 1.2 <= rect.y + rect.height - padY) {
-        ctx.fillText(ellipsize(ctx, info.room, innerWidth), rect.x + padX, y);
-      }
-    }
-    ctx.restore();
-  }
+  for (const paint of paints) drawBlock(ctx, layout, options, paint);
 }
 
 /** Espera a que las tipografías del diseño estén listas para el canvas. */
 export async function loadWallpaperFonts(colors: WallpaperColors) {
   if (!document.fonts?.load) return;
-  await Promise.all([500, 600].map((weight) => document.fonts.load(`${weight} 24px ${colors.fontSans}`))).catch(() => undefined);
+  await Promise.all([400, 500, 600, 700].map((weight) => document.fonts.load(`${weight} 24px ${colors.fontSans}`))).catch(() => undefined);
 }
 
 /** Descarga el canvas como PNG. */

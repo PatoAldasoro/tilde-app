@@ -59,6 +59,7 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
    Semana desde el lunes (1 = lunes … 7 = domingo), formato 24 h, fechas visibles como DD/MM.
 6. **Colores:** solo tokens (`var(--color-*)`, utilidades de Tailwind generadas de ellos). El color de una materia
    es una clave de la paleta (`color_key`), nunca un hex: se aplica con la clase `subj-<clave>` y las variables `--s-*`.
+   Única excepción: el color de fondo que el usuario elige al exportar el horario (es contenido suyo, no interfaz).
 7. **Pantallas:** desktop y tablets en modo escritorio (1024–1440 px, con touch). Sin layouts mobile. Targets ≥ 40 px,
    nada que dependa solo de hover, foco visible, todo operable con teclado, `prefers-reduced-motion`.
 8. **Secretos:** nunca en el repo. `.env.local` está ignorado; `.env.example` documenta las variables.

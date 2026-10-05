@@ -1,27 +1,44 @@
 /**
- * Geometría del horario exportado como fondo de pantalla: una tabla con la semana tipo,
- * centrada en una imagen 16:9 (horizontal) o 9:16 (vertical). Sin fechas: solo los días.
+ * Geometría del horario exportado como fondo de pantalla: la semana tipo en una tabla que ocupa
+ * casi toda la imagen, con una fila por media hora. Sin fechas: solo los días.
  * El dibujo en sí está en `src/lib/wallpaper-canvas.ts`.
  */
 import type { WeekItem } from "./schedule";
 
-export type WallpaperFormat = "landscape" | "portrait";
-
-/** Tamaño de la imagen en píxeles (4K). */
-export const WALLPAPER_SIZE: Record<WallpaperFormat, { width: number; height: number }> = {
-  landscape: { width: 3840, height: 2160 },
-  portrait: { width: 2160, height: 3840 },
-};
-
 /**
- * Medidas en unidades de diseño: la imagen mide 1920 × 1080 (horizontal) o 1080 × 1920
- * (vertical) unidades y cada unidad son `unit` píxeles.
+ * Proporciones disponibles. Las dos de 16:9 son las clásicas; 16:10 es la de la mayoría de las
+ * notebooks y 9:19,5 la de los teléfonos actuales (una imagen 9:16 les queda corta de alto y el
+ * teléfono la agranda recortando los costados).
  */
-const SPEC = {
-  landscape: { width: 1920, height: 1080, maxTableWidth: 1680, maxTableHeight: 880, timeColumn: 92, header: 68, maxColumn: 300, maxHour: 104 },
-  portrait: { width: 1080, height: 1920, maxTableWidth: 1000, maxTableHeight: 1340, timeColumn: 84, header: 80, maxColumn: 230, maxHour: 150 },
+export const WALLPAPER_FORMATS = {
+  "16x9": { width: 3840, height: 2160 },
+  "16x10": { width: 3840, height: 2400 },
+  "9x16": { width: 2160, height: 3840 },
+  "9x19.5": { width: 2160, height: 4680 },
 } as const;
 
+export type WallpaperFormat = keyof typeof WALLPAPER_FORMATS;
+
+export const WALLPAPER_FORMAT_KEYS = Object.keys(WALLPAPER_FORMATS) as WallpaperFormat[];
+
+export function isWallpaperFormat(value: unknown): value is WallpaperFormat {
+  return typeof value === "string" && value in WALLPAPER_FORMATS;
+}
+
+export const isPortrait = (format: WallpaperFormat): boolean => WALLPAPER_FORMATS[format].height > WALLPAPER_FORMATS[format].width;
+
+/**
+ * Medidas en unidades de diseño: el ancho de la imagen son 1920 unidades (horizontal) o 1080
+ * (vertical). La tabla ocupa todo menos un margen: fino a los costados en horizontal y, en
+ * vertical, casi todo el alto de la pantalla.
+ */
+const SPEC = {
+  landscape: { units: 1920, marginX: 0.03, marginY: 0.07, timeColumn: 96, header: 58 },
+  portrait: { units: 1080, marginX: 0.065, marginY: 0.05, timeColumn: 112, header: 62 },
+} as const;
+
+/** Cada fila de la grilla es media hora. */
+export const WALLPAPER_STEP = 30;
 /** Sin nada cargado se dibuja una grilla de 08:00 a 18:00. */
 const EMPTY_RANGE = { start: 8 * 60, end: 18 * 60 };
 /** Rango mínimo, para que un horario de pocas horas no quede con filas gigantes. */
@@ -31,6 +48,7 @@ export type Rect = { x: number; y: number; width: number; height: number };
 
 export type WallpaperLayout = {
   format: WallpaperFormat;
+  portrait: boolean;
   /** Tamaño de la imagen, en píxeles. */
   width: number;
   height: number;
@@ -41,8 +59,11 @@ export type WallpaperLayout = {
   headerHeight: number;
   timeColumnWidth: number;
   columns: { weekday: number; x: number; width: number }[];
-  /** Líneas de hora, de la primera a la última inclusive. */
-  hours: { minutes: number; y: number }[];
+  /**
+   * Filas de media hora, de arriba hacia abajo. La hora de cada fila se escribe adentro de ella;
+   * la última es la de cierre: muestra la hora en que termina el horario.
+   */
+  rows: { minutes: number; y: number; height: number; isHour: boolean }[];
   startMinutes: number;
   endMinutes: number;
   blocks: { item: WeekItem; rect: Rect }[];
@@ -65,52 +86,67 @@ export function wallpaperRange(items: readonly Pick<WeekItem, "start" | "end">[]
  * Calcula dónde va cada cosa. Solo se dibujan los días de `weekdays` (los visibles en el Horario).
  */
 export function wallpaperLayout(items: readonly WeekItem[], weekdays: readonly number[], format: WallpaperFormat): WallpaperLayout {
-  const spec = SPEC[format];
-  const { width, height } = WALLPAPER_SIZE[format];
-  const unit = width / spec.width;
+  const { width, height } = WALLPAPER_FORMATS[format];
+  const portrait = height > width;
+  const spec = portrait ? SPEC.portrait : SPEC.landscape;
+  const unit = width / spec.units;
+  const unitsHigh = height / unit;
   const days = [...new Set(weekdays)].sort((a, b) => a - b);
   const shown = items.filter((item) => days.includes(item.weekday));
   const { start, end } = wallpaperRange(shown);
-  const hourCount = (end - start) / 60;
+  // Una fila por media hora, más la de cierre.
+  const rowCount = (end - start) / WALLPAPER_STEP + 1;
 
-  const columnWidth = Math.min((spec.maxTableWidth - spec.timeColumn) / Math.max(days.length, 1), spec.maxColumn);
-  const hourHeight = Math.min((spec.maxTableHeight - spec.header) / hourCount, spec.maxHour);
-  const tableWidth = spec.timeColumn + columnWidth * days.length;
-  const tableHeight = spec.header + hourHeight * hourCount;
-  const left = (spec.width - tableWidth) / 2;
-  const top = (spec.height - tableHeight) / 2;
-  const px = (value: number) => Math.round(value * unit);
-
+  const left = spec.units * spec.marginX;
+  const top = unitsHigh * spec.marginY;
+  const tableWidth = spec.units - left * 2;
+  const tableHeight = unitsHigh - top * 2;
+  const columnWidth = (tableWidth - spec.timeColumn) / Math.max(days.length, 1);
+  const rowHeight = (tableHeight - spec.header) / rowCount;
   const bodyTop = top + spec.header;
-  const y = (minutes: number) => bodyTop + ((minutes - start) / 60) * hourHeight;
-  const columns = days.map((weekday, index) => ({ weekday, x: px(left + spec.timeColumn + columnWidth * index), width: px(columnWidth) }));
-  const gutter = 5;
+  const px = (value: number) => Math.round(value * unit);
+  const y = (minutes: number) => bodyTop + ((minutes - start) / WALLPAPER_STEP) * rowHeight;
+  /** Separación entre un bloque y las líneas de la grilla. */
+  const gap = 2;
 
   return {
     format,
+    portrait,
     width,
     height,
     unit,
     table: { x: px(left), y: px(top), width: px(tableWidth), height: px(tableHeight) },
     headerHeight: px(spec.header),
     timeColumnWidth: px(spec.timeColumn),
-    columns,
-    hours: Array.from({ length: hourCount + 1 }, (_, index) => ({ minutes: start + index * 60, y: px(y(start + index * 60)) })),
+    columns: days.map((weekday, index) => ({ weekday, x: px(left + spec.timeColumn + columnWidth * index), width: px(columnWidth) })),
+    rows: Array.from({ length: rowCount }, (_, index) => {
+      const minutes = start + index * WALLPAPER_STEP;
+      return { minutes, y: px(y(minutes)), height: px(rowHeight), isHour: minutes % 60 === 0 };
+    }),
     startMinutes: start,
     endMinutes: end,
     blocks: shown.map((item) => {
       const columnLeft = left + spec.timeColumn + columnWidth * days.indexOf(item.weekday);
-      const inner = columnWidth - gutter * 2;
-      const slot = inner / item.cols;
+      const slot = (columnWidth - gap * 2) / item.cols;
       return {
         item,
         rect: {
-          x: px(columnLeft + gutter + slot * item.col),
-          y: px(y(item.start) + 2),
-          width: px(slot - (item.cols > 1 ? 3 : 0)),
-          height: px(Math.max(((item.end - item.start) / 60) * hourHeight - 4, 12)),
+          x: px(columnLeft + gap + slot * item.col),
+          y: px(y(item.start) + gap),
+          width: px(slot - (item.cols > 1 ? gap : 0)),
+          height: px(Math.max(((item.end - item.start) / WALLPAPER_STEP) * rowHeight - gap * 2, rowHeight * 0.5)),
         },
       };
     }),
   };
+}
+
+// ---------- color de fondo personalizado ----------
+
+/** "#1a2B3c" o "1A2B3C" (también la forma corta "#abc") → "#1a2b3c"; null si no es un color. */
+export function normalizeHexColor(value: string): string | null {
+  const text = value.trim().replace(/^#/, "").toLowerCase();
+  if (/^[0-9a-f]{6}$/.test(text)) return `#${text}`;
+  if (/^[0-9a-f]{3}$/.test(text)) return `#${[...text].map((char) => char + char).join("")}`;
+  return null;
 }
