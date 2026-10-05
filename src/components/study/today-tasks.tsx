@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useToday } from "@/components/providers";
 import { SubjectChip } from "@/components/subject-chip";
 import { TaskCheckbox } from "@/components/tasks/task-row";
+import { Skeletons } from "@/components/ui/query-state";
 import { Switch } from "@/components/ui/switch";
 import { isArchived } from "@/lib/domain/subjects";
 import { isCompleted, tasksForDay } from "@/lib/domain/tasks";
@@ -51,7 +52,17 @@ export function TodayTasks() {
         )}
       </div>
       <div className="side-panel-body">
-        {entries.length === 0 ? <p className="day-empty p-4">{t("no_tasks_today")}</p> : null}
+        {tasksQuery.isError ? (
+          <p className="day-empty p-4" role="alert">
+            {t("load_error")}
+          </p>
+        ) : tasksQuery.isPending ? (
+          <div className="flex flex-col gap-2 p-2">
+            <Skeletons count={3} className="h-9" label={t("tasks_loading")} />
+          </div>
+        ) : entries.length === 0 ? (
+          <p className="day-empty p-4">{t("no_tasks_today")}</p>
+        ) : null}
         {entries.map(({ task }) => {
           const subject = task.subject_id ? subjectMap.get(task.subject_id) : undefined;
           return (

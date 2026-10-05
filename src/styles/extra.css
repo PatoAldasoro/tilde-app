@@ -111,3 +111,21 @@ span.ev { cursor: default; }
 :root[data-theme="dark"] .shot .shot-dark { display: block; }
 :root[data-theme="dark"] .shot .shot-light { display: none; }
 .hero-mark { flex: none; }
+
+/* ---------- Touch targets (tablets en modo escritorio) ----------
+   Controles que se ven más chicos que 40 px extienden su área táctil. */
+@media (pointer: coarse) {
+  .cal-dn, .cal-add, .help-btn { position: relative; }
+  .cal-dn::after, .cal-add::after { content: ""; position: absolute; inset: -6px; }
+  .cal-more { min-height: 32px; }
+  .task-title { min-height: var(--hit-target); display: inline-flex; align-items: center; }
+  .seg-item { height: var(--control-height); }
+  .slot-btn:active { background: var(--color-surface-hover); }
+}
+
+/* ---------- Movimiento reducido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .timer-ring .bar { transition: none; }
+  .progress > i { transition: none; }
+  .btn:active:not(:disabled):not([aria-disabled="true"]), .play-btn:active { transform: none; }
+}

@@ -81,4 +81,15 @@ test.describe("shell con sesión", () => {
     await expect(page).toHaveURL(/\/en\/app\/calendar$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Calendar");
   });
+
+  test("cerrar sesión vuelve a la landing y /app deja de ser accesible", async ({ page }) => {
+    await page.goto("/app");
+    await page.getByRole("button", { name: "Abrir menú" }).click();
+    await page.getByRole("button", { name: "Ajustes" }).click();
+    await page.getByRole("dialog", { name: "Ajustes" }).getByRole("button", { name: "Cerrar sesión" }).click();
+    await expect(page).toHaveURL(/localhost:\d+\/$/);
+    await expect(page.getByRole("button", { name: "Continuar con Google" }).first()).toBeVisible();
+    await page.goto("/app/todo");
+    await expect(page).toHaveURL(/localhost:\d+\/$/);
+  });
 });
