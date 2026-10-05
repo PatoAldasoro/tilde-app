@@ -172,3 +172,16 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
       foco del teclado y el símbolo del logo. Los colores de las materias no cambian.
     - Se guarda en el perfil (`profiles.accent_color`, `null` = original) y también en el dispositivo, igual que
       el tema: un script en `<head>` lo aplica antes del primer pintado para que no parpadee en naranja.
+31. **El idioma, solo en Ajustes (06/10/2026).** El menú lateral traía el selector de idioma junto al de tema
+    (como en el prototipo). Por pedido del usuario el idioma queda únicamente en Ajustes; el tema sigue en los dos.
+32. **Dependencias sin avisos al instalar (06/10/2026).**
+    - **ESLint 10.** La 9 quedó sin soporte. `eslint-config-next` todavía trae tres plugins (`import`, `jsx-a11y`,
+      `react`) que declaran ESLint 9 como máximo, aunque funcionan con la 10: `overrides` en `package.json` deja
+      asentada esa excepción, y `eslint.config.mjs` le pasa a `eslint-plugin-react` la versión de React ya
+      resuelta (la detectaba con una API que ESLint 10 quitó). Se comprobó con un archivo de prueba que las reglas
+      de los seis plugins siguen marcando lo mismo que antes. Cuando `eslint-config-next` actualice esos plugins,
+      los `overrides` se pueden quitar.
+    - **`allowScripts`.** npm 12 (el que usa Vercel) ya no corre scripts de instalación de las dependencias sin
+      una decisión explícita. Los cuatro que aparecen (`esbuild`, `@swc/core`, `@parcel/watcher`, `unrs-resolver`)
+      solo verifican o compilan un binario que ya llega precompilado: quedan denegados. El build, los tests y el
+      lint pasan con esos scripts bloqueados.

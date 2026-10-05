@@ -71,6 +71,11 @@ test.describe("shell con sesión", () => {
   test("el idioma se cambia desde Ajustes y se guarda en el perfil", async ({ page }) => {
     await page.goto("/app");
     await page.getByRole("button", { name: "Abrir menú" }).click();
+    // En el menú queda el tema; el idioma está solo en Ajustes.
+    const drawer = page.locator("#drawer");
+    await expect(drawer.getByRole("radiogroup", { name: "Tema" })).toBeVisible();
+    await expect(drawer.getByRole("radiogroup", { name: "Idioma" })).toHaveCount(0);
+    await expect(drawer.getByRole("radio", { name: "English" })).toHaveCount(0);
     await page.getByRole("button", { name: "Ajustes" }).click();
     await page.getByRole("dialog", { name: "Ajustes" }).getByRole("radio", { name: "English" }).click();
     await expect(page).toHaveURL(/\/en\/app$/);

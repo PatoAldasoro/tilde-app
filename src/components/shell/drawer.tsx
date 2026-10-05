@@ -9,7 +9,7 @@ import { useReturnFocus } from "@/components/ui/use-return-focus";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Avatar } from "./avatar";
 import { isNavActive, NAV_ITEMS } from "./nav";
-import { LocaleSegmented, ThemeSegmented } from "./preferences";
+import { ThemeSegmented } from "./preferences";
 
 type DrawerProps = { open: boolean; onOpenChange: (open: boolean) => void; onOpenSettings: () => void };
 
@@ -64,9 +64,9 @@ export function Drawer({ open, onOpenChange, onOpenSettings }: DrawerProps) {
                   <Settings size={20} />
                   <span>{t("settings")}</span>
                 </button>
-                <div className="drawer-row flex-col items-stretch">
+                {/* El idioma se cambia en Ajustes; acá queda solo el tema, que se toca más seguido. */}
+                <div className="drawer-row">
                   <ThemeSegmented onSaved={(theme) => updateProfile.mutate({ theme })} />
-                  <LocaleSegmented onSaved={(locale) => updateProfile.mutate({ locale })} />
                 </div>
               </div>
             </nav>
