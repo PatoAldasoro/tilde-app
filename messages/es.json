@@ -668,5 +668,8 @@
   "wallpaper_color_hint": "Cualquier color: con el selector o escribiendo su código.",
   "wallpaper_blocks": "Bloques",
   "wallpaper_blocks_solid": "Plenos",
-  "wallpaper_blocks_soft": "Suaves"
+  "wallpaper_blocks_soft": "Suaves",
+  "accent_color": "Color de acento",
+  "accent_color_hint": "El color de los resaltados, las selecciones y el foco en toda la app.",
+  "accent_default": "Naranja Tilde"
 }

@@ -9,16 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
+import { setAccentPreference, useAccentPreference } from "@/hooks/use-accent";
 import { localePrefix } from "@/i18n/routing";
 import type { Weekday } from "@/lib/domain/dates";
 import { getSupabase } from "@/lib/supabase/client";
+import { AccentSwatches } from "./accent-swatches";
 import { LocaleSegmented, ThemeSegmented } from "./preferences";
 
 const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 
 type SettingsDialogProps = { open: boolean; onOpenChange: (open: boolean) => void };
 
-/** Ajustes: idioma, tema, días visibles del Horario, anticipación de las entregas, menú por borde y cerrar sesión. */
+/** Ajustes: idioma, tema, color de acento, días visibles del Horario, anticipación de las entregas, menú por borde y cerrar sesión. */
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -26,6 +28,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const profile = useProfile();
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
+  const accent = useAccentPreference();
   const [signingOut, setSigningOut] = useState(false);
   const letters = t("wd_letter").split(",");
   const names = t("wd_long").split(",");
@@ -58,6 +61,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </Field>
           <Field label={t("theme")} hint={t("theme_hint")}>
             <ThemeSegmented onSaved={(theme) => updateProfile.mutate({ theme })} />
+          </Field>
+          <Field label={t("accent_color")} labelId="settings-accent" hint={t("accent_color_hint")}>
+            <AccentSwatches
+              value={accent}
+              labelledBy="settings-accent"
+              onChange={(next) => {
+                setAccentPreference(next);
+                updateProfile.mutate({ accent_color: next });
+              }}
+            />
           </Field>
           <Field label={t("visible_days")} hint={t("visible_days_hint")}>
             <div className="daychips" role="group" aria-label={t("visible_days")}>

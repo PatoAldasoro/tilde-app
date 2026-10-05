@@ -163,3 +163,12 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     sale de la ventana. Después de abrirse hay que alejarse 96 px para que vuelva a estar disponible. Un menú
     abierto así se cierra solo al alejar el mouse, salvo que se lo use. Es solo para mouse, y se apaga en Ajustes
     (`profiles.edge_menu`). El botón del menú sigue ahí: nada depende solo del hover.
+30. **Color de acento a elección (06/10/2026).** En Ajustes se puede cambiar el naranja de la app por cualquiera de
+    los 12 colores de la paleta de materias (o volver al original, "Naranja Tilde").
+    - No se inventan colores: cada token del acento se arma con los tonos que la paleta ya tiene para ese color,
+      en claro y en oscuro (`vivid` → acento y foco, `solid` + `on-solid` → rellenos con texto, `soft` + `on-soft`
+      → fondos suaves y texto). Las reglas están al final de `tokens.css` y se activan con `<html data-accent>`.
+    - Cambia todo lo que usa el acento: resaltados de "hoy", pestañas, casillas, interruptores, anillo del timer,
+      foco del teclado y el símbolo del logo. Los colores de las materias no cambian.
+    - Se guarda en el perfil (`profiles.accent_color`, `null` = original) y también en el dispositivo, igual que
+      el tema: un script en `<head>` lo aplica antes del primer pintado para que no parpadee en naranja.

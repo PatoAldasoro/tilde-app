@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient
 import { useTranslations } from "next-intl";
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { toast } from "@/components/ui/toast";
+import { setAccentPreference } from "@/hooks/use-accent";
 import { setThemePreference } from "@/hooks/use-theme";
+import { toAccent } from "@/lib/accent";
 import { minutesInTimeZone, todayInTimeZone, type IsoDate } from "@/lib/domain/dates";
 import { getSupabase } from "@/lib/supabase/client";
 import type { ProfileRow, Update } from "@/lib/supabase/types";
@@ -97,12 +99,15 @@ export function useNowMinutes(): number {
   );
 }
 
-/** El tema guardado en el perfil manda sobre el del dispositivo (se aplica al entrar). */
+/** El tema y el color de acento guardados en el perfil mandan sobre los del dispositivo (se aplican al entrar). */
 function ProfileThemeSync() {
-  const theme = useProfile().theme;
+  const { theme, accent_color: accent } = useProfile();
   useEffect(() => {
     if (isThemePreference(theme)) setThemePreference(theme);
   }, [theme]);
+  useEffect(() => {
+    setAccentPreference(toAccent(accent));
+  }, [accent]);
   return null;
 }
 

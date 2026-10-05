@@ -63,13 +63,13 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"default_task_lead_days": number,"edge_menu": boolean,"locale": string,"theme": string,"timezone": string,"updated_at": string,"user_id": string,"visible_weekdays": (number)[]
+                    "accent_color": string | null,"created_at": string,"default_task_lead_days": number,"edge_menu": boolean,"locale": string,"theme": string,"timezone": string,"updated_at": string,"user_id": string,"visible_weekdays": (number)[]
                   }
                   Insert: {
-                    "created_at"?: string,"default_task_lead_days"?: number,"edge_menu"?: boolean,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id": string,"visible_weekdays"?: (number)[]
+                    "accent_color"?: string | null,"created_at"?: string,"default_task_lead_days"?: number,"edge_menu"?: boolean,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id": string,"visible_weekdays"?: (number)[]
                   }
                   Update: {
-                    "created_at"?: string,"default_task_lead_days"?: number,"edge_menu"?: boolean,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id"?: string,"visible_weekdays"?: (number)[]
+                    "accent_color"?: string | null,"created_at"?: string,"default_task_lead_days"?: number,"edge_menu"?: boolean,"locale"?: string,"theme"?: string,"timezone"?: string,"updated_at"?: string,"user_id"?: string,"visible_weekdays"?: (number)[]
                   }
                   Relationships: [
                     

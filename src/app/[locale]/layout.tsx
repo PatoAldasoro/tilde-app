@@ -13,7 +13,7 @@ import { InlineScript } from "@/components/inline-script";
 import { ConfirmHost } from "@/components/ui/confirm";
 import { Toaster } from "@/components/ui/toast";
 import { routing } from "@/i18n/routing";
-import { themeScript } from "@/lib/theme";
+import { headScript } from "@/lib/accent";
 
 type Props = { children: ReactNode; params: Promise<{ locale: string }> };
 
@@ -47,10 +47,10 @@ export default async function RootLayout({ children, params }: Props) {
   const t = await getTranslations();
 
   return (
-    // data-theme lo fija el script de <head> antes del primer pintado.
+    // data-theme y data-accent los fija el script de <head> antes del primer pintado.
     <html lang={locale} data-theme="light" suppressHydrationWarning>
       <head>
-        <InlineScript html={themeScript} />
+        <InlineScript html={headScript} />
       </head>
       <body>
         <NextIntlClientProvider>

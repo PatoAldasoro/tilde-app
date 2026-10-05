@@ -668,5 +668,8 @@
   "wallpaper_color_hint": "Any color: with the picker or by typing its code.",
   "wallpaper_blocks": "Blocks",
   "wallpaper_blocks_solid": "Solid",
-  "wallpaper_blocks_soft": "Soft"
+  "wallpaper_blocks_soft": "Soft",
+  "accent_color": "Accent color",
+  "accent_color_hint": "The color of highlights, selections, and focus across the app.",
+  "accent_default": "Tilde orange"
 }

@@ -119,6 +119,13 @@
   --color-on-accent-fill: #FFFFFF;
   --color-on-accent: #FFFFFF;
   --color-focus-ring: #E44919;
+  /* El acento original, como un color más del selector de Ajustes (ver "Color de acento" al final). */
+  --accent-default-solid: #BD3403;
+  --accent-default-vivid: #E44919;
+  --accent-default-soft: #FCEDE7;
+  --accent-default-on-solid: #FFFFFF;
+  /* Hacia dónde se corre el acento al pasar el mouse: en claro se oscurece. */
+  --accent-shift: #000000;
 
   --color-success: #12924F;
   --color-success-soft: #E3F5EA;
@@ -245,6 +252,12 @@
   --color-on-accent-fill: #1A0F0A;
   --color-on-accent: #1A0F0A;
   --color-focus-ring: #FF8D65;
+  --accent-default-solid: #FF754A;
+  --accent-default-vivid: #FF754A;
+  --accent-default-soft: #3A2219;
+  --accent-default-on-solid: #1A0F0A;
+  /* En oscuro, al pasar el mouse el acento se aclara. */
+  --accent-shift: #FFFFFF;
 
   --color-success: #4CC97F;
   --color-success-soft: #15301F;
@@ -350,6 +363,24 @@
 .subj-fucsia { --s-solid: var(--subject-fucsia-solid); --s-vivid: var(--subject-fucsia-vivid); --s-soft: var(--subject-fucsia-soft); --s-on-soft: var(--subject-fucsia-on-soft); --s-on-solid: var(--subject-fucsia-on-solid); }
 .subj-cacao { --s-solid: var(--subject-cacao-solid); --s-vivid: var(--subject-cacao-vivid); --s-soft: var(--subject-cacao-soft); --s-on-soft: var(--subject-cacao-on-soft); --s-on-solid: var(--subject-cacao-on-solid); }
 .subj-grafito { --s-solid: var(--subject-grafito-solid); --s-vivid: var(--subject-grafito-vivid); --s-soft: var(--subject-grafito-soft); --s-on-soft: var(--subject-grafito-on-soft); --s-on-solid: var(--subject-grafito-on-solid); }
+
+/* ---------- Color de acento a elección ----------
+   <html data-accent="<clave>"> cambia el naranja por un color de la paleta de materias (Ajustes).
+   Sin el atributo queda el acento original. Cada regla también vale dentro de un [data-theme]
+   anidado, para que ahí el acento tome los valores de ese tema. */
+.accent-default { --s-solid: var(--accent-default-solid); --s-vivid: var(--accent-default-vivid); --s-soft: var(--accent-default-soft); --s-on-solid: var(--accent-default-on-solid); }
+:root[data-accent="frambuesa"], :root[data-accent="frambuesa"] [data-theme] { --color-accent: var(--subject-frambuesa-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-frambuesa-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-frambuesa-soft); --color-accent-text: var(--subject-frambuesa-on-soft); --color-accent-fill: var(--subject-frambuesa-solid); --color-on-accent-fill: var(--subject-frambuesa-on-solid); --color-on-accent: var(--subject-frambuesa-on-solid); --color-focus-ring: var(--subject-frambuesa-vivid); }
+:root[data-accent="mandarina"], :root[data-accent="mandarina"] [data-theme] { --color-accent: var(--subject-mandarina-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-mandarina-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-mandarina-soft); --color-accent-text: var(--subject-mandarina-on-soft); --color-accent-fill: var(--subject-mandarina-solid); --color-on-accent-fill: var(--subject-mandarina-on-solid); --color-on-accent: var(--subject-mandarina-on-solid); --color-focus-ring: var(--subject-mandarina-vivid); }
+:root[data-accent="ambar"], :root[data-accent="ambar"] [data-theme] { --color-accent: var(--subject-ambar-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-ambar-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-ambar-soft); --color-accent-text: var(--subject-ambar-on-soft); --color-accent-fill: var(--subject-ambar-solid); --color-on-accent-fill: var(--subject-ambar-on-solid); --color-on-accent: var(--subject-ambar-on-solid); --color-focus-ring: var(--subject-ambar-vivid); }
+:root[data-accent="lima"], :root[data-accent="lima"] [data-theme] { --color-accent: var(--subject-lima-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-lima-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-lima-soft); --color-accent-text: var(--subject-lima-on-soft); --color-accent-fill: var(--subject-lima-solid); --color-on-accent-fill: var(--subject-lima-on-solid); --color-on-accent: var(--subject-lima-on-solid); --color-focus-ring: var(--subject-lima-vivid); }
+:root[data-accent="pino"], :root[data-accent="pino"] [data-theme] { --color-accent: var(--subject-pino-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-pino-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-pino-soft); --color-accent-text: var(--subject-pino-on-soft); --color-accent-fill: var(--subject-pino-solid); --color-on-accent-fill: var(--subject-pino-on-solid); --color-on-accent: var(--subject-pino-on-solid); --color-focus-ring: var(--subject-pino-vivid); }
+:root[data-accent="turquesa"], :root[data-accent="turquesa"] [data-theme] { --color-accent: var(--subject-turquesa-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-turquesa-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-turquesa-soft); --color-accent-text: var(--subject-turquesa-on-soft); --color-accent-fill: var(--subject-turquesa-solid); --color-on-accent-fill: var(--subject-turquesa-on-solid); --color-on-accent: var(--subject-turquesa-on-solid); --color-focus-ring: var(--subject-turquesa-vivid); }
+:root[data-accent="cielo"], :root[data-accent="cielo"] [data-theme] { --color-accent: var(--subject-cielo-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-cielo-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-cielo-soft); --color-accent-text: var(--subject-cielo-on-soft); --color-accent-fill: var(--subject-cielo-solid); --color-on-accent-fill: var(--subject-cielo-on-solid); --color-on-accent: var(--subject-cielo-on-solid); --color-focus-ring: var(--subject-cielo-vivid); }
+:root[data-accent="cobalto"], :root[data-accent="cobalto"] [data-theme] { --color-accent: var(--subject-cobalto-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-cobalto-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-cobalto-soft); --color-accent-text: var(--subject-cobalto-on-soft); --color-accent-fill: var(--subject-cobalto-solid); --color-on-accent-fill: var(--subject-cobalto-on-solid); --color-on-accent: var(--subject-cobalto-on-solid); --color-focus-ring: var(--subject-cobalto-vivid); }
+:root[data-accent="uva"], :root[data-accent="uva"] [data-theme] { --color-accent: var(--subject-uva-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-uva-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-uva-soft); --color-accent-text: var(--subject-uva-on-soft); --color-accent-fill: var(--subject-uva-solid); --color-on-accent-fill: var(--subject-uva-on-solid); --color-on-accent: var(--subject-uva-on-solid); --color-focus-ring: var(--subject-uva-vivid); }
+:root[data-accent="fucsia"], :root[data-accent="fucsia"] [data-theme] { --color-accent: var(--subject-fucsia-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-fucsia-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-fucsia-soft); --color-accent-text: var(--subject-fucsia-on-soft); --color-accent-fill: var(--subject-fucsia-solid); --color-on-accent-fill: var(--subject-fucsia-on-solid); --color-on-accent: var(--subject-fucsia-on-solid); --color-focus-ring: var(--subject-fucsia-vivid); }
+:root[data-accent="cacao"], :root[data-accent="cacao"] [data-theme] { --color-accent: var(--subject-cacao-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-cacao-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-cacao-soft); --color-accent-text: var(--subject-cacao-on-soft); --color-accent-fill: var(--subject-cacao-solid); --color-on-accent-fill: var(--subject-cacao-on-solid); --color-on-accent: var(--subject-cacao-on-solid); --color-focus-ring: var(--subject-cacao-vivid); }
+:root[data-accent="grafito"], :root[data-accent="grafito"] [data-theme] { --color-accent: var(--subject-grafito-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-grafito-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-grafito-soft); --color-accent-text: var(--subject-grafito-on-soft); --color-accent-fill: var(--subject-grafito-solid); --color-on-accent-fill: var(--subject-grafito-on-solid); --color-on-accent: var(--subject-grafito-on-solid); --color-focus-ring: var(--subject-grafito-vivid); }
 
 @media (prefers-reduced-motion: reduce) {
   :root { --duration-fast: 1ms; --duration-base: 1ms; --duration-slow: 1ms; --duration-drawer: 1ms; }

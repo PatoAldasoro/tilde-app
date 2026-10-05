@@ -575,3 +575,78 @@ test("menú: se abre con un gesto decidido hacia el borde izquierdo y no con cua
   await page.waitForTimeout(500);
   await expect(drawer(page)).toHaveCount(0);
 });
+
+// ---------- color de acento ----------
+
+test("ajustes: el color de acento se elige de la paleta, se aplica en toda la app y se recuerda", async ({ page, context }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/app/schedule");
+  const html = page.locator("html");
+  const token = (name: string) => page.evaluate((property) => getComputedStyle(document.documentElement).getPropertyValue(property).trim().toUpperCase(), name);
+  const todayPill = () => page.locator(".sched-dayhead.is-today .wd").evaluate((element) => getComputedStyle(element).backgroundColor);
+  const openSettings = async () => {
+    await page.getByRole("button", { name: "Abrir menú" }).click();
+    await drawer(page).getByRole("button", { name: "Ajustes" }).click();
+    return page.getByRole("dialog", { name: "Ajustes" });
+  };
+
+  // Por defecto, el naranja original.
+  await expect(html).not.toHaveAttribute("data-accent");
+  expect(await token("--color-accent")).toBe("#E44919");
+  await expect.poll(todayPill).toBe("rgb(189, 52, 3)");
+
+  let settings = await openSettings();
+  const group = settings.getByRole("radiogroup", { name: "Color de acento" });
+  await expect(group.getByRole("radio")).toHaveCount(13);
+  await expect(group.getByRole("radio", { name: "Naranja Tilde" })).toHaveAttribute("aria-checked", "true");
+
+  // Se aplica al instante, sin recargar, y queda en el perfil.
+  await group.getByRole("radio", { name: "Turquesa" }).click();
+  await expect(html).toHaveAttribute("data-accent", "turquesa");
+  expect(await token("--color-accent")).toBe("#0EA09D");
+  expect(await token("--color-accent-soft")).toBe("#D6F8F6");
+  expect(await token("--color-focus-ring")).toBe("#0EA09D");
+  await expect.poll(async () => (await db.from("profiles").select("accent_color").single()).data?.accent_color).toBe("turquesa");
+
+  // Con el teclado: las flechas recorren la paleta.
+  await page.keyboard.press("ArrowRight");
+  await expect(group.getByRole("radio", { name: "Cielo" })).toHaveAttribute("aria-checked", "true");
+  await expect(html).toHaveAttribute("data-accent", "cielo");
+  await page.keyboard.press("ArrowLeft");
+  await expect(html).toHaveAttribute("data-accent", "turquesa");
+  await settings.getByRole("button", { name: "Listo" }).click();
+  await expect.poll(todayPill).toBe("rgb(2, 131, 128)");
+
+  // En oscuro usa los tonos de ese tema.
+  await page.getByRole("button", { name: "Abrir menú" }).click();
+  await drawer(page).getByRole("radio", { name: "Oscuro" }).click();
+  await page.keyboard.press("Escape");
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  expect(await token("--color-accent")).toBe("#0AC3BF");
+  await expect.poll(todayPill).toBe("rgb(10, 195, 191)");
+
+  // Se recuerda al recargar (lo aplica el script de <head>, antes del primer pintado)…
+  await page.reload();
+  await expect(html).toHaveAttribute("data-accent", "turquesa");
+  // Sin esperar a React: en una página a la que no le llega el JavaScript de la app, el acento ya está puesto.
+  const bare = await context.newPage();
+  await bare.route("**/_next/static/**/*.js", (route) => route.abort());
+  await bare.goto("/app/schedule");
+  await expect(bare.locator("html")).toHaveAttribute("data-accent", "turquesa");
+  await expect(bare.locator("html")).toHaveAttribute("data-theme", "dark");
+  await bare.close();
+  // …y en otro dispositivo lo trae el perfil.
+  await page.evaluate(() => localStorage.removeItem("tilde-accent"));
+  await page.reload();
+  await expect(html).toHaveAttribute("data-accent", "turquesa");
+  expect(await page.evaluate(() => localStorage.getItem("tilde-accent"))).toBe("turquesa");
+
+  // Volver al naranja original.
+  settings = await openSettings();
+  await settings.getByRole("radio", { name: "Naranja Tilde" }).click();
+  await expect(html).not.toHaveAttribute("data-accent");
+  expect(await token("--color-accent")).toBe("#FF754A");
+  await expect.poll(async () => (await db.from("profiles").select("accent_color").single()).data?.accent_color).toBeNull();
+  expect(errors).toEqual([]);
+});

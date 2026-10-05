@@ -143,6 +143,9 @@ span.ev { cursor: default; }
 /* Slots are always reachable by touch: show the "+" hint on focus too. */
 .slot-btn:focus-visible::after { content: "+"; position: absolute; left: 8px; top: 3px; font-size: 13px; color: var(--color-text-subtle); }
 
+/* Ajustes: color de acento (el original + los 12 de la paleta, 7 por fila) */
+.swatches.is-accent { grid-template-columns: repeat(7, var(--hit-target)); }
+
 /* ---------- Íconos de materias y actividades ---------- */
 .s-icon { flex: none; }
 .subject-tile { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--s-soft, var(--color-surface-sunken)); color: var(--s-on-soft, var(--color-text-muted)); }
