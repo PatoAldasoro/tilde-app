@@ -675,12 +675,11 @@
   "phase_exam": "Examen",
   "exam_ready": "Examen listo",
   "exam_plan": "{v} de corrido",
-  "exam_no_pause": "Sin pausas ni descansos",
   "exam_away_count": "{n, plural, one {# salida} other {# salidas}}",
   "exam_away_toast": "{n, plural, one {Saliste de la página. Va # salida en este examen.} other {Saliste de la página. Van # salidas en este examen.}}",
   "exam_finish": "Entregar el examen",
   "exam_duration": "Duración del examen",
-  "exam_hint": "El examen corre de corrido: no se pausa ni se ajusta. Al empezar pasa a pantalla completa y la lista de tareas se oculta hasta entregarlo. Salir de la página (otra pestaña, otra ventana) queda anotado y suena una alarma.",
+  "exam_hint": "El examen corre de corrido y sin descansos; la pausa existe, pero está en el menú del reloj. Al empezar pasa a pantalla completa y la lista de tareas se oculta hasta entregarlo. Salir de la página (otra pestaña, otra ventana) queda anotado y suena una alarma.",
   "exam_summary": "Resumen del examen",
   "exam_aways": "Salidas de la página",
   "exam_away_time": "Tiempo afuera",
@@ -690,7 +689,6 @@
   "mode_study": "Estudio",
   "mode_exam": "Examen",
   "adjust_time": "Ajustar el tiempo",
-  "adjust_not_in_exam": "En modo examen el tiempo no se ajusta.",
   "adjust_needs_session": "Disponible con una sesión en curso.",
   "adjust_back": "Atrasar",
   "adjust_forward": "Adelantar",
@@ -794,5 +792,10 @@
   "wrapped_exams": "{n, plural, one {# simulacro de examen} other {# simulacros de examen}}, {aways, plural, =0 {sin salir de la página ni una vez.} one {con # salida de la página.} other {con # salidas de la página.}}",
   "wrapped_so_far_week": "a esta altura de la semana pasada",
   "wrapped_so_far_month": "a esta altura del mes pasado",
-  "wrapped_so_far_term": "a esta altura del cuatrimestre pasado"
+  "wrapped_so_far_term": "a esta altura del cuatrimestre pasado",
+  "exam_straight": "De corrido, sin descansos",
+  "exam_options": "Opciones del examen",
+  "exam_pause": "Pausar el examen",
+  "exam_resume": "Reanudar el examen",
+  "exam_pause_hint": "Un examen de verdad no se pausa. Si hace falta, se puede desde acá: el tiempo queda detenido hasta reanudarlo."
 }

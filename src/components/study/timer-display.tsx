@@ -1,13 +1,15 @@
 "use client";
 
 import { ChevronsLeft, ChevronsRight, ClockPlus, Coffee, GraduationCap, Pause, PictureInPicture2, Play, RotateCcw, SkipForward, Square, Target, TimerReset } from "lucide-react";
+import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useProfile } from "@/components/providers";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatClock, isExam, phaseProgress, remainingMs, type ActiveTimer, type TimerConfig, type TimerState } from "@/lib/domain/timer";
+import { drawPipFrame, type PipModel } from "@/lib/pip-canvas";
 import { pipStore, usePip } from "@/lib/pip-store";
-import { studyStore } from "@/lib/study-store";
+import { studyStore, useStudy } from "@/lib/study-store";
 import { cn } from "@/lib/utils";
 import { useDuration } from "./duration";
 
@@ -80,12 +82,21 @@ function useTimerTexts({ timer, config, now }: TimerProps) {
   const endsAt = (ms: number) => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone }).format(new Date(ms));
   const sub = !active
     ? exam
-      ? t("exam_no_pause")
+      ? t("exam_straight")
       : t("focus_cycles_plan", { n: current.cycles, f: current.focusMinutes, b: current.breakMinutes })
     : !active.running
       ? t("paused")
       : t("ends_at", { time: endsAt(active.phaseEndsAt ?? now) });
   return { active, exam, clock, phaseLabel, sub, fraction: active ? phaseProgress(active, now) : 0 };
+}
+
+/** Lo que muestra el timer flotante cuando va en la ventana de imagen en imagen (se dibuja en un canvas). */
+export function usePipModel(): PipModel {
+  const t = useTranslations();
+  const { timer, setup, now } = useStudy();
+  const { active, exam, clock, phaseLabel, sub, fraction } = useTimerTexts({ timer, config: setup.config, now });
+  const detail = !active || !active.running || exam ? sub : t("cycle_of", { n: active.cycle, total: active.config.cycles });
+  return { clock, phase: phaseLabel, detail, fraction, tone: !active ? "idle" : active.phase === "break" ? "break" : "focus" };
 }
 
 /** Anillo de progreso con el tiempo restante. El gráfico es un SVG propio, no un ícono. */
@@ -158,7 +169,7 @@ export function MiniTimer({ timer, config, now }: TimerProps) {
           {clock}
         </span>
         <div className="mini-timer-controls">
-          {exam && active ? (
+          {exam && running ? (
             <button type="button" className="round-btn is-sm" aria-label={t("exam_finish")} title={t("exam_finish")} onClick={() => studyStore.finish()}>
               <Square size={16} fill="currentColor" />
             </button>
@@ -183,17 +194,20 @@ export function MiniTimer({ timer, config, now }: TimerProps) {
   );
 }
 
-/** Ajustar el tiempo a mano: adelantar, atrasar, cortar el foco o volver a empezar la fase. */
+/**
+ * El menú del reloj. En una sesión de estudio: adelantar, atrasar, cortar el foco o volver a empezar
+ * la fase. En un examen el tiempo no se toca; ahí está, a propósito un paso más lejos, la pausa.
+ */
 function AdjustPopover({ active }: { active: ActiveTimer | null }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const exam = active !== null && isExam(active.config);
-  const available = active !== null && !exam;
-  const reason = exam ? t("adjust_not_in_exam") : t("adjust_needs_session");
-  const step = (minutes: number, label: string, icon: React.ReactNode, iconFirst: boolean) => (
+  const available = active !== null;
+  const label = exam ? t("exam_options") : t("adjust_time");
+  const step = (minutes: number, text: string, icon: ReactNode, iconFirst: boolean) => (
     <button type="button" className="btn btn-secondary adjust-step" onClick={() => studyStore.adjust(minutes)}>
       {iconFirst ? icon : null}
-      <span className="tnum">{label}</span>
+      <span className="tnum">{text}</span>
       {iconFirst ? null : icon}
     </button>
   );
@@ -209,43 +223,66 @@ function AdjustPopover({ active }: { active: ActiveTimer | null }) {
         <button
           type="button"
           className="round-btn"
-          aria-label={available ? t("adjust_time") : `${t("adjust_time")}. ${reason}`}
-          data-tip={available ? t("adjust_time") : reason}
+          aria-label={available ? label : `${label}. ${t("adjust_needs_session")}`}
+          data-tip={available ? label : t("adjust_needs_session")}
           aria-disabled={!available || undefined}
         >
           <ClockPlus size={20} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="popover-pad adjust-pop" align="center">
-        <strong className="text-body-s">{t("adjust_time")}</strong>
-        <div className="adjust-row" role="group" aria-label={t("adjust_back")}>
-          <span className="adjust-label">{t("adjust_back")}</span>
-          {step(-5, t("min_short", { n: 5 }), <ChevronsLeft size={16} />, true)}
-          {step(-1, t("min_short", { n: 1 }), <ChevronsLeft size={16} />, true)}
-        </div>
-        <div className="adjust-row" role="group" aria-label={t("adjust_forward")}>
-          <span className="adjust-label">{t("adjust_forward")}</span>
-          {step(1, t("min_short", { n: 1 }), <ChevronsRight size={16} />, false)}
-          {step(5, t("min_short", { n: 5 }), <ChevronsRight size={16} />, false)}
-        </div>
-        <p className="field-hint">{t("adjust_hint")}</p>
-        <div className="menu-sep" />
-        {active?.phase === "focus" ? (
-          <button type="button" className="menu-item" onClick={act(() => studyStore.skipFocus())}>
-            <Coffee size={18} />
-            <span>{active.cycle >= active.config.cycles ? t("end_focus_last") : t("end_focus")}</span>
+      {exam ? (
+        <PopoverContent className="popover-pad adjust-pop" align="center">
+          <strong className="text-body-s">{t("exam_options")}</strong>
+          <p className="field-hint">{t("exam_pause_hint")}</p>
+          <div className="menu-sep" />
+          {active.running ? (
+            <button type="button" className="menu-item" onClick={act(() => studyStore.pause())}>
+              <Pause size={18} />
+              <span>{t("exam_pause")}</span>
+            </button>
+          ) : (
+            <button type="button" className="menu-item" onClick={act(() => studyStore.toggle())}>
+              <Play size={18} />
+              <span>{t("exam_resume")}</span>
+            </button>
+          )}
+          <button type="button" className="menu-item" onClick={act(() => studyStore.finish())}>
+            <Square size={18} />
+            <span>{t("exam_finish")}</span>
           </button>
-        ) : (
-          <button type="button" className="menu-item" onClick={act(() => studyStore.skipBreak())}>
-            <SkipForward size={18} />
-            <span>{t("skip_break")}</span>
+        </PopoverContent>
+      ) : (
+        <PopoverContent className="popover-pad adjust-pop" align="center">
+          <strong className="text-body-s">{t("adjust_time")}</strong>
+          <div className="adjust-row" role="group" aria-label={t("adjust_back")}>
+            <span className="adjust-label">{t("adjust_back")}</span>
+            {step(-5, t("min_short", { n: 5 }), <ChevronsLeft size={16} />, true)}
+            {step(-1, t("min_short", { n: 1 }), <ChevronsLeft size={16} />, true)}
+          </div>
+          <div className="adjust-row" role="group" aria-label={t("adjust_forward")}>
+            <span className="adjust-label">{t("adjust_forward")}</span>
+            {step(1, t("min_short", { n: 1 }), <ChevronsRight size={16} />, false)}
+            {step(5, t("min_short", { n: 5 }), <ChevronsRight size={16} />, false)}
+          </div>
+          <p className="field-hint">{t("adjust_hint")}</p>
+          <div className="menu-sep" />
+          {active?.phase === "focus" ? (
+            <button type="button" className="menu-item" onClick={act(() => studyStore.skipFocus())}>
+              <Coffee size={18} />
+              <span>{active.cycle >= active.config.cycles ? t("end_focus_last") : t("end_focus")}</span>
+            </button>
+          ) : (
+            <button type="button" className="menu-item" onClick={act(() => studyStore.skipBreak())}>
+              <SkipForward size={18} />
+              <span>{t("skip_break")}</span>
+            </button>
+          )}
+          <button type="button" className="menu-item" onClick={act(() => studyStore.restartPhase())}>
+            <TimerReset size={18} />
+            <span>{t("restart_phase")}</span>
           </button>
-        )}
-        <button type="button" className="menu-item" onClick={act(() => studyStore.restartPhase())}>
-          <TimerReset size={18} />
-          <span>{t("restart_phase")}</span>
-        </button>
-      </PopoverContent>
+        </PopoverContent>
+      )}
     </Popover>
   );
 }
@@ -257,11 +294,12 @@ function AdjustPopover({ active }: { active: ActiveTimer | null }) {
 export function TimerControls({ timer, onStart }: { timer: TimerState; onStart?: () => void }) {
   const t = useTranslations();
   const pip = usePip();
+  const pipModel = usePipModel();
   const active = activeOf(timer);
   const exam = active !== null && isExam(active.config);
   const running = active?.running ?? false;
   const onBreak = active?.phase === "break";
-  const floating = pip.window !== null || pip.floating;
+  const floating = pip.video || pip.floating;
   const skipTip = exam ? t("skip_not_in_exam") : onBreak ? t("skip_break") : t("skip_break_only");
 
   return (
@@ -277,8 +315,8 @@ export function TimerControls({ timer, onStart }: { timer: TimerState; onStart?:
         <RotateCcw size={20} />
       </button>
       <AdjustPopover active={active} />
-      {exam ? (
-        // Un examen no se pausa: lo único que se puede hacer es entregarlo.
+      {exam && running ? (
+        // Un examen en marcha se entrega; pausarlo es posible, pero desde el menú del reloj (un paso más lejos).
         <button type="button" className="play-btn" aria-label={t("exam_finish")} data-tip={t("exam_finish")} onClick={() => studyStore.finish()}>
           <Square size={24} fill="currentColor" strokeWidth={1.5} />
         </button>
@@ -311,7 +349,7 @@ export function TimerControls({ timer, onStart }: { timer: TimerState; onStart?:
         aria-label={t("floating_timer")}
         aria-pressed={floating}
         data-tip={floating ? t("floating_timer_close") : t("floating_timer_hint")}
-        onClick={() => (floating ? pipStore.close() : void pipStore.open(t("floating_timer")))}
+        onClick={() => (floating ? pipStore.close() : void pipStore.open((canvas) => drawPipFrame(canvas, pipModel)))}
       >
         <PictureInPicture2 size={20} />
       </button>

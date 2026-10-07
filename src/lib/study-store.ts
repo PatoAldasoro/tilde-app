@@ -175,12 +175,23 @@ export const studyStore = {
     commit({ setup: { ...getSnapshot().setup, volume: Math.max(0, Math.min(1, volume)) } });
   },
 
-  /** Iniciar, pausar o reanudar. Un examen no se pausa: una vez que arranca, corre de corrido. */
+  /**
+   * Iniciar, pausar o reanudar: el botón grande. Un examen en marcha no se pausa desde acá
+   * (para eso está `pause()`, que la interfaz deja en un submenú); reanudarlo, sí.
+   */
   toggle() {
     const { setup, timer } = getSnapshot();
     const now = Date.now();
     if (timer.status === "idle") commit({ timer: start(setup.config, setup.subjectId, now) });
-    else if (timer.status === "active" && !isExam(timer.config)) commit({ timer: timer.running ? pause(timer, now) : resume(timer, now) });
+    else if (timer.status !== "active") return;
+    else if (!timer.running) commit({ timer: resume(timer, now) });
+    else if (!isExam(timer.config)) commit({ timer: pause(timer, now) });
+  },
+
+  /** Pausa explícita, también para un examen. */
+  pause() {
+    const { timer } = getSnapshot();
+    if (timer.status === "active" && timer.running) commit({ timer: pause(timer, Date.now()) });
   },
 
   /**

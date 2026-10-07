@@ -638,7 +638,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .mini-task .mt-title { flex: 1; min-width: 0; font-size: var(--text-body-s); }
 .mini-task.is-done .mt-title { color: var(--color-text-subtle); text-decoration: line-through; }
 .mini-task .chip { max-width: 120px; }
-.focus-mode { position: fixed; inset: 0; z-index: var(--z-focus-mode); background: var(--color-bg); display: grid; grid-template-columns: minmax(0, 1fr) 380px; animation: fade-in var(--duration-slow) var(--ease-standard); }
+/* A la altura de un diálogo (y no encima de todo): los menús, tooltips y avisos que se abren desde adentro tienen que verse. */
+.focus-mode { position: fixed; inset: 0; z-index: var(--z-dialog); background: var(--color-bg); display: grid; grid-template-columns: minmax(0, 1fr) 380px; animation: fade-in var(--duration-slow) var(--ease-standard); }
 .focus-main { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-8); padding: var(--space-8); position: relative; }
 .focus-main .timer-ring { width: 500px; height: 500px; }
 .focus-main .timer-time { font-size: var(--text-timer-focus); }

@@ -200,21 +200,36 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
 36. **Sonido a elección.** Cinco sonidos generados en el navegador (sin archivos), volumen y botón de prueba; elegir
     uno lo hace sonar. Se guarda en el dispositivo, junto con el resto de la configuración de la sesión.
 37. **Modo examen.** Un solo bloque de 1:30, 2, 2:30 o 3 horas.
-    - No se pausa ni se ajusta, y no hay descansos: solo se entrega. (Decisión propia: un simulacro con pausas no
-      entrena lo mismo.)
+    - No hay descansos ni se ajusta el tiempo, y el botón principal entrega. Pausar se puede, pero a propósito un
+      paso más lejos: en el menú del reloj ("Opciones del examen"), con un texto que recuerda que un examen de
+      verdad no se pausa. Reanudar sí queda a un clic. En pausa el reloj no corre, las salidas de la página no se
+      anotan y siguen el rojo, la pantalla completa y la lista de tareas oculta. (Pedido posterior; al principio no
+      se podía pausar.)
     - Mientras dura, el acento de toda la app pasa a un rojo que solo existe para esto (`--exam-*`), por encima del
       acento elegido en Ajustes. Con el modo elegido y sin empezar, solo cambia la tarjeta del timer.
     - Salir de la página (otra pestaña, otra ventana) suena una alarma (se puede apagar) y queda anotado: cuántas
-      veces y cuánto tiempo. Se ve en el reloj, en el resumen y en el historial. Usar la ventana flotante no cuenta.
+      veces y cuánto tiempo. Se ve en el reloj, en el resumen y en el historial. La ventana flotante es del
+      navegador, no de la página: tocarla le saca el foco a Tilde y cuenta como salida.
     - Al empezar pasa solo a pantalla completa (el modo foco), y mientras dura no se muestra la lista de tareas, ni
       ahí ni en la vista normal. Salir de la pantalla completa no corta el examen ni cuenta como salida. Si el
       examen se retoma después de recargar la página no vuelve a pantalla completa solo: el navegador solo lo
       permite a partir de un clic.
-38. **Timer flotante.** En Chrome y Edge es una ventana aparte que queda encima de todo (Document Picture-in-Picture),
-    con el timer en un rectángulo redondeado que llena el marco y el mismo borde de progreso que el anillo. Se puede
-    pausar y reanudar desde ahí, sigue el tema y el acento, y mueve el reloj con sus propios timers: una pestaña en
-    segundo plano tiene los suyos frenados por el navegador. Donde esa API no existe (Firefox, Safari), el mismo
-    botón activa un recuadro flotante dentro de la app, que acompaña al cambiar de sección.
+38. **Timer flotante.** Es la ventana de imagen en imagen de los videos del navegador: sin marco, siempre encima.
+    El timer se dibuja en un canvas (`src/lib/pip-canvas.ts`: rectángulo redondeado con el borde de progreso, fase,
+    detalle y reloj, con los tokens del tema, el acento y el rojo de examen) que se transmite como video
+    (`captureStream`) a un `<video>` invisible, y ese video es el que va a la ventana.
+    - Reemplaza a la primera versión (Document Picture-in-Picture), que abría una ventana del navegador con su barra
+      de título: se pidió sin marco, o sacar la función.
+    - El botón de reproducir y pausar de la ventana maneja el timer: por Media Session donde el navegador lo usa
+      (Chromium) y por la pausa del video donde lo maneja directo (Firefox). El video va en marcha o detenido igual
+      que el timer, para que el botón muestre lo que va a hacer. Los navegadores detienen el video al cerrar la
+      ventana: eso no pausa la sesión (`CLOSE_GRACE_MS` en `pip-store.ts`). En un examen la ventana no maneja nada.
+    - El tic del timer sale de un Worker (`src/lib/ticker.ts`): los timers de una página en segundo plano se frenan.
+    - Límites: en la ventana no hay HTML, así que no hay más botones que los del navegador (cerrar, volver a la
+      pestaña, reproducir y pausar) y el contenido no es accesible para lectores de pantalla (el timer de la página
+      sí). Recargar la página la cierra.
+    - Si el navegador no tiene la API o la rechaza, el mismo botón activa un recuadro flotante dentro de la app, que
+      acompaña al cambiar de sección.
 39. **Historial editable.** Cada sesión tiene un menú (editar, eliminar con deshacer) y se puede anotar una a mano.
     Se corrigen fecha, hora, materia, tipo, foco, descansos, ciclos, subtareas y la lista de lo que se hizo: si el
     texto coincide con una tarea queda enlazada; si no, se guarda solo el texto.

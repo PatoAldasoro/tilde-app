@@ -6,19 +6,15 @@ import { toast } from "@/components/ui/toast";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { playAlarm, playSound } from "@/lib/chime";
 import { formatClock, isExam, remainingMs, type TimerEvent } from "@/lib/domain/timer";
-import { pipStore } from "@/lib/pip-store";
 import { studyStore, useStudy } from "@/lib/study-store";
+import { startTicker } from "@/lib/ticker";
 
 type Translate = ReturnType<typeof useTranslations>;
 
 /** Lo último que necesita el avance del timer para avisar (lo mantiene al día StudyTimerRunner). */
 const latest: { t: Translate | null; push: ((path: string) => void) | null; pathname: string } = { t: null, push: null, pathname: "" };
 
-/**
- * Avanza el timer hasta ahora y avisa los cambios de fase (sonido y toast). Lo llaman el
- * intervalo de la página y el de la ventana flotante: cuando la pestaña queda en segundo plano el
- * navegador le frena los timers, pero la ventana flotante sigue visible y los suyos no.
- */
+/** Avanza el timer hasta ahora y avisa los cambios de fase (sonido y toast). */
 export function advanceStudyTimer() {
   const events: TimerEvent[] = studyStore.tick();
   if (events.length === 0) return;
@@ -58,10 +54,12 @@ export function StudyTimerRunner() {
   useEffect(() => {
     if (!active) return;
     advanceStudyTimer();
-    const interval = setInterval(advanceStudyTimer, 500);
+    // El tic viene de un Worker: con la pestaña en segundo plano el navegador frena los timers de la
+    // página, y el aviso de fin de fase o el timer flotante llegarían tarde.
+    const stopTicker = startTicker(advanceStudyTimer, 500);
     document.addEventListener("visibilitychange", advanceStudyTimer);
     return () => {
-      clearInterval(interval);
+      stopTicker();
       document.removeEventListener("visibilitychange", advanceStudyTimer);
     };
   }, [active]);
@@ -79,8 +77,6 @@ export function StudyTimerRunner() {
   useEffect(() => {
     if (!exam) return;
     const onLeave = () => {
-      // Usar los botones de la ventana flotante no es irse.
-      if (pipStore.hasFocus()) return;
       if (!studyStore.leave()) return;
       const { setup } = studyStore.getSnapshot();
       if (setup.awayAlarm) playAlarm(setup.volume);
@@ -110,7 +106,7 @@ export function StudyTimerRunner() {
       return;
     }
     const examMode = isExam(timer.config);
-    const phase = examMode ? t("phase_exam") : timer.running ? t(timer.phase === "focus" ? "phase_focus" : "phase_break") : t("paused");
+    const phase = !timer.running ? t("paused") : examMode ? t("phase_exam") : t(timer.phase === "focus" ? "phase_focus" : "phase_break");
     const title = t("timer_title", { time: formatClock(remainingMs(timer, now), { hours: examMode }), phase });
     if (document.title !== ownTitle.current) pageTitle.current = document.title;
     document.title = title;

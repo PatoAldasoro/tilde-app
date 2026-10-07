@@ -246,9 +246,9 @@ span.ev { cursor: default; }
 .mini-timer-time { font-size: clamp(40px, 38cqh, 112px); font-weight: var(--weight-light); letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mini-timer.is-long .mini-timer-time { font-size: clamp(34px, 30cqh, 88px); }
 .mini-timer-controls { display: flex; gap: var(--space-2); }
-/* La ventana flotante es un documento aparte: solo el timer, a todo el marco. */
-.pip-body { margin: 0; height: 100vh; padding: 6px; overflow: hidden; background: var(--color-bg); }
-/* Sin ventana flotante disponible: un recuadro fijo dentro de la app. */
+/* El video que alimenta la ventana de imagen en imagen: tiene que estar en la página, pero no se ve. */
+.pip-source { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* Sin ventana de imagen en imagen: un recuadro fijo dentro de la app. */
 .floating-timer { position: fixed; right: var(--space-5); bottom: var(--space-5); z-index: var(--z-sheet); width: 288px; height: 148px; border-radius: 26px; box-shadow: var(--shadow-popover); }
 .floating-timer-actions { position: absolute; top: 8px; right: 12px; display: flex; gap: 2px; }
 .floating-timer .mini-timer-phase span { display: none; }

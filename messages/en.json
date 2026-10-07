@@ -675,12 +675,11 @@
   "phase_exam": "Exam",
   "exam_ready": "Exam ready",
   "exam_plan": "{v} straight",
-  "exam_no_pause": "No pauses, no breaks",
   "exam_away_count": "{n, plural, one {# exit} other {# exits}}",
   "exam_away_toast": "{n, plural, one {You left the page. That is # exit in this exam.} other {You left the page. That is # exits in this exam.}}",
   "exam_finish": "Hand in the exam",
   "exam_duration": "Exam length",
-  "exam_hint": "The exam runs straight through: it cannot be paused or adjusted. When it starts it goes full screen and the task list stays hidden until it is handed in. Leaving the page (another tab, another window) is logged and sounds an alarm.",
+  "exam_hint": "The exam runs straight through with no breaks; pausing exists, but it lives in the clock menu. When it starts it goes full screen and the task list stays hidden until it is handed in. Leaving the page (another tab, another window) is logged and sounds an alarm.",
   "exam_summary": "Exam summary",
   "exam_aways": "Times you left the page",
   "exam_away_time": "Time away",
@@ -690,7 +689,6 @@
   "mode_study": "Study",
   "mode_exam": "Exam",
   "adjust_time": "Adjust the time",
-  "adjust_not_in_exam": "The time cannot be adjusted in exam mode.",
   "adjust_needs_session": "Available while a session is running.",
   "adjust_back": "Rewind",
   "adjust_forward": "Fast-forward",
@@ -794,5 +792,10 @@
   "wrapped_exams": "{n, plural, one {# mock exam} other {# mock exams}}, {aways, plural, =0 {without leaving the page once.} one {with # exit from the page.} other {with # exits from the page.}}",
   "wrapped_so_far_week": "at this point last week",
   "wrapped_so_far_month": "at this point last month",
-  "wrapped_so_far_term": "at this point last term"
+  "wrapped_so_far_term": "at this point last term",
+  "exam_straight": "Straight through, no breaks",
+  "exam_options": "Exam options",
+  "exam_pause": "Pause the exam",
+  "exam_resume": "Resume the exam",
+  "exam_pause_hint": "A real exam cannot be paused. If it is needed, it can be done from here: the clock stays stopped until it is resumed."
 }
