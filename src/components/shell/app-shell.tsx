@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useProfile } from "@/components/providers";
+import { FloatingTimer } from "@/components/study/floating-timer";
 import { StudyTimerRunner } from "@/components/study/timer-runner";
 import { useAutoCloseOnLeave, useEdgeIntent } from "@/hooks/use-edge-menu";
 import { useScrolled } from "@/hooks/use-scrolled";
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ShellContext.Provider value={value}>
       <StudyTimerRunner />
       {children}
+      <FloatingTimer />
       <Drawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

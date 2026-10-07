@@ -1,6 +1,6 @@
 "use client";
 
-import { History, Maximize2, Minimize2, SlidersHorizontal, Timer, Volume2, VolumeX } from "lucide-react";
+import { BookOpenCheck, GraduationCap, History, Maximize2, Minimize2, Play, SlidersHorizontal, Sparkles, Timer, Volume2, VolumeX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Dialog as DialogPrimitive } from "radix-ui";
@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { CommitInput } from "@/components/ui/commit-input";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { playSound, SOUND_KINDS, type SoundKind } from "@/lib/chime";
 import { activeSubjects } from "@/lib/domain/subjects";
-import { CUSTOM_LIMITS, tasksCompletedBetween, type PresetKey, type SessionSummary } from "@/lib/domain/timer";
+import { CUSTOM_LIMITS, EXAM_MINUTES, isExam, isIncomplete, tasksCompletedBetween, type PresetKey, type SessionSummary } from "@/lib/domain/timer";
 import { useStudyMutations } from "@/lib/queries/study";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTasks } from "@/lib/queries/tasks";
@@ -23,6 +25,7 @@ import { useDuration } from "./duration";
 import { HistoryView } from "./history-view";
 import { PhaseRow, TimerControls, TimerRing } from "./timer-display";
 import { TodayTasks } from "./today-tasks";
+import { WrappedDialog } from "./wrapped-dialog";
 
 function setTab(tab: "session" | "history") {
   const url = new URL(window.location.href);
@@ -37,6 +40,9 @@ export function StudyView() {
   const tab = useSearchParams().get("tab") === "history" ? "history" : "session";
   const { timer, setup, now } = useStudy();
   const [focusMode, setFocusMode] = useState(false);
+  const [wrapped, setWrapped] = useState(false);
+  const exam = isExam(timer.status === "active" ? timer.config : setup.config);
+  const locked = timer.status === "active";
   const focusOpen = focusMode && timer.status !== "finished";
 
   // Pantalla completa mientras dura el modo foco (si el navegador la permite).
@@ -58,12 +64,18 @@ export function StudyView() {
     <PageFrame
       title={t("nav_sessions")}
       actions={
-        tab === "session" ? (
-          <Button onClick={() => setFocusMode(true)}>
-            <Maximize2 size={18} />
-            {t("focus_mode")}
+        <>
+          <Button variant="ghost" onClick={() => setWrapped(true)}>
+            <Sparkles size={18} />
+            {t("wrapped")}
           </Button>
-        ) : null
+          {tab === "session" ? (
+            <Button onClick={() => setFocusMode(true)}>
+              <Maximize2 size={18} />
+              {t("focus_mode")}
+            </Button>
+          ) : null}
+        </>
       }
     >
       <div className="tabs mb-6" role="tablist" aria-label={t("sessions_tabs")}>
@@ -82,7 +94,18 @@ export function StudyView() {
           <HistoryView onStart={() => setTab("session")} />
         ) : (
           <div className="sessions-grid">
-            <section className="timer-card" aria-label={t("timer")}>
+            {/* data-exam: en modo examen el acento de la tarjeta pasa al rojo de examen. */}
+            <section className="timer-card" aria-label={t("timer")} data-exam={exam ? "" : undefined}>
+              <Segmented
+                label={t("session_mode")}
+                value={exam ? "exam" : "study"}
+                disabled={locked}
+                onChange={(mode) => studyStore.setExamMode(mode === "exam")}
+                options={[
+                  { value: "study", label: t("mode_study"), icon: <BookOpenCheck size={16} /> },
+                  { value: "exam", label: t("mode_exam"), icon: <GraduationCap size={16} /> },
+                ]}
+              />
               <PhaseRow timer={timer} config={setup.config} />
               <TimerRing timer={timer} config={setup.config} now={now} />
               <TimerControls timer={timer} />
@@ -117,17 +140,20 @@ export function StudyView() {
       </DialogPrimitive.Root>
 
       {timer.status === "finished" ? <SummaryDialog summary={timer.summary} /> : null}
+      <WrappedDialog open={wrapped} onOpenChange={setWrapped} />
     </PageFrame>
   );
 }
 
-/** Presets, valores personalizados, materia, sonido y "Terminar sesión". */
+/** Presets (o la duración del examen), materia, sonido y "Terminar sesión". */
 function SessionOptions() {
   const t = useTranslations();
+  const duration = useDuration();
   const { timer, setup } = useStudy();
   const subjectsQuery = useSubjects();
   const subjects = activeSubjects(subjectsQuery.data ?? []);
   const locked = timer.status === "active";
+  const exam = isExam(locked ? timer.config : setup.config);
   const subjectId = subjects.some((subject) => subject.id === setup.subjectId) ? (setup.subjectId ?? "") : "";
 
   const customField = (key: keyof typeof CUSTOM_LIMITS, label: string) => (
@@ -150,20 +176,30 @@ function SessionOptions() {
   return (
     <div className="session-options">
       <div className="row">
-        <Segmented<PresetKey>
-          label={t("preset")}
-          value={setup.config.preset}
-          disabled={locked}
-          onChange={(preset) => studyStore.setPreset(preset)}
-          options={[
-            { value: "25-5", label: t("preset_pomodoro") },
-            { value: "50-10", label: "50/10" },
-            { value: "90-20", label: "90/20" },
-            { value: "custom", label: t("custom"), icon: <SlidersHorizontal size={16} /> },
-          ]}
-        />
+        {exam ? (
+          <Segmented
+            label={t("exam_duration")}
+            value={String(setup.examMinutes)}
+            disabled={locked}
+            onChange={(minutes) => studyStore.setExamMinutes(Number(minutes))}
+            options={EXAM_MINUTES.map((minutes) => ({ value: String(minutes), label: duration(minutes * 60) }))}
+          />
+        ) : (
+          <Segmented<Exclude<PresetKey, "exam">>
+            label={t("preset")}
+            value={setup.studyPreset}
+            disabled={locked}
+            onChange={(preset) => studyStore.setPreset(preset)}
+            options={[
+              { value: "25-5", label: t("preset_pomodoro") },
+              { value: "50-10", label: "50/10" },
+              { value: "90-20", label: "90/20" },
+              { value: "custom", label: t("custom"), icon: <SlidersHorizontal size={16} /> },
+            ]}
+          />
+        )}
       </div>
-      {setup.config.preset === "custom" ? (
+      {!exam && setup.config.preset === "custom" ? (
         <div className="custom-row">
           {customField("focusMinutes", t("focus_min"))}
           {customField("breakMinutes", t("break_min"))}
@@ -190,9 +226,11 @@ function SessionOptions() {
             {t("sound_on_phase")}
           </span>
         </Switch>
+        <SoundPopover />
       </div>
-      {locked ? <p className="field-hint">{t("options_locked")}</p> : null}
-      {locked ? (
+      {exam ? <p className="field-hint max-w-[52ch] text-center">{t("exam_hint")}</p> : null}
+      {locked && !exam ? <p className="field-hint">{t("options_locked")}</p> : null}
+      {locked && !exam ? (
         <Button variant="ghost" onClick={() => studyStore.finish()}>
           {t("finish_session")}
         </Button>
@@ -201,36 +239,114 @@ function SessionOptions() {
   );
 }
 
-/** Resumen al terminar o detener: tiempos reales, ciclos y tareas tildadas. Guardar o descartar. */
+/** Elegir y probar el sonido de fin de fase, el volumen y la alarma del modo examen. */
+function SoundPopover() {
+  const t = useTranslations();
+  const { setup } = useStudy();
+  const choose = (kind: SoundKind) => {
+    studyStore.setSoundKind(kind);
+    // Elegir uno lo hace sonar: así se prueban sin un paso más.
+    playSound(kind, setup.volume);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" icon aria-label={t("sound_settings")} data-tip={t("sound_settings")}>
+          <SlidersHorizontal size={18} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="popover-pad sound-pop" align="end">
+        <strong className="text-body-s" id="sound-kind-label">
+          {t("sound_settings")}
+        </strong>
+        <div className="sound-list" role="radiogroup" aria-labelledby="sound-kind-label">
+          {SOUND_KINDS.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              role="radio"
+              className="sound-option"
+              aria-checked={setup.soundKind === kind}
+              onClick={() => choose(kind)}
+            >
+              <span className="sound-radio" aria-hidden="true" />
+              <span className="flex-1">{t(`sound_${kind}`)}</span>
+              <Play size={14} className="subtle" aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+        <label className="sound-volume">
+          <span>{t("sound_volume")}</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={Math.round(setup.volume * 100)}
+            aria-valuetext={`${Math.round(setup.volume * 100)} %`}
+            onChange={(event) => studyStore.setVolume(Number(event.target.value) / 100)}
+            onPointerUp={() => playSound(setup.soundKind, setup.volume)}
+            onKeyUp={() => playSound(setup.soundKind, setup.volume)}
+          />
+        </label>
+        <Button className="self-start" onClick={() => playSound(setup.soundKind, setup.volume)}>
+          <Play size={16} />
+          {t("sound_test")}
+        </Button>
+        <div className="menu-sep" />
+        <Switch checked={setup.awayAlarm} onChange={(value) => studyStore.setAwayAlarm(value)}>
+          {t("exam_away_alarm")}
+        </Switch>
+        <span className="field-hint">{t("exam_away_alarm_hint")}</span>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Resumen al terminar, detener o reiniciar: tiempos reales, ciclos y lo que se tildó. Guardar o descartar. */
 function SummaryDialog({ summary }: { summary: SessionSummary }) {
   const t = useTranslations();
   const duration = useDuration();
   const tasksQuery = useTasks();
   const mutations = useStudyMutations();
   const [saving, setSaving] = useState(false);
+  const exam = isExam(summary);
   const completed = useMemo(
     () => tasksCompletedBetween(tasksQuery.data ?? [], summary.startedAt, summary.endedAt),
+    [tasksQuery.data, summary.startedAt, summary.endedAt],
+  );
+  const subtasks = useMemo(
+    () => tasksCompletedBetween((tasksQuery.data ?? []).flatMap((task) => task.subtasks), summary.startedAt, summary.endedAt),
     [tasksQuery.data, summary.startedAt, summary.endedAt],
   );
 
   async function save() {
     setSaving(true);
-    const ok = await mutations.save(summary, completed);
+    const ok = await mutations.save(summary, completed, subtasks.length);
     setSaving(false);
     if (!ok) return;
-    studyStore.reset();
+    studyStore.clear();
     toast(t("session_saved"));
   }
 
   function discard() {
-    studyStore.reset();
+    studyStore.clear();
     toast(t("session_discarded"));
   }
+
+  const stat = (value: string | number, label: string) => (
+    <div className="summary-stat">
+      <div className="v">{value}</div>
+      <div className="l">{label}</div>
+    </div>
+  );
 
   return (
     <Dialog open>
       <DialogContent
-        title={t("session_summary")}
+        title={exam ? t("exam_summary") : t("session_summary")}
+        description={isIncomplete(summary) ? t("session_incomplete", { done: summary.cyclesCompleted, total: summary.cycles ?? 0 }) : undefined}
         size="sm"
         hideClose
         onEscapeKeyDown={(event) => event.preventDefault()}
@@ -238,22 +354,11 @@ function SummaryDialog({ summary }: { summary: SessionSummary }) {
       >
         <DialogBody>
           <div className="summary-stats">
-            <div className="summary-stat">
-              <div className="v">{duration(summary.focusSeconds)}</div>
-              <div className="l">{t("focus_time")}</div>
-            </div>
-            <div className="summary-stat">
-              <div className="v">{duration(summary.breakSeconds)}</div>
-              <div className="l">{t("breaks")}</div>
-            </div>
-            <div className="summary-stat">
-              <div className="v">{summary.cyclesCompleted}</div>
-              <div className="l">{t("cycles_completed")}</div>
-            </div>
-            <div className="summary-stat">
-              <div className="v">{completed.length}</div>
-              <div className="l">{t("tasks_completed")}</div>
-            </div>
+            {stat(duration(summary.focusSeconds), t("focus_time"))}
+            {exam ? stat(summary.awayCount ?? 0, t("exam_aways")) : stat(duration(summary.breakSeconds), t("breaks"))}
+            {exam ? stat(duration(summary.awaySeconds ?? 0), t("exam_away_time")) : stat(summary.cyclesCompleted, t("cycles_completed"))}
+            {stat(completed.length, t("tasks_completed"))}
+            {stat(subtasks.length, t("subtasks_completed"))}
           </div>
           {completed.length > 0 ? (
             <ul className="flex flex-col gap-1 text-body-s text-text-muted">

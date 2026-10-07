@@ -60,8 +60,9 @@ test("timer: fases, pausa, saltar descanso y título de la pestaña", async ({ p
   await expect(card(page).locator(".phase-pill")).toHaveText("Foco");
   await expect(card(page)).toContainText("Ciclo 2 de 4");
 
-  // Reiniciar vuelve al estado inicial y restaura el título de la página.
+  // Reiniciar con foco ya hecho ofrece guardarlo; al descartar vuelve al estado inicial y restaura el título.
   await card(page).getByRole("button", { name: "Reiniciar" }).click();
+  await page.getByRole("dialog", { name: "Resumen de la sesión" }).getByRole("button", { name: "Descartar" }).click();
   await expect(card(page).locator(".phase-pill")).toHaveText("Lista para empezar");
   await expect(page).toHaveTitle("Sesiones de estudio · Tilde");
 });

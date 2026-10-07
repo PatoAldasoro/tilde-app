@@ -61,6 +61,7 @@ async function main() {
     grade_course: course,
     grade_final: final,
     archived_at: archived ? at(rel("2026-07-20")) : null,
+    sort_order: order,
     created_at: new Date(Date.UTC(2026, 6, 1, 12, order)).toISOString(),
   });
   const subjects = await insert("subjects", [

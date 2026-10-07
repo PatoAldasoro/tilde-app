@@ -2,7 +2,7 @@
 
 import { Archive, ArchiveRestore, Calendar, Ellipsis, FileText, Pencil, Trash2, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { SubjectTile } from "@/components/subject-icon";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Progress } from "@/components/ui/progress";
@@ -21,9 +21,12 @@ type SubjectCardProps = {
   onEdit: () => void;
   onArchive: (archived: boolean) => void;
   onDelete: () => void;
+  /** Asa para reordenar (solo en la lista de materias activas). */
+  grip?: ReactNode;
+  className?: string;
 };
 
-export function SubjectCard({ subject, progress, taskCounts, documentCount, onOpen, onEdit, onArchive, onDelete }: SubjectCardProps) {
+export function SubjectCard({ subject, progress, taskCounts, documentCount, onOpen, onEdit, onArchive, onDelete, grip, className }: SubjectCardProps) {
   const t = useTranslations();
   const titleId = useId();
   const termLabel = useTermLabel();
@@ -31,7 +34,7 @@ export function SubjectCard({ subject, progress, taskCounts, documentCount, onOp
   const meta = [subject.commission, termLabel(subject)].filter(Boolean).join(" · ");
 
   return (
-    <article className={cn("subject-card", subjectClass(subject.color_key), archived && "is-archived")} aria-labelledby={titleId}>
+    <article className={cn("subject-card", subjectClass(subject.color_key), archived && "is-archived", className)} aria-labelledby={titleId}>
       <button type="button" className="card-open" aria-label={t("open_subject", { name: subject.name })} onClick={onOpen} />
       <div className="card-top">
         <SubjectTile icon={subject.icon} />
@@ -45,6 +48,7 @@ export function SubjectCard({ subject, progress, taskCounts, documentCount, onOp
           </button>
         ) : (
           <Menu>
+            {grip}
             <MenuTrigger className="btn btn-ghost btn-icon card-menu" aria-label={t("subject_options", { name: subject.name })}>
               <Ellipsis size={20} />
             </MenuTrigger>

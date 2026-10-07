@@ -80,4 +80,7 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 - Mutaciones: `useOptimistic` de `src/lib/queries/table.ts` (aplica en caché, revierte si falla).
 - Los ids se generan en el cliente (`crypto.randomUUID()`), así el optimista y la base coinciden.
 - Confirmaciones con `confirm()` y avisos con `toast()` (`src/components/ui`). Borrados de tareas: toast "Deshacer" de 8 s.
+- La sesión de estudio en curso vive fuera de React (`src/lib/study-store.ts`, persistida en `localStorage`); el timer
+  flotante, en `src/lib/pip-store.ts`. Los tooltips que pueden quedar dentro de un panel con scroll van con el
+  `Tooltip` de Radix (portal), no con `data-tip`.
 - Al cerrar una fase: `npm run check` en verde y un commit.

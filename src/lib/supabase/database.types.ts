@@ -146,13 +146,13 @@ isOneToOne: false
                   ]
                 },"study_sessions": {
                   Row: {
-                    "break_seconds": number,"created_at": string,"cycles_completed": number,"ended_at": string,"focus_seconds": number,"id": string,"preset": string,"started_at": string,"subject_id": string | null,"user_id": string
+                    "away_count": number,"away_seconds": number,"break_seconds": number,"created_at": string,"cycles_completed": number,"ended_at": string,"focus_seconds": number,"id": string,"preset": string,"started_at": string,"subject_id": string | null,"subtasks_completed": number,"user_id": string
                   }
                   Insert: {
-                    "break_seconds": number,"created_at"?: string,"cycles_completed": number,"ended_at": string,"focus_seconds": number,"id"?: string,"preset": string,"started_at": string,"subject_id"?: string | null,"user_id"?: string
+                    "away_count"?: number,"away_seconds"?: number,"break_seconds": number,"created_at"?: string,"cycles_completed": number,"ended_at": string,"focus_seconds": number,"id"?: string,"preset": string,"started_at": string,"subject_id"?: string | null,"subtasks_completed"?: number,"user_id"?: string
                   }
                   Update: {
-                    "break_seconds"?: number,"created_at"?: string,"cycles_completed"?: number,"ended_at"?: string,"focus_seconds"?: number,"id"?: string,"preset"?: string,"started_at"?: string,"subject_id"?: string | null,"user_id"?: string
+                    "away_count"?: number,"away_seconds"?: number,"break_seconds"?: number,"created_at"?: string,"cycles_completed"?: number,"ended_at"?: string,"focus_seconds"?: number,"id"?: string,"preset"?: string,"started_at"?: string,"subject_id"?: string | null,"subtasks_completed"?: number,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -184,13 +184,13 @@ isOneToOne: false
                   ]
                 },"subjects": {
                   Row: {
-                    "archived_at": string | null,"color_key": string,"commission": string | null,"created_at": string,"credits": number | null,"grade_course": number | null,"grade_final": number | null,"icon": string | null,"id": string,"name": string,"teacher": string | null,"term_period": number | null,"term_year": number | null,"updated_at": string,"user_id": string
+                    "archived_at": string | null,"color_key": string,"commission": string | null,"created_at": string,"credits": number | null,"grade_course": number | null,"grade_final": number | null,"icon": string | null,"id": string,"name": string,"sort_order": number,"teacher": string | null,"term_period": number | null,"term_year": number | null,"updated_at": string,"user_id": string
                   }
                   Insert: {
-                    "archived_at"?: string | null,"color_key": string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"icon"?: string | null,"id"?: string,"name": string,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
+                    "archived_at"?: string | null,"color_key": string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"icon"?: string | null,"id"?: string,"name": string,"sort_order"?: number,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
                   }
                   Update: {
-                    "archived_at"?: string | null,"color_key"?: string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"icon"?: string | null,"id"?: string,"name"?: string,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
+                    "archived_at"?: string | null,"color_key"?: string,"commission"?: string | null,"created_at"?: string,"credits"?: number | null,"grade_course"?: number | null,"grade_final"?: number | null,"icon"?: string | null,"id"?: string,"name"?: string,"sort_order"?: number,"teacher"?: string | null,"term_period"?: number | null,"term_year"?: number | null,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     

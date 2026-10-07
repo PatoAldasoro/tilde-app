@@ -1,19 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
+  adjust,
   clampCustom,
+  comeBack,
   configFor,
   elapsedTotals,
+  examConfig,
   finish,
   formatClock,
+  isIncomplete,
   isTimerState,
+  leave,
   pause,
   phaseProgress,
   remainingMs,
+  restartPhase,
   resume,
   skipBreak,
+  skipFocus,
   start,
   tasksCompletedBetween,
   tick,
+  worthSaving,
   type ActiveTimer,
   type TimerState,
 } from "./timer";
@@ -103,6 +111,9 @@ describe("fases y ciclos", () => {
         focusSeconds: 20 * 60,
         breakSeconds: 2 * 60,
         cyclesCompleted: 2,
+        cycles: 2,
+        awayCount: 0,
+        awaySeconds: 0,
       },
     });
   });
@@ -136,6 +147,9 @@ describe("resumen", () => {
       focusSeconds: 25 * 60,
       breakSeconds: 2 * 60,
       cyclesCompleted: 1,
+      cycles: 4,
+      awayCount: 0,
+      awaySeconds: 0,
     });
   });
 
@@ -183,5 +197,140 @@ describe("formato y persistencia", () => {
       expect(isTimerState(bad)).toBe(false);
     }
     expect(isTimerState({ status: "idle" })).toBe(true);
+  });
+});
+
+describe("ajustar el tiempo a mano", () => {
+  it("adelantar le quita tiempo a la fase y lo cuenta como foco (se estudió con el timer frenado)", () => {
+    const paused = pause(start(pomodoro, null, T0), T0 + 5 * MIN);
+    const moved = adjust(paused, 10 * MIN, T0 + 40 * MIN);
+    expect(remainingMs(moved, T0 + 40 * MIN)).toBe(10 * MIN);
+    expect(moved.focusMs).toBe(15 * MIN);
+    expect(moved.running).toBe(false);
+  });
+
+  it("atrasar le devuelve tiempo a la fase y lo descuenta (el timer corrió sin que se estudiara)", () => {
+    const timer = start(pomodoro, null, T0);
+    const moved = adjust(timer, -5 * MIN, T0 + 12 * MIN);
+    expect(remainingMs(moved, T0 + 12 * MIN)).toBe(18 * MIN);
+    expect(elapsedTotals(moved, T0 + 12 * MIN).focusMs).toBe(7 * MIN);
+    // Sigue corriendo desde ahí.
+    expect(remainingMs(moved, T0 + 13 * MIN)).toBe(17 * MIN);
+    expect(elapsedTotals(moved, T0 + 13 * MIN).focusMs).toBe(8 * MIN);
+  });
+
+  it("no pasa del principio ni del final de la fase", () => {
+    const timer = start(pomodoro, null, T0);
+    const rewound = adjust(timer, -60 * MIN, T0 + 3 * MIN);
+    expect(remainingMs(rewound, T0 + 3 * MIN)).toBe(25 * MIN);
+    expect(elapsedTotals(rewound, T0 + 3 * MIN).focusMs).toBe(0);
+
+    const forwarded = adjust(timer, 60 * MIN, T0 + 3 * MIN);
+    expect(remainingMs(forwarded, T0 + 3 * MIN)).toBe(0);
+    expect(forwarded.focusMs).toBe(25 * MIN);
+    // Al llegar al final, el tick la cierra como una fase completa.
+    const { state, events } = tick(forwarded, T0 + 3 * MIN);
+    expect(active(state).phase).toBe("break");
+    expect(active(state).cyclesCompleted).toBe(1);
+    expect(events).toEqual([{ type: "break-started", minutes: 5 }]);
+  });
+
+  it("también ajusta el descanso, sin tocar el foco", () => {
+    const onBreak = active(tick(start(pomodoro, null, T0), T0 + 25 * MIN).state);
+    const moved = adjust(onBreak, 2 * MIN, T0 + 26 * MIN);
+    expect(remainingMs(moved, T0 + 26 * MIN)).toBe(2 * MIN);
+    expect(moved.focusMs).toBe(25 * MIN);
+    expect(moved.breakMs).toBe(3 * MIN);
+  });
+
+  it("volver a empezar la fase conserva el tiempo real ya contado", () => {
+    const again = restartPhase(start(pomodoro, null, T0), T0 + 10 * MIN);
+    expect(remainingMs(again, T0 + 10 * MIN)).toBe(25 * MIN);
+    expect(elapsedTotals(again, T0 + 12 * MIN).focusMs).toBe(12 * MIN);
+  });
+
+  it("cortar el foco pasa al descanso sin contar el ciclo como completado", () => {
+    const state = skipFocus(start(pomodoro, null, T0), T0 + 10 * MIN);
+    const onBreak = active(state);
+    expect(onBreak.phase).toBe("break");
+    expect(onBreak.cyclesCompleted).toBe(0);
+    expect(onBreak.focusMs).toBe(10 * MIN);
+    expect(remainingMs(onBreak, T0 + 10 * MIN)).toBe(5 * MIN);
+    // En el descanso no hace nada.
+    expect(skipFocus(onBreak, T0 + 11 * MIN)).toBe(onBreak);
+  });
+
+  it("cortar el foco del último ciclo termina la sesión", () => {
+    const single = start({ preset: "custom", focusMinutes: 30, breakMinutes: 5, cycles: 1 }, null, T0);
+    const state = skipFocus(single, T0 + 12 * MIN);
+    expect(state.status).toBe("finished");
+    if (state.status === "finished") expect(state.summary).toMatchObject({ focusSeconds: 720, cyclesCompleted: 0, cycles: 1 });
+  });
+});
+
+describe("sesiones incompletas", () => {
+  it("el resumen dice cuántos ciclos estaban planeados", () => {
+    const summary = finish(start(pomodoro, null, T0), T0 + 30 * MIN);
+    expect(summary).toMatchObject({ cycles: 4, cyclesCompleted: 0, focusSeconds: 1800 });
+    expect(isIncomplete(summary)).toBe(true);
+    expect(isIncomplete({ cycles: 4, cyclesCompleted: 4 })).toBe(false);
+    // Un resumen viejo, sin el dato, no se marca como incompleto.
+    expect(isIncomplete({ cyclesCompleted: 1 })).toBe(false);
+  });
+
+  it("vale la pena guardarla a partir de un minuto de foco", () => {
+    const timer = start(pomodoro, null, T0);
+    expect(worthSaving(timer, T0 + 59_000)).toBe(false);
+    expect(worthSaving(timer, T0 + 60_000)).toBe(true);
+  });
+});
+
+describe("modo examen", () => {
+  const exam = examConfig(120);
+
+  it("es un solo bloque sin descansos: 1:30, 2, 2:30 o 3 horas", () => {
+    expect(exam).toEqual({ preset: "exam", focusMinutes: 120, breakMinutes: 0, cycles: 1 });
+    expect(examConfig(180).focusMinutes).toBe(180);
+    expect(examConfig(45).focusMinutes).toBe(120);
+  });
+
+  it("corre de corrido y termina solo al cumplirse el tiempo", () => {
+    const timer = start(exam, null, T0);
+    expect(tick(timer, T0 + 119 * MIN).state).toBe(timer);
+    const { state, events } = tick(timer, T0 + 120 * MIN);
+    expect(events).toEqual([{ type: "finished" }]);
+    expect(state.status === "finished" && state.summary).toMatchObject({ preset: "exam", focusSeconds: 7200, breakSeconds: 0, cyclesCompleted: 1 });
+  });
+
+  it("cuenta las salidas de la página y el tiempo afuera", () => {
+    let timer = start(exam, null, T0);
+    timer = leave(timer, T0 + 10 * MIN);
+    // Dos avisos seguidos de la misma salida (pestaña oculta + ventana sin foco) cuentan una vez.
+    expect(leave(timer, T0 + 10 * MIN + 500)).toBe(timer);
+    timer = comeBack(timer, T0 + 11 * MIN);
+    timer = leave(timer, T0 + 30 * MIN);
+    timer = comeBack(timer, T0 + 30 * MIN + 30_000);
+    expect(timer).toMatchObject({ awayCount: 2, awayMs: 90_000, awaySince: null });
+    expect(comeBack(timer, T0 + 40 * MIN)).toBe(timer);
+    expect(finish(timer, T0 + 50 * MIN)).toMatchObject({ awayCount: 2, awaySeconds: 90 });
+  });
+
+  it("si termina estando afuera, ese tiempo también se cuenta", () => {
+    const timer = leave(start(exam, null, T0), T0 + 100 * MIN);
+    const { state } = tick(timer, T0 + 125 * MIN);
+    expect(state.status === "finished" && state.summary).toMatchObject({ awayCount: 1, awaySeconds: 20 * 60 });
+  });
+
+  it("fuera del modo examen, o en pausa, salir no se registra", () => {
+    const study = start(pomodoro, null, T0);
+    expect(leave(study, T0 + MIN)).toBe(study);
+    const paused = pause(start(exam, null, T0), T0 + MIN);
+    expect(leave(paused, T0 + 2 * MIN)).toBe(paused);
+  });
+
+  it("el reloj largo muestra horas", () => {
+    expect(formatClock(120 * MIN, { hours: true })).toBe("2:00:00");
+    expect(formatClock(61 * MIN + 5000, { hours: true })).toBe("1:01:05");
+    expect(formatClock(59_001, { hours: true })).toBe("0:01:00");
   });
 });

@@ -11,9 +11,10 @@ horario, tareas, calendario, notas y sesiones de estudio. El color de cada mater
   Se pueden importar desde un JSON (por ejemplo, un plan armado por una IA).
 - **Calendario** — vista mensual con parciales, finales, TP (que generan su tarea), recuperatorios y feriados nacionales.
   Importa fechas de un archivo `.ics` o de un calendario vinculado (Google Calendar, Outlook, iCloud).
-- **Sesiones de estudio** — timer con presets, modo foco, tareas de hoy (con sus subtareas) e historial.
+- **Sesiones de estudio** — timer con presets, modo foco, modo examen, timer flotante, tareas de hoy (con sus
+  subtareas), historial editable y un "Wrapped" de la semana, el mes o el cuatrimestre.
 
-Cada materia (y cada actividad del horario) puede llevar un ícono además de su color. El color de acento de la
+Las materias se ordenan arrastrándolas en Inicio. Cada materia (y cada actividad del horario) puede llevar un ícono además de su color. El color de acento de la
 app se elige en Ajustes entre los de la paleta.
 
 Pensada para desktop y tablets en modo escritorio (1024 a 1440 px, con touch). En español e inglés, con tema claro y oscuro.

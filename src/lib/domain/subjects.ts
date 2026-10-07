@@ -37,6 +37,11 @@ export function firstFreeColor(usedByActive: readonly string[]): ColorKey {
 export const TERM_PERIODS = [1, 2, 0, 3] as const;
 export type TermPeriod = (typeof TERM_PERIODS)[number];
 
+/** Orden de las materias: el que eligió el usuario (arrastrando en Inicio) y, a igualdad, por antigüedad. */
+export function bySubjectOrder(a: { sort_order: number; created_at: string }, b: { sort_order: number; created_at: string }): number {
+  return a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at);
+}
+
 type Archivable = { archived_at: string | null };
 
 export const isArchived = (subject: Archivable): boolean => subject.archived_at !== null;

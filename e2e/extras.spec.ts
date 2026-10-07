@@ -650,3 +650,76 @@ test("ajustes: el color de acento se elige de la paleta, se aplica en toda la ap
   await expect.poll(async () => (await db.from("profiles").select("accent_color").single()).data?.accent_color).toBeNull();
   expect(errors).toEqual([]);
 });
+
+// ---------- materias: orden a mano ----------
+
+test("inicio: las materias se reordenan arrastrando, con el mouse y con el teclado", async ({ page }) => {
+  await db.from("subjects").update({ sort_order: 1 }).eq("id", subjectId);
+  await db.from("subjects").insert([
+    { name: "Álgebra", color_key: "frambuesa", sort_order: 2 },
+    { name: "Química", color_key: "turquesa", sort_order: 3 },
+  ]);
+  await page.goto("/app");
+  const names = () => page.locator(".subject-card .card-title").allTextContents();
+  const order = async () => (await db.from("subjects").select("name").order("sort_order")).data!.map((row) => row.name);
+  await expect.poll(names).toEqual(["Física II", "Álgebra", "Química"]);
+
+  // Con el teclado, desde el asa: Espacio levanta, la flecha mueve, Espacio suelta.
+  // (con una pausa entre teclas, como una persona: el arrastre con teclado mide y anuncia cada paso)
+  await page.getByRole("button", { name: "Mover Química" }).focus();
+  for (const key of ["Space", "ArrowLeft", "ArrowLeft", "Space"]) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(200);
+  }
+  await expect.poll(names).toEqual(["Química", "Física II", "Álgebra"]);
+  await expect.poll(order).toEqual(["Química", "Física II", "Álgebra"]);
+
+  // Con el mouse, desde cualquier parte de la tarjeta.
+  const from = (await page.locator(".subject-card").filter({ hasText: "Álgebra" }).boundingBox())!;
+  const to = (await page.locator(".subject-card").filter({ hasText: "Química" }).boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 - 20, from.y + from.height / 2, { steps: 3 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(names).toEqual(["Álgebra", "Química", "Física II"]);
+  await expect.poll(order).toEqual(["Álgebra", "Química", "Física II"]);
+  // Arrastrar no abre la materia; un clic sin mover, sí.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.locator(".subject-card").filter({ hasText: "Química" }).getByRole("button", { name: "Abrir Química" }).click();
+  await expect(page.getByRole("dialog", { name: "Química" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // El orden queda guardado y vale en el resto de la app.
+  await page.reload();
+  await expect.poll(names).toEqual(["Álgebra", "Química", "Física II"]);
+  await page.goto("/app/todo");
+  await page.getByRole("radio", { name: "Por materia" }).click();
+  await expect(page.getByRole("radiogroup", { name: "Materia" }).getByRole("radio")).toHaveText(["Álgebra", "Química", "Física II"]);
+
+  // Una materia nueva va al final.
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Agregar materia" }).first().click();
+  await page.getByRole("dialog", { name: "Nueva materia" }).getByLabel("Nombre").fill("Historia");
+  await page.getByRole("dialog", { name: "Nueva materia" }).getByRole("button", { name: "Agregar materia" }).click();
+  await expect.poll(names).toEqual(["Álgebra", "Química", "Física II", "Historia"]);
+  await expect.poll(order).toEqual(["Álgebra", "Química", "Física II", "Historia"]);
+});
+
+test("el logo conserva su color aunque cambie el acento", async ({ page }) => {
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Abrir menú" }).click();
+  const logo = drawer(page).locator(".logo svg rect").first();
+  const fill = () => logo.evaluate((element) => getComputedStyle(element).fill);
+  const original = await fill();
+  expect(original).toBe("rgb(228, 73, 25)");
+
+  await drawer(page).getByRole("button", { name: "Ajustes" }).click();
+  await page.getByRole("dialog", { name: "Ajustes" }).getByRole("radio", { name: "Cobalto" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-accent", "cobalto");
+  await page.getByRole("dialog", { name: "Ajustes" }).getByRole("button", { name: "Listo" }).click();
+  await page.getByRole("button", { name: "Abrir menú" }).click();
+  // El acento cambió (la sección activa del menú usa el nuevo), el logo no.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--color-accent").trim().toUpperCase())).toBe("#5E8AFE");
+  expect(await fill()).toBe(original);
+});

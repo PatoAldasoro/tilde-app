@@ -3,7 +3,7 @@
 import { Archive, ArrowLeft, BookOpen, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { PageFrame } from "@/components/shell/app-shell";
 import { Button } from "@/components/ui/button";
 import { confirm } from "@/components/ui/confirm";
@@ -16,6 +16,7 @@ import { useDocuments, useSubjectMutations, useSubjects } from "@/lib/queries/su
 import { useTasks } from "@/lib/queries/tasks";
 import type { SubjectRow } from "@/lib/supabase/types";
 import { GradesView } from "./grades-view";
+import { SortableSubjects } from "./sortable-subjects";
 import { SubjectCard } from "./subject-card";
 import { SubjectFormDialog } from "./subject-form-dialog";
 import { SubjectSheet } from "./subject-sheet";
@@ -78,6 +79,21 @@ export function HomeView() {
 
   const addSubject = () => setForm({ subject: null });
   const list = showArchived ? archived : active;
+  const card = (subject: SubjectRow, grip?: ReactNode, className?: string) => (
+    <SubjectCard
+      key={subject.id}
+      subject={subject}
+      progress={subjectProgress(tasks, subject.id)}
+      taskCounts={taskCounts(tasks.filter((task) => task.subject_id === subject.id))}
+      documentCount={documents.filter((document) => document.subject_id === subject.id).length}
+      grip={grip}
+      className={className}
+      onOpen={() => setOpenSubjectId(subject.id)}
+      onEdit={() => setForm({ subject })}
+      onArchive={(value) => setArchived(subject, value)}
+      onDelete={() => void remove(subject)}
+    />
+  );
 
   return (
     <PageFrame
@@ -160,32 +176,16 @@ export function HomeView() {
                   {t("add_subject")}
                 </Button>
               </Empty>
+            ) : showArchived ? (
+              <div className="subject-grid">{list.map((subject) => card(subject))}</div>
             ) : (
-              <div className="subject-grid">
-                {list.map((subject) => {
-                  const own = tasks.filter((task) => task.subject_id === subject.id);
-                  return (
-                    <SubjectCard
-                      key={subject.id}
-                      subject={subject}
-                      progress={subjectProgress(tasks, subject.id)}
-                      taskCounts={taskCounts(own)}
-                      documentCount={documents.filter((document) => document.subject_id === subject.id).length}
-                      onOpen={() => setOpenSubjectId(subject.id)}
-                      onEdit={() => setForm({ subject })}
-                      onArchive={(value) => setArchived(subject, value)}
-                      onDelete={() => void remove(subject)}
-                    />
-                  );
-                })}
-                {showArchived ? null : (
-                  <button type="button" className="subject-ghost" onClick={addSubject}>
-                    <Plus size={22} />
-                    <strong>{t("add_subject")}</strong>
-                    <span>{t("add_subject_hint")}</span>
-                  </button>
-                )}
-              </div>
+              <SortableSubjects subjects={list} renderCard={card} onReorder={mutations.reorder}>
+                <button type="button" className="subject-ghost" onClick={addSubject}>
+                  <Plus size={22} />
+                  <strong>{t("add_subject")}</strong>
+                  <span>{t("add_subject_hint")}</span>
+                </button>
+              </SortableSubjects>
             )}
           </>
         )}

@@ -126,6 +126,12 @@
   --accent-default-on-solid: #FFFFFF;
   /* Hacia dónde se corre el acento al pasar el mouse: en claro se oscurece. */
   --accent-shift: #000000;
+  /* Rojo del modo examen: solo aparece ahí (no es de la paleta de materias ni el de errores). */
+  --exam-solid: #BE123C;
+  --exam-vivid: #E11D48;
+  --exam-soft: #FFE4E8;
+  --exam-on-soft: #9F1239;
+  --exam-on-solid: #FFFFFF;
 
   --color-success: #12924F;
   --color-success-soft: #E3F5EA;
@@ -258,6 +264,11 @@
   --accent-default-on-solid: #1A0F0A;
   /* En oscuro, al pasar el mouse el acento se aclara. */
   --accent-shift: #FFFFFF;
+  --exam-solid: #FB5E7B;
+  --exam-vivid: #FB5E7B;
+  --exam-soft: #4A1522;
+  --exam-on-soft: #FFB1C0;
+  --exam-on-solid: #1A0A0E;
 
   --color-success: #4CC97F;
   --color-success-soft: #15301F;
@@ -381,6 +392,11 @@
 :root[data-accent="fucsia"], :root[data-accent="fucsia"] [data-theme] { --color-accent: var(--subject-fucsia-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-fucsia-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-fucsia-soft); --color-accent-text: var(--subject-fucsia-on-soft); --color-accent-fill: var(--subject-fucsia-solid); --color-on-accent-fill: var(--subject-fucsia-on-solid); --color-on-accent: var(--subject-fucsia-on-solid); --color-focus-ring: var(--subject-fucsia-vivid); }
 :root[data-accent="cacao"], :root[data-accent="cacao"] [data-theme] { --color-accent: var(--subject-cacao-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-cacao-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-cacao-soft); --color-accent-text: var(--subject-cacao-on-soft); --color-accent-fill: var(--subject-cacao-solid); --color-on-accent-fill: var(--subject-cacao-on-solid); --color-on-accent: var(--subject-cacao-on-solid); --color-focus-ring: var(--subject-cacao-vivid); }
 :root[data-accent="grafito"], :root[data-accent="grafito"] [data-theme] { --color-accent: var(--subject-grafito-vivid); --color-accent-hover: color-mix(in srgb, var(--subject-grafito-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--subject-grafito-soft); --color-accent-text: var(--subject-grafito-on-soft); --color-accent-fill: var(--subject-grafito-solid); --color-on-accent-fill: var(--subject-grafito-on-solid); --color-on-accent: var(--subject-grafito-on-solid); --color-focus-ring: var(--subject-grafito-vivid); }
+
+/* ---------- Modo examen ----------
+   Mientras hay un examen en curso (<html data-exam>) o está elegido en la tarjeta del timer
+   ([data-exam]), el acento pasa al rojo de examen, por encima del acento elegido en Ajustes. */
+:root[data-exam], [data-exam], :root[data-exam] [data-theme] { --color-accent: var(--exam-vivid); --color-accent-hover: color-mix(in srgb, var(--exam-vivid) 86%, var(--accent-shift)); --color-accent-soft: var(--exam-soft); --color-accent-text: var(--exam-on-soft); --color-accent-fill: var(--exam-solid); --color-on-accent-fill: var(--exam-on-solid); --color-on-accent: var(--exam-on-solid); --color-focus-ring: var(--exam-vivid); }
 
 @media (prefers-reduced-motion: reduce) {
   :root { --duration-fast: 1ms; --duration-base: 1ms; --duration-slow: 1ms; --duration-drawer: 1ms; }

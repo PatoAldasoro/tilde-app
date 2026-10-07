@@ -114,17 +114,17 @@ test("subtareas: bloquean la tarea, la completan sola y la reabren", async ({ pa
 
   const main = page.getByRole("checkbox", { name: /TP de circuitos/ }).first();
   await expect(main).toHaveAttribute("aria-disabled", "true");
-  await expect(main).toHaveAttribute("data-tip", "Faltan 2 subtareas para poder completarla");
+  await expect(main).toHaveAttribute("data-blocked-reason", "Faltan 2 subtareas para poder completarla");
   // aria-disabled: sigue recibiendo el clic para poder explicar por qué no se completa.
   await main.click({ force: true });
-  await expect(main).toHaveClass(/tip-open/);
+  await expect(page.locator(".tooltip")).toContainText("Faltan 2 subtareas para poder completarla");
   await expect(main).toHaveAttribute("aria-checked", "false");
   // Progreso por unidades: 2 subtareas = 2 unidades.
   await expect(day("Hoy", page).locator(".day-count")).toHaveText("0/2");
 
   await page.getByRole("button", { name: "Ver subtareas" }).click();
   await page.getByRole("checkbox", { name: "Armar el informe" }).click();
-  await expect(main).toHaveAttribute("data-tip", "Falta 1 subtarea para poder completarla");
+  await expect(main).toHaveAttribute("data-blocked-reason", "Falta 1 subtarea para poder completarla");
   await expect(day("Hoy", page).locator(".day-count")).toHaveText("1/2");
   await page.getByRole("checkbox", { name: "Revisar cálculos" }).click();
   // Al completar la última, la tarea se completa sola.

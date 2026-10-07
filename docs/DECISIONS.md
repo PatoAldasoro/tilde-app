@@ -185,3 +185,41 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
       una decisión explícita. Los cuatro que aparecen (`esbuild`, `@swc/core`, `@parcel/watcher`, `unrs-resolver`)
       solo verifican o compilan un binario que ya llega precompilado: quedan denegados. El build, los tests y el
       lint pasan con esos scripts bloqueados.
+
+## Tercera tanda de cambios (07/10/2026)
+
+33. **Orden de las materias a mano.** `subjects.sort_order` (las que ya existían quedan por antigüedad). En Inicio se
+    arrastran desde cualquier parte de la tarjeta con el mouse o el dedo, y con el teclado desde un asa (Espacio la
+    levanta, las flechas la mueven). Ese orden vale en toda la app: filtros, selectores, notas. Una nueva va al final.
+34. **Sesiones incompletas.** "Reiniciar" ya no tira lo estudiado: si hay al menos un minuto de foco abre el resumen
+    (que dice cuántos ciclos quedaron hechos de los planeados) para guardar o descartar. Con menos, vuelve al inicio.
+35. **Ajustar el tiempo a mano** (menú del reloj con el signo más): adelantar o atrasar 1 o 5 minutos, cortar el foco
+    y volver a empezar la fase. Adelantar cuenta ese tiempo como hecho (se siguió con el timer frenado); atrasar lo
+    descuenta (el timer corrió de más). No pasa del principio ni del final de la fase. Un foco cortado antes de
+    tiempo suma sus minutos pero no cuenta como ciclo completado.
+36. **Sonido a elección.** Cinco sonidos generados en el navegador (sin archivos), volumen y botón de prueba; elegir
+    uno lo hace sonar. Se guarda en el dispositivo, junto con el resto de la configuración de la sesión.
+37. **Modo examen.** Un solo bloque de 1:30, 2, 2:30 o 3 horas.
+    - No se pausa ni se ajusta, y no hay descansos: solo se entrega. (Decisión propia: un simulacro con pausas no
+      entrena lo mismo.)
+    - Mientras dura, el acento de toda la app pasa a un rojo que solo existe para esto (`--exam-*`), por encima del
+      acento elegido en Ajustes. Con el modo elegido y sin empezar, solo cambia la tarjeta del timer.
+    - Salir de la página (otra pestaña, otra ventana) suena una alarma (se puede apagar) y queda anotado: cuántas
+      veces y cuánto tiempo. Se ve en el reloj, en el resumen y en el historial. Usar la ventana flotante no cuenta.
+38. **Timer flotante.** En Chrome y Edge es una ventana aparte que queda encima de todo (Document Picture-in-Picture),
+    con el timer en un rectángulo redondeado que llena el marco y el mismo borde de progreso que el anillo. Se puede
+    pausar y reanudar desde ahí, sigue el tema y el acento, y mueve el reloj con sus propios timers: una pestaña en
+    segundo plano tiene los suyos frenados por el navegador. Donde esa API no existe (Firefox, Safari), el mismo
+    botón activa un recuadro flotante dentro de la app, que acompaña al cambiar de sección.
+39. **Historial editable.** Cada sesión tiene un menú (editar, eliminar con deshacer) y se puede anotar una a mano.
+    Se corrigen fecha, hora, materia, tipo, foco, descansos, ciclos, subtareas y la lista de lo que se hizo: si el
+    texto coincide con una tarea queda enlazada; si no, se guarda solo el texto.
+40. **Subtareas en el registro.** `study_sessions.subtasks_completed`: las subtareas tildadas entre el inicio y el fin,
+    en el resumen y en una columna del historial.
+41. **Wrapped.** Resumen de la semana, el mes o el cuatrimestre en tarjetas: foco total y comparación, materia
+    estrella y la olvidada, mejor día, racha y horario preferido, tareas y entregas, sesión más larga y cierre.
+    - Los números son reales (`src/lib/domain/wrapped.ts`); una tarjeta sin datos no aparece.
+    - Un período en curso se compara contra el mismo tramo del anterior, no contra el período entero.
+    - Cuatrimestre según el calendario académico argentino: marzo a julio, agosto a diciembre, y el verano.
+42. **El tooltip de una tarea bloqueada** se dibuja fuera de su contenedor (portal), para que un panel con scroll no
+    lo recorte. **El logo** usa el naranja de la marca y ya no sigue al acento elegido.

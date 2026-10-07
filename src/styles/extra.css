@@ -188,7 +188,96 @@ span.ev { cursor: default; }
 .color-input:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 @media (max-height: 760px) { .wallpaper-preview { --preview-height: 380px; } }
 
+/* ---------- Tooltip en portal (Radix): no lo recorta ningún contenedor con scroll ---------- */
+.tooltip { z-index: var(--z-toast); max-width: 260px; padding: 6px 10px; border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--text-micro); line-height: 1.4; animation: fade-in var(--duration-fast) var(--ease-standard); }
+
+/* ---------- Inicio: materias que se reordenan arrastrando ---------- */
+.sortable-subject { min-width: 0; display: flex; }
+.sortable-subject > .subject-card { flex: 1; min-width: 0; }
+.sortable-subject.is-dragging-source > .subject-card { opacity: 0.35; }
+.card-grip { width: 32px; height: 40px; margin: -8px -4px 0 0; }
+.subject-card:hover .card-grip { opacity: 1; }
+.subject-card.is-lifted { box-shadow: var(--shadow-drag); cursor: grabbing; }
+
 /* ---------- Sesiones ---------- */
+.round-btn.is-sm { width: var(--hit-target); height: var(--hit-target); }
+.round-btn.is-primary { background: var(--color-primary); color: var(--color-on-primary); border-color: transparent; }
+.round-btn.is-primary:hover { background: var(--color-primary-hover); }
+.round-btn[aria-pressed="true"] { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent-text); }
+/* Modo examen: el reloj lleva horas ("1:59:30") y necesita un cuerpo algo menor para entrar en el anillo. */
+.timer-ring.is-long .timer-time { font-size: 76px; }
+.focus-main .timer-ring.is-long .timer-time { font-size: 104px; }
+.summary-stats > :last-child:nth-child(odd) { grid-column: span 2; }
+
+/* Ajustar el tiempo */
+.adjust-pop { display: flex; flex-direction: column; gap: var(--space-2); width: 308px; max-width: none; }
+.adjust-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.adjust-label { font-size: var(--text-caption); color: var(--color-text-muted); }
+.adjust-step { justify-content: center; gap: var(--space-1); padding: 0 var(--space-2); }
+
+/* Elegir el sonido */
+.sound-pop { display: flex; flex-direction: column; gap: var(--space-3); width: 288px; }
+.sound-list { display: flex; flex-direction: column; gap: 2px; }
+.sound-option { display: flex; align-items: center; gap: var(--space-3); min-height: var(--hit-target); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text); font-size: var(--text-body-s); text-align: left; }
+.sound-option:hover { background: var(--color-surface-hover); }
+.sound-option:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.sound-radio { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--color-border-control); }
+.sound-option[aria-checked="true"] .sound-radio { border: 5px solid var(--color-accent); }
+.sound-volume { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-body-s); }
+.sound-volume input { flex: 1; min-width: 0; height: var(--hit-target); accent-color: var(--color-accent); }
+
+/* Timer flotante: el borde de progreso del anillo, en un rectángulo redondeado que llena el marco */
+.mini-timer { position: relative; width: 100%; height: 100%; min-height: 128px; border-radius: 26px; background: var(--color-surface); container-type: size; }
+.mini-timer-border { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mini-timer-border rect { x: 5px; y: 5px; width: calc(100% - 10px); height: calc(100% - 10px); rx: 22px; fill: none; stroke-width: 6px; }
+.mini-timer-border .track { stroke: var(--color-surface-sunken); }
+:root[data-theme="dark"] .mini-timer-border .track { stroke: var(--color-surface-active); }
+.mini-timer-border .bar { stroke: var(--color-accent); stroke-dasharray: 1; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke var(--duration-slow); }
+.mini-timer.is-break .bar { stroke: var(--color-success); }
+.mini-timer.is-idle .bar { stroke: var(--color-border-strong); }
+.mini-timer-body { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); align-items: center; gap: 2px var(--space-3); padding: 18px 22px 16px; }
+.mini-timer-phase { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); font-size: var(--text-caption); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
+.mini-timer-phase strong { color: var(--color-accent-text); font-weight: var(--weight-semibold); }
+.mini-timer.is-break .mini-timer-phase strong { color: var(--color-success-text); }
+.mini-timer.is-idle .mini-timer-phase strong { color: var(--color-text-muted); }
+.mini-timer-phase span { overflow: hidden; text-overflow: ellipsis; }
+.mini-timer-time { font-size: clamp(40px, 38cqh, 112px); font-weight: var(--weight-light); letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mini-timer.is-long .mini-timer-time { font-size: clamp(34px, 30cqh, 88px); }
+.mini-timer-controls { display: flex; gap: var(--space-2); }
+/* La ventana flotante es un documento aparte: solo el timer, a todo el marco. */
+.pip-body { margin: 0; height: 100vh; padding: 6px; overflow: hidden; background: var(--color-bg); }
+/* Sin ventana flotante disponible: un recuadro fijo dentro de la app. */
+.floating-timer { position: fixed; right: var(--space-5); bottom: var(--space-5); z-index: var(--z-sheet); width: 288px; height: 148px; border-radius: 26px; box-shadow: var(--shadow-popover); }
+.floating-timer-actions { position: absolute; top: 8px; right: 12px; display: flex; gap: 2px; }
+.floating-timer .mini-timer-phase span { display: none; }
+
+/* Historial */
+/* Contenedor de lo posicionado adentro: así nada absoluto se escapa del scroll horizontal de la tabla. */
+.table-wrap { position: relative; }
+.session-table td.actions { width: 1%; padding: 0 var(--space-2) 0 0; text-align: right; }
+.session-tasks { list-style: none; margin: 0 0 var(--space-2); padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.session-tasks li { display: flex; align-items: center; gap: var(--space-2); min-height: var(--hit-target); padding: 0 var(--space-1) 0 var(--space-3); font-size: var(--text-body-s); }
+.session-tasks li + li { border-top: 1px solid var(--color-border); }
+
+/* Wrapped */
+.wrapped-bar { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.wrapped-range { min-width: 150px; text-align: center; font-size: var(--text-body-s); font-weight: var(--weight-medium); }
+.wrapped-card { min-height: 304px; display: flex; flex-direction: column; justify-content: center; gap: var(--space-3); padding: var(--space-8) var(--space-10); border-radius: var(--radius-xl); background: var(--color-accent-soft); }
+.wrapped-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.wrapped-kicker { font-size: var(--text-micro); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-accent-text); }
+.wrapped-big { font-family: var(--font-display); font-size: 64px; line-height: 1.04; letter-spacing: var(--tracking-display); overflow-wrap: anywhere; }
+.wrapped-line { max-width: 54ch; font-size: var(--text-body); line-height: 1.5; color: var(--color-text-muted); }
+.wrapped-card.is-cover, .wrapped-card.is-closing { background: var(--color-primary); color: var(--color-on-primary); }
+.wrapped-card.is-cover .wrapped-kicker, .wrapped-card.is-closing .wrapped-kicker, .wrapped-card.is-cover .wrapped-line, .wrapped-card.is-closing .wrapped-line { color: inherit; opacity: 0.78; }
+.wrapped-card.is-subject { background: var(--s-soft); }
+.wrapped-card.is-subject .wrapped-kicker, .wrapped-card.is-subject .wrapped-big { color: var(--s-on-soft); }
+.wrapped-dots { display: flex; justify-content: center; }
+.wrapped-dot { width: 26px; height: var(--hit-target); display: grid; place-items: center; border: 0; background: transparent; padding: 0; }
+.wrapped-dot::before { content: ""; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-border-strong); transition: width var(--duration-base) var(--ease-standard), background var(--duration-fast); }
+.wrapped-dot[aria-selected="true"]::before { width: 20px; background: var(--color-accent); }
+.wrapped-dot:focus-visible { outline: none; }
+.wrapped-dot:focus-visible::before { box-shadow: var(--shadow-focus); }
+
 /* Subtareas dentro de "Tareas de hoy": alineadas con el título de su tarea. */
 .mini-subtasks { display: flex; flex-direction: column; padding: 0 var(--space-2) var(--space-1) 42px; }
 .mini-task .subcount { padding: 0 2px; flex: none; }

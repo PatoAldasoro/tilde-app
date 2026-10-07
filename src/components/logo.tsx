@@ -3,11 +3,12 @@
 export function LogoSymbol({ size = 28, className }: { size?: number; className?: string }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <rect width="24" height="24" rx="6.5" fill="var(--color-accent)" />
+      {/* El color del logo es el de la marca: no cambia con el acento que se elija en Ajustes. */}
+      <rect width="24" height="24" rx="6.5" fill="var(--accent-default-vivid)" />
       <path
         d="M5 13.2C6.3 10.6 8.3 10.4 9.9 12.6L11.6 15C12.1 15.7 12.9 15.7 13.4 15L18.9 7.4"
         fill="none"
-        stroke="var(--color-on-accent)"
+        stroke="var(--accent-default-on-solid)"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"

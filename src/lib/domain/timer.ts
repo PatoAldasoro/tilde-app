@@ -7,7 +7,8 @@
  * recuperar al recargar. Todas las funciones son puras: reciben `now` en milisegundos.
  */
 
-export type PresetKey = "25-5" | "50-10" | "90-20" | "custom";
+/** "exam" es el modo examen: un solo bloque largo, sin descansos ni pausas. */
+export type PresetKey = "25-5" | "50-10" | "90-20" | "custom" | "exam";
 
 export type TimerConfig = {
   preset: PresetKey;
@@ -18,7 +19,7 @@ export type TimerConfig = {
 
 type Durations = Omit<TimerConfig, "preset">;
 
-export const PRESETS: Record<Exclude<PresetKey, "custom">, Durations> = {
+export const PRESETS: Record<Exclude<PresetKey, "custom" | "exam">, Durations> = {
   "25-5": { focusMinutes: 25, breakMinutes: 5, cycles: 4 },
   "50-10": { focusMinutes: 50, breakMinutes: 10, cycles: 3 },
   "90-20": { focusMinutes: 90, breakMinutes: 20, cycles: 2 },
@@ -34,7 +35,18 @@ export const CUSTOM_LIMITS = {
 
 export const DEFAULT_CONFIG: TimerConfig = { preset: "25-5", ...PRESETS["25-5"] };
 
-export function configFor(preset: PresetKey, custom: Durations = CUSTOM_DEFAULT): TimerConfig {
+/** Duraciones del modo examen, en minutos. */
+export const EXAM_MINUTES = [90, 120, 150, 180] as const;
+export const EXAM_DEFAULT_MINUTES = 120;
+
+export function examConfig(minutes: number): TimerConfig {
+  const allowed = (EXAM_MINUTES as readonly number[]).includes(minutes) ? minutes : EXAM_DEFAULT_MINUTES;
+  return { preset: "exam", focusMinutes: allowed, breakMinutes: 0, cycles: 1 };
+}
+
+export const isExam = (config: Pick<TimerConfig, "preset">): boolean => config.preset === "exam";
+
+export function configFor(preset: Exclude<PresetKey, "exam">, custom: Durations = CUSTOM_DEFAULT): TimerConfig {
   return preset === "custom" ? { preset, ...clampCustom(custom) } : { preset, ...PRESETS[preset] };
 }
 
@@ -71,6 +83,10 @@ export type ActiveTimer = {
   breakMs: number;
   /** Fases de foco terminadas. */
   cyclesCompleted: number;
+  /** Modo examen: veces que se salió de la página, tiempo afuera ya cerrado y desde cuándo está afuera ahora. */
+  awayCount?: number;
+  awayMs?: number;
+  awaySince?: number | null;
 };
 
 export type SessionSummary = {
@@ -81,6 +97,10 @@ export type SessionSummary = {
   focusSeconds: number;
   breakSeconds: number;
   cyclesCompleted: number;
+  /** Ciclos que tenía planeados la sesión (para saber si quedó incompleta). */
+  cycles?: number;
+  awayCount?: number;
+  awaySeconds?: number;
 };
 
 export type TimerState = { status: "idle" } | ActiveTimer | { status: "finished"; summary: SessionSummary };
@@ -122,6 +142,7 @@ function closeSegment(timer: ActiveTimer, until: number): ActiveTimer {
 }
 
 function toSummary(timer: ActiveTimer, endedAt: number): SessionSummary {
+  const back = comeBack(timer, endedAt);
   return {
     preset: timer.config.preset,
     subjectId: timer.subjectId,
@@ -130,7 +151,15 @@ function toSummary(timer: ActiveTimer, endedAt: number): SessionSummary {
     focusSeconds: Math.round(timer.focusMs / 1000),
     breakSeconds: Math.round(timer.breakMs / 1000),
     cyclesCompleted: timer.cyclesCompleted,
+    cycles: timer.config.cycles,
+    awayCount: back.awayCount ?? 0,
+    awaySeconds: Math.round((back.awayMs ?? 0) / 1000),
   };
+}
+
+/** ¿La sesión terminó antes de completar lo planeado? */
+export function isIncomplete(summary: Pick<SessionSummary, "cycles" | "cyclesCompleted">): boolean {
+  return summary.cycles !== undefined && summary.cyclesCompleted < summary.cycles;
 }
 
 /** Milisegundos que le quedan a la fase actual. */
@@ -218,17 +247,99 @@ export function skipBreak(timer: ActiveTimer, now: number): ActiveTimer {
   };
 }
 
+// ---------- ajustar el tiempo a mano ----------
+
+/**
+ * Mueve el reloj de la fase en curso. Sirve para cuando el timer no refleja lo que pasó:
+ * - `deltaMs` positivo, **adelantar**: se estuvo estudiando con el timer frenado. Le quita ese
+ *   tiempo a lo que falta y lo suma como tiempo real de la fase.
+ * - `deltaMs` negativo, **atrasar**: el timer siguió corriendo pero no se estaba estudiando.
+ *   Le devuelve ese tiempo a la fase y lo descuenta del tiempo real.
+ * No pasa del principio ni del final de la fase (si llega al final, el próximo tick la cierra).
+ */
+export function adjust(timer: ActiveTimer, deltaMs: number, now: number): ActiveTimer {
+  const total = phaseDuration(timer.config, timer.phase);
+  const left = remainingMs(timer, now);
+  const nextLeft = Math.max(0, Math.min(total, left - deltaMs));
+  const applied = left - nextLeft;
+  if (applied === 0) return timer;
+  // Se cierra el tramo en curso para que el ajuste opere sobre todo lo contado hasta ahora.
+  const closed = closeSegment(timer, now);
+  const credited = timer.phase === "focus" ? { focusMs: Math.max(0, closed.focusMs + applied) } : { breakMs: Math.max(0, closed.breakMs + applied) };
+  return {
+    ...closed,
+    ...credited,
+    phaseEndsAt: timer.running ? now + nextLeft : null,
+    remainingMs: timer.running ? null : nextLeft,
+    segmentStartedAt: timer.running ? now : null,
+  };
+}
+
+/** Vuelve a empezar la fase en curso. El tiempo real ya contado no se pierde. */
+export function restartPhase(timer: ActiveTimer, now: number): ActiveTimer {
+  const closed = closeSegment(timer, now);
+  const total = phaseDuration(timer.config, timer.phase);
+  return { ...closed, phaseEndsAt: timer.running ? now + total : null, remainingMs: timer.running ? null : total, segmentStartedAt: timer.running ? now : null };
+}
+
+/**
+ * Cortar el foco antes de tiempo y pasar al descanso (o terminar, si era el último ciclo).
+ * El tiempo real cuenta, pero el ciclo no figura como completado: no llegó al final.
+ */
+export function skipFocus(timer: ActiveTimer, now: number): TimerState {
+  if (timer.phase !== "focus") return timer;
+  const closed = closeSegment(timer, now);
+  if (timer.cycle >= timer.config.cycles) return { status: "finished", summary: toSummary(closed, now) };
+  const duration = phaseDuration(timer.config, "break");
+  return {
+    ...closed,
+    phase: "break",
+    phaseEndsAt: timer.running ? now + duration : null,
+    remainingMs: timer.running ? null : duration,
+    segmentStartedAt: timer.running ? now : null,
+  };
+}
+
+// ---------- modo examen: salidas de la página ----------
+
+/** Se salió de la página (otra pestaña, otra ventana). Solo cuenta con el examen corriendo. */
+export function leave(timer: ActiveTimer, now: number): ActiveTimer {
+  if (!isExam(timer.config) || !timer.running || timer.awaySince != null) return timer;
+  return { ...timer, awayCount: (timer.awayCount ?? 0) + 1, awaySince: now };
+}
+
+/** Volvió a la página: se suma el tiempo que estuvo afuera. */
+export function comeBack(timer: ActiveTimer, now: number): ActiveTimer {
+  if (timer.awaySince == null) return timer;
+  return { ...timer, awayMs: (timer.awayMs ?? 0) + Math.max(0, now - timer.awaySince), awaySince: null };
+}
+
 /** Terminar o detener la sesión en cualquier momento: devuelve el resumen con los tiempos reales. */
 export function finish(timer: ActiveTimer, now: number): SessionSummary {
   return toSummary(closeSegment(timer, now), now);
 }
 
-/** "MM:SS" (los minutos pueden pasar de 59: 90:00). Redondea hacia arriba para no mostrar 00:00 antes de tiempo. */
-export function formatClock(ms: number): string {
+/**
+ * "MM:SS" (los minutos pueden pasar de 59: 90:00). Con `hours`, "H:MM:SS" (modo examen).
+ * Redondea hacia arriba para no mostrar 00:00 antes de tiempo.
+ */
+export function formatClock(ms: number, options?: { hours?: boolean }): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  if (options?.hours) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+    return `${hours}:${minutes}:${seconds}`;
+  }
+  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${seconds}`;
+}
+
+/** Lo mínimo de foco para que valga la pena preguntar si guardar una sesión que se corta. */
+export const WORTH_SAVING_MS = 60_000;
+
+/** ¿Hay tiempo suficiente como para ofrecer guardarla? */
+export function worthSaving(timer: ActiveTimer, now: number): boolean {
+  return elapsedTotals(timer, now).focusMs >= WORTH_SAVING_MS;
 }
 
 /** Tareas tildadas entre el inicio y el fin de la sesión. */

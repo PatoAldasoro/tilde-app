@@ -1,16 +1,25 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useSessionUser } from "@/components/providers";
+import { bySubjectOrder } from "@/lib/domain/subjects";
+import { nextSortOrder, type OrderPatch } from "@/lib/domain/tasks";
 import type { SubjectFormValues } from "@/lib/schemas";
 import type { SubjectDocumentRow, SubjectRow, Update } from "@/lib/supabase/types";
 import { deleteRows, insertRows, newId, nowIso, patchById, removeByIds, updateRow, useOptimistic, useRows } from "./table";
 
+/** Las materias, en el orden elegido por el usuario. */
 export function useSubjects() {
-  return useRows("subjects");
+  const query = useRows("subjects", "sort_order");
+  // La caché se toca de forma optimista (altas, reordenar): el orden se vuelve a aplicar acá.
+  const data = useMemo(() => (query.data ? [...query.data].sort(bySubjectOrder) : undefined), [query.data]);
+  return { ...query, data };
 }
 
 export function useSubjectMutations() {
   const user = useSessionUser();
+  const queryClient = useQueryClient();
 
   const create = useOptimistic("subjects", {
     apply: (rows, row: SubjectRow) => [...rows, row],
@@ -19,6 +28,15 @@ export function useSubjectMutations() {
   const update = useOptimistic("subjects", {
     apply: (rows, { id, patch }: { id: string; patch: Update<"subjects"> }) => patchById(rows, id, patch as Partial<SubjectRow>),
     run: ({ id, patch }) => updateRow("subjects", id, patch),
+  });
+  const reorder = useOptimistic("subjects", {
+    apply: (rows, patches: OrderPatch[]) => {
+      const orders = new Map(patches.map((patch) => [patch.id, patch.sort_order]));
+      return rows.map((row) => (orders.has(row.id) ? { ...row, sort_order: orders.get(row.id)! } : row));
+    },
+    run: async (patches) => {
+      await Promise.all(patches.map((patch) => updateRow("subjects", patch.id, { sort_order: patch.sort_order })));
+    },
   });
   const remove = useOptimistic("subjects", {
     apply: (rows, id: string) => removeByIds(rows, [id]),
@@ -34,6 +52,8 @@ export function useSubjectMutations() {
         id: newId(),
         user_id: user.id,
         ...values,
+        // Una materia nueva va al final.
+        sort_order: nextSortOrder(queryClient.getQueryData<SubjectRow[]>(["subjects"]) ?? []),
         grade_course: null,
         grade_final: null,
         archived_at: null,
@@ -44,6 +64,10 @@ export function useSubjectMutations() {
       return row;
     },
     update: (id: string, patch: Update<"subjects">) => update.mutate({ id, patch }),
+    /** Guarda un orden nuevo (ver orderPatches): solo se escriben las materias que cambiaron de lugar. */
+    reorder: (patches: OrderPatch[]) => {
+      if (patches.length > 0) reorder.mutate(patches);
+    },
     setArchived: (id: string, archived: boolean) => update.mutate({ id, patch: { archived_at: archived ? nowIso() : null } }),
     remove: (id: string) => remove.mutate(id),
   };
