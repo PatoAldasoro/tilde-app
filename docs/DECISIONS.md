@@ -206,6 +206,10 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
       acento elegido en Ajustes. Con el modo elegido y sin empezar, solo cambia la tarjeta del timer.
     - Salir de la página (otra pestaña, otra ventana) suena una alarma (se puede apagar) y queda anotado: cuántas
       veces y cuánto tiempo. Se ve en el reloj, en el resumen y en el historial. Usar la ventana flotante no cuenta.
+    - Al empezar pasa solo a pantalla completa (el modo foco), y mientras dura no se muestra la lista de tareas, ni
+      ahí ni en la vista normal. Salir de la pantalla completa no corta el examen ni cuenta como salida. Si el
+      examen se retoma después de recargar la página no vuelve a pantalla completa solo: el navegador solo lo
+      permite a partir de un clic.
 38. **Timer flotante.** En Chrome y Edge es una ventana aparte que queda encima de todo (Document Picture-in-Picture),
     con el timer en un rectángulo redondeado que llena el marco y el mismo borde de progreso que el anillo. Se puede
     pausar y reanudar desde ahí, sigue el tema y el acento, y mueve el reloj con sus propios timers: una pestaña en

@@ -680,7 +680,7 @@
   "exam_away_toast": "{n, plural, one {You left the page. That is # exit in this exam.} other {You left the page. That is # exits in this exam.}}",
   "exam_finish": "Hand in the exam",
   "exam_duration": "Exam length",
-  "exam_hint": "The exam runs straight through: it cannot be paused or adjusted. Leaving the page (another tab, another window) is logged and sounds an alarm.",
+  "exam_hint": "The exam runs straight through: it cannot be paused or adjusted. When it starts it goes full screen and the task list stays hidden until it is handed in. Leaving the page (another tab, another window) is logged and sounds an alarm.",
   "exam_summary": "Exam summary",
   "exam_aways": "Times you left the page",
   "exam_away_time": "Time away",

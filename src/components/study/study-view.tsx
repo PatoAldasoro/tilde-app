@@ -21,6 +21,7 @@ import { useStudyMutations } from "@/lib/queries/study";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTasks } from "@/lib/queries/tasks";
 import { studyStore, useStudy } from "@/lib/study-store";
+import { cn } from "@/lib/utils";
 import { useDuration } from "./duration";
 import { HistoryView } from "./history-view";
 import { PhaseRow, TimerControls, TimerRing } from "./timer-display";
@@ -40,10 +41,22 @@ export function StudyView() {
   const tab = useSearchParams().get("tab") === "history" ? "history" : "session";
   const { timer, setup, now } = useStudy();
   const [focusMode, setFocusMode] = useState(false);
+  // Examen para el que se abrió solo el modo foco (su instante de inicio): vale mientras ese examen siga en curso.
+  const [examFocusFor, setExamFocusFor] = useState<number | null>(null);
   const [wrapped, setWrapped] = useState(false);
   const exam = isExam(timer.status === "active" ? timer.config : setup.config);
   const locked = timer.status === "active";
-  const focusOpen = focusMode && timer.status !== "finished";
+  const examRunning = timer.status === "active" && isExam(timer.config);
+  const focusOpen = (focusMode || (examRunning && examFocusFor === timer.startedAt)) && timer.status !== "finished";
+  const closeFocus = () => {
+    setFocusMode(false);
+    setExamFocusFor(null);
+  };
+  // Al empezar un examen se pasa solo a pantalla completa (el clic en "Iniciar" es lo que el navegador exige para permitirlo).
+  const onStart = () => {
+    const started = studyStore.getSnapshot().timer;
+    if (started.status === "active" && isExam(started.config)) setExamFocusFor(started.startedAt);
+  };
 
   // Pantalla completa mientras dura el modo foco (si el navegador la permite).
   useEffect(() => {
@@ -54,7 +67,9 @@ export function StudyView() {
     void document.documentElement.requestFullscreen?.().catch(() => undefined);
     // Salir de pantalla completa con Esc (lo maneja el navegador) también cierra el modo foco.
     const onChange = () => {
-      if (!document.fullscreenElement) setFocusMode(false);
+      if (document.fullscreenElement) return;
+      setFocusMode(false);
+      setExamFocusFor(null);
     };
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
@@ -93,7 +108,7 @@ export function StudyView() {
         {tab === "history" ? (
           <HistoryView onStart={() => setTab("session")} />
         ) : (
-          <div className="sessions-grid">
+          <div className={cn("sessions-grid", examRunning && "is-exam")}>
             {/* data-exam: en modo examen el acento de la tarjeta pasa al rojo de examen. */}
             <section className="timer-card" aria-label={t("timer")} data-exam={exam ? "" : undefined}>
               <Segmented
@@ -108,33 +123,38 @@ export function StudyView() {
               />
               <PhaseRow timer={timer} config={setup.config} />
               <TimerRing timer={timer} config={setup.config} now={now} />
-              <TimerControls timer={timer} />
+              <TimerControls timer={timer} onStart={onStart} />
               <SessionOptions />
             </section>
-            <aside className="side-panel" aria-label={t("today_tasks")}>
-              <TodayTasks />
-            </aside>
+            {/* Durante un examen la lista de tareas no se muestra: en un examen no hay pendientes a la vista. */}
+            {examRunning ? null : (
+              <aside className="side-panel" aria-label={t("today_tasks")}>
+                <TodayTasks />
+              </aside>
+            )}
           </div>
         )}
       </div>
 
-      <DialogPrimitive.Root open={focusOpen} onOpenChange={(open) => !open && setFocusMode(false)}>
+      <DialogPrimitive.Root open={focusOpen} onOpenChange={(open) => !open && closeFocus()}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Content className="focus-mode" aria-describedby={undefined}>
+          <DialogPrimitive.Content className={cn("focus-mode", examRunning && "is-exam")} aria-describedby={undefined}>
             <DialogPrimitive.Title className="visually-hidden">{t("focus_mode")}</DialogPrimitive.Title>
             <div className="focus-main">
-              <Button className="focus-exit" onClick={() => setFocusMode(false)}>
+              <Button className="focus-exit" onClick={closeFocus}>
                 <Minimize2 size={18} />
                 {t("exit_focus")}
               </Button>
               <PhaseRow timer={timer} config={setup.config} />
               <TimerRing timer={timer} config={setup.config} now={now} size={460} />
-              <TimerControls timer={timer} />
+              <TimerControls timer={timer} onStart={onStart} />
             </div>
-            <aside className="focus-side" aria-label={t("today_tasks")}>
-              <h3>{t("today")}</h3>
-              <TodayTasks />
-            </aside>
+            {examRunning ? null : (
+              <aside className="focus-side" aria-label={t("today_tasks")}>
+                <h3>{t("today")}</h3>
+                <TodayTasks />
+              </aside>
+            )}
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>

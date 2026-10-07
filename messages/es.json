@@ -680,7 +680,7 @@
   "exam_away_toast": "{n, plural, one {Saliste de la página. Va # salida en este examen.} other {Saliste de la página. Van # salidas en este examen.}}",
   "exam_finish": "Entregar el examen",
   "exam_duration": "Duración del examen",
-  "exam_hint": "El examen corre de corrido: no se pausa ni se ajusta. Salir de la página (otra pestaña, otra ventana) queda anotado y suena una alarma.",
+  "exam_hint": "El examen corre de corrido: no se pausa ni se ajusta. Al empezar pasa a pantalla completa y la lista de tareas se oculta hasta entregarlo. Salir de la página (otra pestaña, otra ventana) queda anotado y suena una alarma.",
   "exam_summary": "Resumen del examen",
   "exam_aways": "Salidas de la página",
   "exam_away_time": "Tiempo afuera",

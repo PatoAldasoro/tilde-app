@@ -139,9 +139,12 @@ test("sonido: se elige entre varios, se prueba y se ajusta el volumen", async ({
   expect(stored).toMatchObject({ soundKind: "bell", volume: 0.8 });
 });
 
-test("modo examen: de corrido, en rojo, sin pausas y con las salidas de la página anotadas", async ({ page }) => {
+test("modo examen: de corrido, en rojo, a pantalla completa, sin pausas ni tareas, y con las salidas anotadas", async ({ page }) => {
+  await db.from("tasks").insert({ title: "Repasar la unidad 3", planned_date: "2026-03-10", sort_order: 1 });
   await page.goto("/app/study");
   const accent = (selector: string) => page.locator(selector).evaluate((element) => getComputedStyle(element).getPropertyValue("--color-accent").trim().toUpperCase());
+  const fullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
+  const taskLists = page.locator(".side-panel, .focus-side");
   expect(await accent(".timer-card")).toBe("#E44919");
 
   await card(page).getByRole("radio", { name: "Examen" }).click();
@@ -153,18 +156,26 @@ test("modo examen: de corrido, en rojo, sin pausas y con las salidas de la pági
   await card(page).getByRole("radio", { name: "1 h 30 min" }).click();
   await expect(time(page)).toHaveText("1:30:00");
   await card(page).locator("select").selectOption({ label: "Física II" });
+  // Antes de empezar, la lista de tareas sigue a la vista.
+  await expect(page.getByRole("complementary", { name: "Tareas de hoy" })).toContainText("Repasar la unidad 3");
+  expect(await fullscreen()).toBe(false);
 
   await card(page).getByRole("button", { name: "Iniciar", exact: true }).click();
-  await expect(card(page).locator(".phase-pill")).toHaveText("Examen");
+  // Al empezar pasa solo a pantalla completa, con el timer y nada más: la lista de tareas se oculta.
+  const focus = page.getByRole("dialog", { name: "Modo foco" });
+  await expect(focus).toBeVisible();
+  await expect.poll(fullscreen).toBe(true);
+  await expect(focus.locator(".phase-pill")).toHaveText("Examen");
+  await expect(taskLists).toHaveCount(0);
+  await expect(page.getByText("Repasar la unidad 3")).toHaveCount(0);
   // Con el examen en curso, toda la app pasa al rojo.
   await expect(page.locator("html")).toHaveAttribute("data-exam", "");
   expect(await accent("html")).toBe("#E11D48");
   await expect(page).toHaveTitle(/^1:(29|30):\d\d · Examen · Tilde$/);
   // No se pausa, no se ajusta y no hay descansos: solo se entrega.
-  await expect(card(page).getByRole("button", { name: "Pausar" })).toHaveCount(0);
-  await expect(card(page).getByRole("button", { name: /^Ajustar el tiempo/ })).toHaveAttribute("aria-disabled", "true");
-  await expect(card(page).getByRole("button", { name: /^Saltar descanso/ })).toHaveAttribute("aria-disabled", "true");
-  await expect(card(page).getByRole("radio", { name: "Estudio" })).toBeDisabled();
+  await expect(focus.getByRole("button", { name: "Pausar" })).toHaveCount(0);
+  await expect(focus.getByRole("button", { name: /^Ajustar el tiempo/ })).toHaveAttribute("aria-disabled", "true");
+  await expect(focus.getByRole("button", { name: /^Saltar descanso/ })).toHaveAttribute("aria-disabled", "true");
 
   // Salir de la página (otra ventana) suena y queda anotado; al volver avisa cuántas van.
   await page.clock.fastForward("10:00");
@@ -174,7 +185,16 @@ test("modo examen: de corrido, en rojo, sin pausas y con las salidas de la pági
   await page.clock.fastForward("00:30");
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page.locator(".toast")).toContainText("Saliste de la página. Va 1 salida en este examen.");
-  await expect(card(page).locator(".timer-sub")).toContainText("1 salida");
+  await expect(focus.locator(".timer-sub")).toContainText("1 salida");
+
+  // Salir de la pantalla completa no corta el examen: sigue en la vista normal, todavía sin la lista de tareas.
+  await focus.getByRole("button", { name: "Salir del modo foco" }).click();
+  await expect(focus).toBeHidden();
+  await expect.poll(fullscreen).toBe(false);
+  await expect(card(page).locator(".phase-pill")).toHaveText("Examen");
+  await expect(card(page).getByRole("radio", { name: "Estudio" })).toBeDisabled();
+  await expect(taskLists).toHaveCount(0);
+
   // Otra salida, esta vez con la alarma apagada: se anota igual.
   await card(page).getByRole("button", { name: "Elegir el sonido" }).click();
   await page.getByRole("switch", { name: /Alarma al salir/ }).click();
@@ -192,12 +212,24 @@ test("modo examen: de corrido, en rojo, sin pausas y con las salidas de la pági
   await expect(summary.locator(".summary-stat").filter({ hasText: "Tiempo afuera" })).toContainText("1 min");
   await summary.getByRole("button", { name: "Guardar" }).click();
   await expect(page.locator("html")).not.toHaveAttribute("data-exam");
+  // Entregado el examen, la lista de tareas vuelve.
+  await expect(page.getByRole("complementary", { name: "Tareas de hoy" })).toContainText("Repasar la unidad 3");
   await expect
     .poll(async () => (await sessions()).map((row) => [row.preset, row.subject_id, row.away_count, row.away_seconds, row.break_seconds]))
     .toEqual([["exam", subjectId, 2, 40, 0]]);
 
   await page.getByRole("tab", { name: "Historial" }).click();
   await expect(page.locator(".session-table tbody tr").first()).toContainText("Examen · 2 salidas");
+});
+
+test("una sesión de estudio común no pasa sola a pantalla completa ni oculta las tareas", async ({ page }) => {
+  await db.from("tasks").insert({ title: "Repasar la unidad 3", planned_date: "2026-03-10", sort_order: 1 });
+  await page.goto("/app/study");
+  await card(page).getByRole("button", { name: "Iniciar", exact: true }).click();
+  await expect(card(page).locator(".phase-pill")).toHaveText("Foco");
+  await expect(page.getByRole("dialog", { name: "Modo foco" })).toHaveCount(0);
+  expect(await page.evaluate(() => document.fullscreenElement !== null)).toBe(false);
+  await expect(page.getByRole("complementary", { name: "Tareas de hoy" })).toContainText("Repasar la unidad 3");
 });
 
 test("modo examen: al cumplirse el tiempo termina solo", async ({ page }) => {

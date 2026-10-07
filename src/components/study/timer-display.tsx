@@ -250,8 +250,11 @@ function AdjustPopover({ active }: { active: ActiveTimer | null }) {
   );
 }
 
-/** Reiniciar · Ajustar el tiempo · Iniciar/Pausar · Saltar descanso · Timer flotante. */
-export function TimerControls({ timer }: { timer: TimerState }) {
+/**
+ * Reiniciar · Ajustar el tiempo · Iniciar/Pausar · Saltar descanso · Timer flotante.
+ * `onStart` avisa que la sesión acaba de arrancar desde este botón (un clic del usuario).
+ */
+export function TimerControls({ timer, onStart }: { timer: TimerState; onStart?: () => void }) {
   const t = useTranslations();
   const pip = usePip();
   const active = activeOf(timer);
@@ -284,7 +287,10 @@ export function TimerControls({ timer }: { timer: TimerState }) {
           type="button"
           className="play-btn"
           aria-label={running ? t("pause") : active ? t("resume") : t("start")}
-          onClick={() => studyStore.toggle()}
+          onClick={() => {
+            studyStore.toggle();
+            if (!active) onStart?.();
+          }}
         >
           {running ? <Pause size={28} fill="currentColor" strokeWidth={1.5} /> : <Play size={28} fill="currentColor" strokeWidth={1.5} />}
         </button>
