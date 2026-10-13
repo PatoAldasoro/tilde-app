@@ -1,0 +1,67 @@
+/* Tilde — Landing.
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en
+   bloques min-width (600 · 768 · 1024 · 1101 · 1280), siempre de menor a mayor. Solo tokens de tokens.css. */
+
+/* ---------- Landing ---------- */
+.landing { background: var(--color-bg); }
+.landing-top.is-scrolled { border-bottom-color: var(--color-border); }
+.landing-top .grow { flex: 1; }
+.lang-select { height: 40px; }
+.logo { display: inline-flex; align-items: center; gap: 12px; color: var(--color-text); text-decoration: none; }
+.logo svg.wordmark { height: 22px; width: auto; }
+.hero-mark { width: 64px; height: 64px; }
+.hero-note { font-size: var(--text-caption); color: var(--color-text-subtle); }
+.feature:nth-of-type(even) .feature-inner { background: var(--color-surface-sunken); border-color: transparent; }
+.feature-kicker { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-caption); color: var(--color-text-muted); font-weight: var(--weight-medium); }
+.feature-kicker .n { font-family: var(--font-display); font-size: 20px; color: var(--color-accent-text); }
+.shot-inner { position: absolute; top: 0; left: 0; width: 1440px; height: 846px; transform-origin: 0 0; pointer-events: none; }
+.shot-inner .topbar { position: relative; }
+.landing-foot .grow { flex: 1; }
+/* Theme toggle on the landing: both icons are rendered, CSS shows the right one (no hydration flash). */
+.theme-icon-dark { display: none; }
+:root[data-theme="dark"] .theme-icon-dark { display: inline-block; }
+:root[data-theme="dark"] .theme-icon-light { display: none; }
+/* ---------- Landing: real screenshots, one per theme ---------- */
+.shot img { display: block; width: 100%; height: auto; }
+.shot .shot-dark { display: none; }
+:root[data-theme="dark"] .shot .shot-dark { display: block; }
+:root[data-theme="dark"] .shot .shot-light { display: none; }
+.hero-mark { flex: none; }
+
+/* ---------- Disposición (mobile first) ---------- */
+.landing-top { position: sticky; top: 0; z-index: var(--z-topbar); display: flex; align-items: center; gap: var(--space-2); height: 60px; padding: 0 var(--space-4); background: color-mix(in srgb, var(--color-bg) 88%, transparent); backdrop-filter: blur(10px) saturate(1.2); border-bottom: 1px solid transparent; transition: border-color var(--duration-base); }
+/* En el teléfono el botón de Google de la barra muestra solo la "G" (el grande está enseguida, en la portada). */
+.landing-top .btn-google { width: 40px; padding: 0; justify-content: center; }
+.landing-top .btn-google span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.hero { max-width: 980px; margin: 0 auto; padding: var(--space-12) var(--space-5) var(--space-10); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); }
+.hero h1 { font-family: var(--font-display); font-weight: 400; font-size: 64px; line-height: 0.95; letter-spacing: -0.02em; }
+.hero p { font-size: 18px; line-height: 1.45; color: var(--color-text-muted); max-width: 620px; text-wrap: balance; }
+
+.feature { max-width: 1160px; margin: 0 auto var(--space-4); padding: 0 var(--space-4); }
+.feature-inner { border-radius: var(--radius-lg); background: var(--color-surface); border: 1px solid var(--color-border); padding: var(--space-8) var(--space-5) 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); overflow: hidden; }
+.feature-inner > h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.01em; max-width: 760px; text-wrap: balance; }
+.feature-inner > p { font-size: var(--text-body); color: var(--color-text-muted); max-width: 560px; line-height: 1.5; text-wrap: balance; }
+.shot { position: relative; margin-top: var(--space-6); width: 100%; max-width: 960px; aspect-ratio: 16 / 9.4; border-radius: var(--radius-md) var(--radius-md) 0 0; border: 1px solid var(--color-border-strong); border-bottom: 0; overflow: hidden; background: var(--color-bg); text-align: left; }
+
+.landing-foot { max-width: 1160px; margin: var(--space-10) auto 0; padding: var(--space-5) var(--space-4) var(--space-8); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); color: var(--color-text-subtle); font-size: var(--text-caption); border-top: 1px solid var(--color-border); }
+
+@media (min-width: 600px) {
+  .landing-top .btn-google { width: auto; padding: 0 12px; justify-content: normal; }
+  .landing-top .btn-google span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; }
+}
+
+@media (min-width: 768px) {
+  .landing-top { gap: var(--space-4); height: 72px; padding: 0 var(--space-8); }
+  .hero { padding: var(--space-24) var(--space-8) var(--space-16); gap: var(--space-6); }
+  .hero h1 { font-size: 84px; }
+  .hero p { font-size: 22px; }
+  .feature { margin-bottom: var(--space-6); padding: 0 var(--space-8); }
+  .feature-inner { border-radius: var(--radius-xl); padding: var(--space-16) var(--space-12) 0; }
+  .feature-inner > h2 { font-size: 44px; line-height: 1.02; }
+  .feature-inner > p { font-size: var(--text-title-s); }
+  .shot { margin-top: var(--space-10); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .landing-foot { margin-top: var(--space-16); padding: var(--space-6) var(--space-8) var(--space-10); flex-wrap: nowrap; gap: var(--space-4); }
+}
+@media (min-width: 1101px) { .feature-inner > h2 { font-size: 52px; } }
+@media (min-width: 1280px) { .hero h1 { font-size: 96px; } }

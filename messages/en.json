@@ -827,5 +827,10 @@
   "signout_pending_q": "Sign out with changes not uploaded?",
   "signout_pending_body": "{n, plural, one {There is {n} change that has not been uploaded yet} other {There are {n} changes that have not been uploaded yet}}. Signing out discards them.",
   "signout_anyway": "Sign out anyway",
-  "needs_connection": "This needs a connection."
+  "needs_connection": "This needs a connection.",
+  "nav_sessions_short": "Sessions",
+  "sections": "Sections",
+  "day_picker": "Day shown",
+  "month_dates": "Dates in {month}",
+  "no_dates_month": "There are no dates this month."
 }

@@ -5,9 +5,9 @@ import type { Database } from "../src/lib/supabase/database.types";
 import { freezeToday, removeUser, signInFreshUser } from "./session";
 
 /**
- * Revisión de layout: cada sección a 1024, 1366 y 1440 px, en español y en inglés (que ocupa
- * un 20–30 % más), con nombres largos. No tiene que haber scroll horizontal y el botón de menú
- * tiene que quedar arriba a la izquierda.
+ * Revisión de layout: cada sección desde el teléfono más angosto (320 px) hasta el escritorio
+ * (1440 px), en español y en inglés (que ocupa un 20–30 % más), con nombres largos. No tiene que
+ * haber scroll horizontal y el botón de menú tiene que quedar arriba a la izquierda.
  */
 let user: TestUser;
 let db: SupabaseClient<Database>;
@@ -17,7 +17,8 @@ const SECTIONS = [
   { path: "/app?tab=grades", ready: "table.grades" },
   { path: "/app/schedule", ready: ".sched-block" },
   { path: "/app/todo", ready: ".task" },
-  { path: "/app/calendar", ready: ".ev" },
+  // En el teléfono las fechas de la grilla son puntos: las que se leen están en la lista del mes.
+  { path: "/app/calendar", ready: ".ev:visible" },
   { path: "/app/study", ready: ".mini-task" },
   { path: "/app/study?tab=history", ready: ".session-table" },
 ];
@@ -65,9 +66,12 @@ test.beforeAll(async ({ browser }) => {
 });
 test.afterAll(async () => removeUser(user));
 
-async function expectNoOverflow(page: Page, label: string) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow, `scroll horizontal en ${label}`).toBeLessThanOrEqual(0);
+async function expectNoOverflow(page: Page, label: string, width: number) {
+  // La página mide lo que la pantalla. En un teléfono, algo que se pasa del borde no muestra una barra:
+  // agranda la página entera, así que no alcanza con comparar contra window.innerWidth.
+  const [inner, scroll] = await page.evaluate(() => [window.innerWidth, document.documentElement.scrollWidth]);
+  expect(inner, `ancho de la página en ${label}`).toBe(width);
+  expect(scroll, `scroll horizontal en ${label}`).toBeLessThanOrEqual(width);
   const menu = await page.locator("#menu-btn").boundingBox();
   expect(menu, `botón de menú en ${label}`).not.toBeNull();
   expect(menu!.x).toBeLessThan(48);
@@ -77,9 +81,15 @@ async function expectNoOverflow(page: Page, label: string) {
 }
 
 for (const locale of ["es", "en"] as const) {
-  for (const width of [1024, 1366, 1440]) {
+  for (const width of [320, 360, 390, 600, 768, 1024, 1366, 1440]) {
     test(`layout ${locale} a ${width} px: sin scroll horizontal en ninguna sección`, async ({ browser }) => {
-      const context = await browser.newContext({ viewport: { width, height: 800 }, locale: "es-AR", timezoneId: "America/Argentina/Buenos_Aires" });
+      const phone = width < 1024;
+      const context = await browser.newContext({
+        viewport: { width, height: phone ? 780 : 800 },
+        locale: "es-AR",
+        timezoneId: "America/Argentina/Buenos_Aires",
+        ...(phone ? { hasTouch: true, isMobile: true } : {}),
+      });
       await freezeToday(context);
       const { sessionCookies } = await import("../scripts/lib/test-session");
       const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
@@ -90,20 +100,22 @@ for (const locale of ["es", "en"] as const) {
         await page.goto(baseURL + prefix + section.path);
         await page.waitForSelector(section.ready);
         await expect(page.locator("html")).toHaveAttribute("lang", locale);
-        await expectNoOverflow(page, `${locale} ${width} ${section.path}`);
+        await expectNoOverflow(page, `${locale} ${width} ${section.path}`, width);
       }
       // Con el drawer, un diálogo y el panel de tarea abiertos tampoco se desborda.
       await page.goto(baseURL + prefix + "/app/todo");
       await page.waitForSelector(".task");
       await page.locator(".task-title").first().click();
       await page.waitForSelector(".sheet");
-      await expectNoOverflow(page, `${locale} ${width} panel de tarea`);
+      await expectNoOverflow(page, `${locale} ${width} panel de tarea`, width);
       await page.keyboard.press("Escape");
       await page.locator("#menu-btn").click();
       await page.waitForSelector("#drawer");
       // El drawer entra deslizándose: se espera a que termine y queda pegado a la izquierda, superpuesto.
       await expect.poll(async () => (await page.locator("#drawer").boundingBox())?.x).toBe(0);
-      expect((await page.locator("#drawer").boundingBox())!.width).toBe(296);
+      // Nunca más ancho que la pantalla: siempre queda una franja para cerrarlo tocando afuera.
+      expect((await page.locator("#drawer").boundingBox())!.width).toBe(Math.min(296, width - 48));
+      await expectNoOverflow(page, `${locale} ${width} menú`, width);
       await context.close();
     });
   }

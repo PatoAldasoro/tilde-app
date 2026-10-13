@@ -69,24 +69,31 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
 
-  /* Layout */
-  --topbar-height: 64px;
+  /* Layout. Mobile first: estos son los valores del teléfono; más abajo crecen con la pantalla. */
+  --topbar-height: 56px;
+  --bottom-nav-height: 60px;      /* barra de secciones al pie (teléfono y tablet) */
   --drawer-width: 296px;
   --sheet-width: 440px;
   --content-max: 1200px;
   --content-narrow: 860px;
-  --gutter: 32px;
+  --gutter: 16px;
   --hit-target: 40px;
   --control-height: 40px;
   --control-height-sm: 32px;
   --control-height-lg: 48px;
   --schedule-slot-height: 26px;   /* 30 min */
-  --schedule-time-col: 60px;
-  --calendar-cell-min: 124px;
+  --schedule-time-col: 44px;
+  --calendar-cell-min: 58px;
+  /* Lo que ocupa abajo la barra de secciones más el borde del teléfono: todo lo fijo al pie se corre eso. */
+  --app-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
   --z-topbar: 20; --z-sheet: 40; --z-drawer: 50; --z-dialog: 60; --z-popover: 70; --z-toast: 80; --z-drag: 90; --z-focus-mode: 100;
 }
 
-@media (max-width: 1199px) { :root { --gutter: 24px; } }
+/* Puntos de quiebre, siempre min-width: 600 teléfono grande · 768 tablet · 1024 escritorio · 1200 escritorio amplio. */
+@media (min-width: 600px) { :root { --gutter: 24px; } }
+@media (min-width: 768px) { :root { --schedule-time-col: 60px; --calendar-cell-min: 124px; } }
+@media (min-width: 1024px) { :root { --topbar-height: 64px; --bottom-nav-height: 0px; } }
+@media (min-width: 1200px) { :root { --gutter: 32px; } }
 
 /* ---------- Light ---------- */
 /* [data-theme] también vale en un elemento cualquiera: así se leen los colores del otro tema (exportar el horario). */

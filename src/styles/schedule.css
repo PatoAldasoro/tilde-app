@@ -1,0 +1,130 @@
+/* Tilde — Horario: grilla semanal, formulario de horarios y exportación.
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en
+   bloques min-width (600 · 768 · 1024 · 1101 · 1280), siempre de menor a mayor. Solo tokens de tokens.css. */
+
+.week-nav { display: flex; align-items: center; gap: var(--space-1); }
+.sched-legend .k { display: inline-flex; align-items: center; gap: var(--space-1-5); }
+.sched-legend .sw { width: 18px; height: 12px; border-radius: 3px; }
+.sched-legend .sw-class { background: var(--color-surface-sunken); border: 1px solid var(--color-border-strong); }
+.sched-legend .sw-event { border: 1.5px dashed var(--color-text-subtle); }
+.sched-legend .sw-skip { background: repeating-linear-gradient(135deg, var(--color-stripe) 0 3px, transparent 3px 6px), var(--color-surface-sunken); border: 1px solid var(--color-border-strong); }
+.sched { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; display: flex; flex-direction: column; }
+.sched-head { display: grid; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.sched-dayhead { min-height: 64px; padding: var(--space-2) var(--space-3); border-left: 1px solid var(--color-border); display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+.sched-dayhead .d { display: flex; align-items: baseline; gap: var(--space-2); }
+.sched-dayhead .wd { font-size: var(--text-title-s); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); text-transform: capitalize; }
+.sched-dayhead .dn { font-size: var(--text-caption); color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+.sched-dayhead.is-today .wd { color: var(--color-on-accent-fill); background: var(--color-accent-fill); border-radius: var(--radius-sm); padding: 0 6px; }
+.sched-dayhead.is-today .dn { color: var(--color-accent-text); font-weight: var(--weight-medium); }
+.holiday-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 22px; padding: 0 7px; border-radius: var(--radius-xs); background: var(--color-holiday-bg); color: var(--color-holiday-text); border: 1px solid var(--color-holiday-border); font-size: 11px; font-weight: var(--weight-medium); }
+.holiday-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sched-body { display: grid; position: relative; }
+.sched-times { position: relative; }
+.sched-col { position: relative; border-left: 1px solid var(--color-border); background-image: repeating-linear-gradient(to bottom, var(--color-border) 0 1px, transparent 1px calc(var(--schedule-slot-height) * 2)), repeating-linear-gradient(to bottom, transparent 0 var(--schedule-slot-height), color-mix(in srgb, var(--color-border) 55%, transparent) var(--schedule-slot-height) calc(var(--schedule-slot-height) + 1px), transparent calc(var(--schedule-slot-height) + 1px) calc(var(--schedule-slot-height) * 2)); }
+.sched-col.is-holiday { background-color: color-mix(in srgb, var(--color-holiday-bg) 55%, transparent); }
+.sched-col.is-today { background-color: color-mix(in srgb, var(--color-accent-soft) 35%, transparent); }
+.slot-btn { position: absolute; left: 0; right: 0; height: var(--schedule-slot-height); border: 0; background: transparent; padding: 0; border-radius: 4px; }
+.slot-btn:hover { background: var(--color-surface-hover); }
+.slot-btn:hover::after { content: "+"; position: absolute; left: 8px; top: 3px; font-size: 13px; color: var(--color-text-subtle); }
+.slot-btn:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-focus-ring); }
+.sched-block { position: absolute; z-index: 2; padding: 5px 8px; border-radius: var(--radius-sm); overflow: hidden; text-align: left; border: 1px solid color-mix(in srgb, var(--s-solid) 45%, transparent); background: var(--s-soft); color: var(--s-on-soft); display: flex; flex-direction: column; gap: 1px; font-size: var(--text-micro); line-height: 1.3; transition: box-shadow var(--duration-fast), transform var(--duration-fast); }
+.sched-block:hover { box-shadow: 0 0 0 1px var(--s-solid); z-index: 3; }
+.sched-block:focus-visible { outline: none; box-shadow: var(--shadow-focus); z-index: 3; }
+.sched-block .b-title { font-weight: var(--weight-semibold); font-size: var(--text-caption); color: var(--s-on-soft); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sched-block .b-meta { display: flex; align-items: center; gap: 4px; opacity: 0.92; white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
+.sched-block .b-meta span { overflow: hidden; text-overflow: ellipsis; }
+.sched-block.is-event { background: var(--color-surface); border: 1.5px dashed var(--s-solid); color: var(--color-text); }
+.sched-block.is-event .b-title { color: var(--color-text); }
+.sched-block.is-event .b-meta { color: var(--color-text-muted); }
+.sched-block.is-event .b-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--s-vivid); flex: none; }
+.sched-block.is-skipped { background: repeating-linear-gradient(135deg, var(--color-stripe) 0 4px, transparent 4px 8px), var(--color-surface-sunken); border: 1px solid var(--color-border-strong); color: var(--color-text-subtle); }
+.sched-block.is-skipped .b-title { color: var(--color-text-subtle); text-decoration: line-through; text-decoration-thickness: 1px; }
+.sched-block.is-skipped .b-meta { color: var(--color-text-subtle); }
+.sched-block .b-flag { font-size: 11px; font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: none; }
+.now-line { position: absolute; left: -1px; right: 0; height: 2px; background: var(--color-accent); z-index: 4; pointer-events: none; }
+.now-line::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
+.now-label { position: absolute; right: 4px; transform: translateY(-50%); z-index: 4; font-size: 11px; font-weight: var(--weight-semibold); color: var(--color-on-accent-fill); background: var(--color-accent-fill); padding: 1px 5px; border-radius: 4px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.slot-rows { display: flex; flex-direction: column; gap: var(--space-3); }
+.block-pop-head { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-2) var(--space-2) var(--space-3); }
+.block-pop-head .sw { width: 12px; height: 12px; border-radius: 3px; background: var(--s-vivid); margin-top: 5px; flex: none; }
+.block-pop-head .t { font-weight: var(--weight-semibold); }
+.block-pop-head .m { font-size: var(--text-caption); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+/* ---------- Horario ---------- */
+.sched { position: relative; }
+.sched-empty .empty-title { font-size: 28px; }
+.sched-block .b-title.is-compact { -webkit-line-clamp: 1; }
+.block-pop-head .m .lucide { display: inline-block; vertical-align: -2px; }
+/* Slots are always reachable by touch: show the "+" hint on focus too. */
+.slot-btn:focus-visible::after { content: "+"; position: absolute; left: 8px; top: 3px; font-size: 13px; color: var(--color-text-subtle); }
+.sched-block .b-title .s-icon { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+.sched-block .b-meta .s-icon { flex: none; }
+.sched-block.is-event .s-icon { color: var(--s-solid); }
+.sched-block.is-skipped .s-icon { color: inherit; }
+.wallpaper-options { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.wallpaper-options .seg { align-self: flex-start; max-width: 100%; }
+.wallpaper-options .seg-item { padding: 0 10px; }
+
+/* ---------- Disposición (mobile first) ---------- */
+.sched-toolbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+/* En el teléfono la semana ocupa su propio renglón, con las flechas en las puntas. */
+.sched-toolbar .week-nav { flex: 1 1 100%; }
+.week-label { flex: 1; text-align: center; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; padding: 0 var(--space-2); white-space: nowrap; }
+.sched-legend { display: none; gap: var(--space-4); align-items: center; font-size: var(--text-caption); color: var(--color-text-muted); }
+
+/* Teléfono: se ve un día por vez y se elige en esta tira. Desde 768 px, la semana entera. */
+.sched-daystrip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-1); margin-bottom: var(--space-3); }
+.sched-daytab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 52px; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text-muted); }
+.sched-daytab .wd { font-size: var(--text-micro); text-transform: capitalize; }
+.sched-daytab .dn { font-size: var(--text-body); font-weight: var(--weight-semibold); color: var(--color-text); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.sched-daytab.is-today .dn { color: var(--color-accent-text); }
+.sched-daytab[aria-pressed="true"] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.sched-daytab[aria-pressed="true"] .dn { color: inherit; }
+/* Un punto marca el feriado. */
+.sched-daytab.is-holiday::after { content: ""; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-subtle); }
+.sched-daytab[aria-pressed="true"].is-holiday::after { background: currentColor; }
+.sched-daytab:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+/* La grilla: la columna de horas y, en el teléfono, solo el día elegido. La página es la que se desplaza. */
+.sched-head, .sched-body { grid-template-columns: var(--schedule-time-col) minmax(0, 1fr); }
+.sched-dayhead:not(.is-shown), .sched-col:not(.is-shown) { display: none; }
+.sched-scroll { position: relative; }
+.sched-time { height: calc(var(--schedule-slot-height) * 2); font-size: 11px; color: var(--color-text-subtle); text-align: right; padding: 0 var(--space-1-5) 0 0; transform: translateY(-7px); font-variant-numeric: tabular-nums; }
+.sched-empty { position: absolute; inset: 64px 0 0 0; display: grid; place-items: center; pointer-events: none; }
+.sched-empty .panel { pointer-events: auto; text-align: center; max-width: calc(100% - 2 * var(--space-4)); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: var(--space-6); }
+
+/* Formulario: cada horario de una materia. En el teléfono, el día arriba y las horas debajo. */
+.slot-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--hit-target); gap: var(--space-2); align-items: end; }
+.slot-row > :first-child { grid-column: 1 / -1; }
+.slot-row > :nth-child(4) { grid-column: 1 / 3; }
+
+/* Exportar el horario: en el teléfono la vista previa va arriba y las opciones debajo. */
+.wallpaper-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.wallpaper-preview { --preview-height: 240px; order: -1; display: grid; place-items: center; height: var(--preview-height); padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-sunken); }
+.wallpaper-preview canvas { max-width: 100%; max-height: calc(var(--preview-height) - 2 * var(--space-3)); width: auto; height: auto; border-radius: var(--radius-sm); box-shadow: var(--shadow-popover); }
+
+@media (min-width: 600px) {
+  .sched-empty .panel { max-width: 420px; padding: var(--space-8); }
+  .slot-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr) var(--hit-target); }
+  .slot-row > :first-child, .slot-row > :nth-child(4) { grid-column: auto; }
+}
+
+@media (min-width: 768px) {
+  .sched-toolbar { gap: var(--space-3); margin-bottom: var(--space-4); }
+  .sched-toolbar .week-nav { flex: 0 1 auto; }
+  .week-label { flex: 0 1 auto; min-width: 168px; text-align: left; }
+  .sched-legend { display: flex; }
+  .sched-daystrip { display: none; }
+  .sched-head, .sched-body { grid-template-columns: var(--schedule-time-col) repeat(var(--days, 5), minmax(0, 1fr)); }
+  .sched-dayhead:not(.is-shown) { display: flex; }
+  .sched-col:not(.is-shown) { display: block; }
+  .sched-time { padding-right: var(--space-2); }
+  .wallpaper-layout { grid-template-columns: 320px minmax(0, 1fr); gap: var(--space-5); }
+  .wallpaper-preview { --preview-height: 380px; order: 0; }
+}
+/* Con pantalla alta, la vista previa crece. */
+@media (min-width: 768px) and (min-height: 761px) { .wallpaper-preview { --preview-height: 460px; } }
+
+/* Escritorio: la grilla tiene su propio desplazamiento y arranca mostrando las 08:00. */
+@media (min-width: 1024px) { .sched-scroll { overflow-y: auto; max-height: calc(100vh - 230px); min-height: 420px; } }
+
+@media (pointer: coarse) { .slot-btn:active { background: var(--color-surface-hover); } }

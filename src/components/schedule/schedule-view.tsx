@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { LoadError } from "@/components/ui/query-state";
 import { toast } from "@/components/ui/toast";
 import { holidayNames } from "@/lib/domain/calendar";
-import { addDays, dateParts, formatDayMonth, startOfWeek, type IsoDate, type Weekday } from "@/lib/domain/dates";
+import { addDays, dateParts, formatDayMonth, startOfWeek, weekdayOf, type IsoDate, type Weekday } from "@/lib/domain/dates";
 import { yearsAround } from "@/lib/domain/holidays";
 import {
   blocksOfActiveSubjects,
@@ -61,6 +61,8 @@ export function ScheduleView() {
   const calendarQuery = useCalendarEvents();
 
   const [weekOffset, setWeekOffset] = useState(0);
+  // Teléfono: el día que se está mirando (la grilla muestra uno por vez). null = hoy, o el primero visible.
+  const [pickedDay, setPickedDay] = useState<Weekday | null>(null);
   const [form, setForm] = useState<ScheduleFormTarget | null>(null);
   const [exporting, setExporting] = useState(false);
   const weekStart = useMemo(() => addDays(startOfWeek(today), weekOffset * 7), [today, weekOffset]);
@@ -95,7 +97,10 @@ export function ScheduleView() {
   }, []);
 
   const days = [...profile.visible_weekdays].sort((a, b) => a - b) as Weekday[];
-  const columns = { gridTemplateColumns: `var(--schedule-time-col) repeat(${days.length}, minmax(0, 1fr))` } satisfies CSSProperties;
+  // Cuántas columnas de día hay: el CSS decide si se ven todas (desde tablet) o solo la elegida (teléfono).
+  const columns = { "--days": days.length } as CSSProperties;
+  const todayWeekday = weekdayOf(today);
+  const shownDay = pickedDay !== null && days.includes(pickedDay) ? pickedDay : days.includes(todayWeekday) ? todayWeekday : days[0];
   const weekdayShort = t("wd_short").split(",");
   const weekdayLong = t("wd_long").split(",");
   const letters = t("wd_letter").split(",");
@@ -247,6 +252,29 @@ export function ScheduleView() {
         </div>
       ) : null}
 
+      <div className="sched-daystrip" role="group" aria-label={t("day_picker")}>
+        {days.map((weekday) => {
+          const date = addDays(weekStart, weekday - 1);
+          return (
+            <button
+              key={weekday}
+              type="button"
+              className={cn("sched-daytab", date === today && "is-today", holidayLabel(date) && "is-holiday")}
+              aria-pressed={weekday === shownDay}
+              aria-label={`${weekdayLong[weekday - 1]} ${formatDayMonth(date)}`}
+              onClick={() => setPickedDay(weekday)}
+            >
+              <span className="wd" aria-hidden="true">
+                {weekdayShort[weekday - 1]}
+              </span>
+              <span className="dn" aria-hidden="true">
+                {dateParts(date).day}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="sched" role="group" aria-label={t("schedule_grid")} aria-busy={!isLoaded}>
         <div className="sched-head" style={columns}>
           <div />
@@ -254,7 +282,7 @@ export function ScheduleView() {
             const date = addDays(weekStart, weekday - 1);
             const holiday = holidayLabel(date);
             return (
-              <div key={weekday} className={cn("sched-dayhead", date === today && "is-today")}>
+              <div key={weekday} className={cn("sched-dayhead", date === today && "is-today", weekday === shownDay && "is-shown")}>
                 <div className="d">
                   <span className="wd">{weekdayShort[weekday - 1]}</span>
                   <span className="dn tnum">{formatDayMonth(date)}</span>
@@ -287,7 +315,7 @@ export function ScheduleView() {
               return (
                 <div
                   key={weekday}
-                  className={cn("sched-col", date === today && "is-today", holiday && "is-holiday")}
+                  className={cn("sched-col", date === today && "is-today", holiday && "is-holiday", weekday === shownDay && "is-shown")}
                   role="group"
                   aria-label={
                     holiday

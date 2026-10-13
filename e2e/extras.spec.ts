@@ -494,7 +494,7 @@ test("íconos: se eligen en la materia y en la actividad, y aparecen donde se mu
 
   // Calendario: el chip de la fecha.
   await page.goto("/app/calendar");
-  await expect(page.locator(".ev.cat-parcial").locator('svg[data-icon="magnet"]')).toBeVisible();
+  await expect(page.locator(".cal .ev.cat-parcial").locator('svg[data-icon="magnet"]')).toBeVisible();
 
   // Horario: el bloque de la clase y una actividad sin materia con su propio ícono.
   await page.goto("/app/schedule");

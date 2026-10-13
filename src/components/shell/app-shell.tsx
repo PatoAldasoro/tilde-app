@@ -9,6 +9,7 @@ import { StudyTimerRunner } from "@/components/study/timer-runner";
 import { useAutoCloseOnLeave, useEdgeIntent } from "@/hooks/use-edge-menu";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { cn } from "@/lib/utils";
+import { BottomNav } from "./bottom-nav";
 import { Drawer } from "./drawer";
 import { SettingsDialog } from "./settings-dialog";
 import { SyncStatus } from "./sync-status";
@@ -17,7 +18,7 @@ type ShellValue = { drawerOpen: boolean; openDrawer: () => void; openSettings: (
 
 const ShellContext = createContext<ShellValue | null>(null);
 
-/** Marco de la app con sesión: drawer de navegación y diálogo de Ajustes. */
+/** Marco de la app con sesión: menú lateral, barra de secciones (teléfono y tablet) y diálogo de Ajustes. */
 export function AppShell({ children }: { children: ReactNode }) {
   const edgeMenu = useProfile().edge_menu;
   // "edge": lo abrió el mouse contra el borde izquierdo (se cierra solo al alejarse).
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ShellContext.Provider value={value}>
       <StudyTimerRunner />
       {children}
+      <BottomNav />
       <FloatingTimer />
       <Drawer
         open={drawerOpen}

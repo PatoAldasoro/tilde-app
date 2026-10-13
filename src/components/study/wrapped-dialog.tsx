@@ -99,15 +99,18 @@ function WrappedStory({ onStart }: { onStart: () => void }) {
             ]}
           />
           <span className="flex-1" />
-          <Button icon variant="ghost" aria-label={t("wrapped_prev_period")} onClick={() => setOffset((value) => value - 1)}>
-            <ChevronLeft size={20} />
-          </Button>
-          <span className="wrapped-range tnum" aria-live="polite">
-            {rangeLabel}
-          </span>
-          <Button icon variant="ghost" aria-label={t("wrapped_next_period")} disabled={offset >= 0} onClick={() => setOffset((value) => value + 1)}>
-            <ChevronRight size={20} />
-          </Button>
+          {/* Las flechas y las fechas van juntas: en el teléfono bajan a su propio renglón. */}
+          <div className="wrapped-nav">
+            <Button icon variant="ghost" aria-label={t("wrapped_prev_period")} onClick={() => setOffset((value) => value - 1)}>
+              <ChevronLeft size={20} />
+            </Button>
+            <span className="wrapped-range tnum" aria-live="polite">
+              {rangeLabel}
+            </span>
+            <Button icon variant="ghost" aria-label={t("wrapped_next_period")} disabled={offset >= 0} onClick={() => setOffset((value) => value + 1)}>
+              <ChevronRight size={20} />
+            </Button>
+          </div>
         </div>
 
         {/* Una tarjeta por vez; se pasa con los botones, los puntos o las flechas del teclado. */}

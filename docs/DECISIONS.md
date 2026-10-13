@@ -290,3 +290,35 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
       mensajes ni los tokens.
     - Los datos que dependen de lo guardado en el dispositivo se muestran recién al terminar la hidratación
       (`useHydrated`): mientras tanto se dibuja lo mismo que el servidor.
+47. **Diseño mobile first.** La app se usa desde un teléfono de 320 px hasta el escritorio. No se le agregaron
+    parches al diseño de escritorio: los estilos se rehicieron con el teléfono como base.
+    - **Estructura.** `tilde.css` y `extra.css` ya no existen. Hay un archivo por área (`base`, `controls`,
+      `overlays`, `shell`, `home`, `schedule`, `tasks`, `calendar`, `import`, `study`, `landing`). En cada uno, las
+      reglas sin `@media` son las del teléfono y lo que cambia con más lugar va en bloques `min-width`, de menor a
+      mayor: 600 (teléfono grande), 768 (tablet), 1024 (escritorio), 1101 y 1280. No hay ningún `max-width`. Los
+      tamaños del marco (`--gutter`, `--topbar-height`, `--bottom-nav-height`…) son tokens que crecen igual.
+    - **El escritorio no cambió.** Se comparó captura contra captura, antes y después, en 28 pantallas y
+      superposiciones a 1024, 1366 y 1440 px: quedaron iguales píxel a píxel.
+    - **Navegación.** En teléfono y tablet hay una barra de secciones al pie, con las cinco a un toque. El menú
+      lateral sigue estando (perfil, ajustes, tema). En escritorio la barra no se muestra.
+    - **Barra superior.** En el teléfono las acciones muestran solo el ícono; el texto queda como nombre accesible
+      (el `Button` lo envuelve en un `span`). Desde 768 px vuelven a mostrarlo.
+    - **Diálogos.** En el teléfono suben desde abajo, ocupan todo el ancho y reparten sus botones; los paneles
+      laterales (materia, tarea) van a pantalla completa. Los campos van a 16 px: con menos, iOS hace zoom al
+      enfocarlos.
+    - **Horario.** Un día por vez, elegido en una tira de días; la página se desplaza (la grilla no tiene su propio
+      scroll). Desde 768 px, la semana entera.
+    - **Calendario.** En las celdas no entran los nombres: cada fecha es un punto con el color de su materia, y
+      toda la celda abre la lista del día. Debajo de la grilla va la lista del mes, que es donde se leen y editan.
+    - **Tareas.** El título ocupa el ancho y los datos (prioridad, entrega, subtareas) bajan a un segundo renglón.
+    - **Sesiones.** El anillo ocupa el ancho disponible y el reloj se mide contra él (unidades de contenedor); las
+      tareas de hoy van debajo. El modo foco es una sola columna que se desplaza.
+    - **Tablas (notas, historial).** En el teléfono cada fila es una tarjeta con sus datos rotulados
+      (`data-label`); siguen siendo tablas para un lector de pantalla.
+    - **Tooltips.** Ocultos no ocupan lugar. Un tooltip invisible que se pasaba del borde le agregaba ancho a la
+      página en el teléfono, y eso no se ve con `scrollWidth - innerWidth`: el navegador agranda la página entera.
+      Por eso los tests de layout comparan contra el ancho de la pantalla.
+    - Pendiente: las capturas de la landing son de escritorio también en el teléfono.
+48. **Instalable.** Manifiesto (`src/app/manifest.ts`) e íconos en `public/icons/`, generados del logo: Tilde se
+    puede agregar a la pantalla de inicio y abre directo en la app. Junto con el modo sin conexión (46), funciona
+    como una app instalada.

@@ -25,7 +25,12 @@ test.afterEach(async () => {
 });
 
 const today = (page: Page) => page.locator("section.day-group").filter({ has: page.getByRole("heading", { name: "Hoy" }) });
-const titles = (page: Page) => today(page).locator(".task .task-title").allTextContents();
+// Sin conexión, cambiar de sección recarga la página: mientras tanto no hay lista que leer.
+const titles = (page: Page) =>
+  today(page)
+    .locator(".task .task-title")
+    .allTextContents()
+    .catch(() => [] as string[]);
 const pill = (page: Page) => page.locator(".sync-pill");
 const stored = (page: Page, prefix: string) => page.evaluate((start) => Object.keys(localStorage).filter((key) => key.startsWith(start)), prefix);
 const tasksInDb = async () =>
@@ -110,6 +115,7 @@ test("sin conexión: se sigue usando, los cambios sobreviven a recargar y a camb
   await goTo(page, "Inicio");
   await expect(page.getByRole("heading", { name: "Inicio" })).toBeVisible();
   await goTo(page, "Tareas");
+  await expect(page).toHaveURL(/\/app\/todo$/);
   await expect.poll(() => titles(page)).toEqual(["Dos", "Hecha en el viaje", "Uno"]);
 
   // Vuelve la conexión: se sube todo, en orden, y se avisa.

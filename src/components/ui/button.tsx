@@ -1,9 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
-import type { ComponentProps } from "react";
+import { Children, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-/** Variantes del botón del diseño (`.btn` en src/styles/tilde.css). */
+/** Variantes del botón del diseño (`.btn` en src/styles/controls.css). */
 export const buttonVariants = cva("btn", {
   variants: {
     variant: {
@@ -23,7 +23,7 @@ export const buttonVariants = cva("btn", {
 type ButtonProps = ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & { asChild?: boolean; loading?: boolean };
 
-export function Button({ className, variant, size, icon, asChild, loading, type, ...props }: ButtonProps) {
+export function Button({ className, variant, size, icon, asChild, loading, type, children, ...props }: ButtonProps) {
   const Comp = asChild ? Slot.Root : "button";
   return (
     <Comp
@@ -31,6 +31,11 @@ export function Button({ className, variant, size, icon, asChild, loading, type,
       className={cn(buttonVariants({ variant, size, icon }), loading && "is-loading", className)}
       aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      {/* El texto va en su propio span: donde no hay lugar (la barra superior en el teléfono) se deja solo el ícono sin perder el nombre. */}
+      {asChild
+        ? children
+        : Children.map(children, (child) => (typeof child === "string" || typeof child === "number" ? <span className="btn-label">{child}</span> : child))}
+    </Comp>
   );
 }

@@ -827,5 +827,10 @@
   "signout_pending_q": "¿Cerrar sesión con cambios sin subir?",
   "signout_pending_body": "{n, plural, one {Hay {n} cambio que todavía no se subió} other {Hay {n} cambios que todavía no se subieron}}. Al cerrar sesión se pierden.",
   "signout_anyway": "Cerrar sesión igual",
-  "needs_connection": "Hace falta conexión para esto."
+  "needs_connection": "Hace falta conexión para esto.",
+  "nav_sessions_short": "Sesiones",
+  "sections": "Secciones",
+  "day_picker": "Día que se muestra",
+  "month_dates": "Fechas de {month}",
+  "no_dates_month": "Este mes no tiene fechas cargadas."
 }

@@ -17,7 +17,7 @@ import { importNews, importRange, nextSkipped, planCalendarImport, type ImportPl
 import { addMonths, dateParts, formatDayMonth, monthMatrix, weekdayOf, type IsoDate } from "@/lib/domain/dates";
 import { yearsAround } from "@/lib/domain/holidays";
 import { parseIcs, type IcsOccurrence } from "@/lib/domain/ics";
-import { activeSubjects, type SubjectBadge } from "@/lib/domain/subjects";
+import { activeSubjects, subjectClass, type SubjectBadge } from "@/lib/domain/subjects";
 import { fetchFeedIcs, useCalendarEvents, useCalendarFeeds, useCalendarMutations } from "@/lib/queries/calendar";
 import { useHolidays } from "@/lib/queries/holidays";
 import { useSubjects } from "@/lib/queries/subjects";
@@ -108,6 +108,15 @@ export function CalendarView() {
   const title = `${months[month - 1]} ${year}`;
   const isCurrentMonth = year === current.year && month === current.month;
   const shift = (delta: number) => setShown(addMonths(year, month, delta));
+  // Los días del mes que tienen algo, para la lista que acompaña a la grilla en el teléfono.
+  const monthDays = weeks.flat().filter((day) => dateParts(day).month === month && (byDate.get(day)?.length ?? 0) > 0);
+  /** El punto de una fecha en la celda (teléfono): el color de la materia y la forma de la categoría. */
+  const dotClass = (item: DayItem) => {
+    if (item.kind === "holiday") return "cat-feriado";
+    const { category, subject_id: subjectId, confirmed } = item.event;
+    const color = category === "feriado" ? "" : subjectClass(subjectId ? subjectMap.get(subjectId)?.color_key : undefined);
+    return cn(`cat-${category}`, color, confirmed && "is-confirmed");
+  };
 
   async function remove(event: CalendarEventRow) {
     const name = eventLabel(event, event.subject_id ? subjectMap.get(event.subject_id)?.name : null);
@@ -261,6 +270,13 @@ export function CalendarView() {
                         <Plus size={16} />
                       </button>
                     </div>
+                    {items.length > 0 ? (
+                      <span className="cal-dots" aria-hidden="true">
+                        {items.slice(0, 4).map((item, index) => (
+                          <i key={index} className={cn("cal-dot", dotClass(item))} />
+                        ))}
+                      </span>
+                    ) : null}
                     {chips.map((item) => (
                       <ItemChip
                         key={item.kind === "holiday" ? `h-${item.holiday.date}` : item.event.id}
@@ -283,6 +299,26 @@ export function CalendarView() {
           ))}
         </div>
       </div>
+
+      <section className="cal-agenda" aria-labelledby="cal-agenda-title">
+        <h2 className="section-label cal-agenda-title" id="cal-agenda-title">
+          {t("month_dates", { month: title })}
+        </h2>
+        {monthDays.length === 0 ? <p className="cal-agenda-empty">{t("no_dates_month")}</p> : null}
+        {monthDays.map((day) => (
+          <div key={day} className={cn("cal-agenda-day", day === today && "is-today")}>
+            <div className="cal-agenda-date">
+              <strong>{dateParts(day).day}</strong>
+              <span>{weekdayShort[weekdayOf(day) - 1]}</span>
+            </div>
+            <div className="cal-agenda-items">
+              {(byDate.get(day) ?? []).map((item) => (
+                <ItemChip key={item.kind === "holiday" ? `h-${item.holiday.date}` : item.event.id} item={item} subjects={subjectMap} actions={actions} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
 
       <EventFormDialog target={form} subjects={subjects} onClose={() => setForm(null)} onDelete={(event) => void remove(event)} />
       <CalendarImportDialog

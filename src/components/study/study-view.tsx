@@ -228,7 +228,7 @@ function SessionOptions() {
       ) : null}
       <div className="row">
         <select
-          className="select w-auto min-w-60"
+          className="select w-auto max-w-full min-w-60"
           aria-label={t("subject")}
           value={subjectId}
           onChange={(event) => studyStore.setSubject(event.target.value || null)}

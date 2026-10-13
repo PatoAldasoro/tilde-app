@@ -1,8 +1,17 @@
 @import "tailwindcss";
 @import "../styles/theme.css";
 @import "../styles/tokens.css";
-@import "../styles/tilde.css" layer(components);
-@import "../styles/extra.css" layer(components);
+@import "../styles/base.css" layer(components);
+@import "../styles/controls.css" layer(components);
+@import "../styles/overlays.css" layer(components);
+@import "../styles/shell.css" layer(components);
+@import "../styles/home.css" layer(components);
+@import "../styles/schedule.css" layer(components);
+@import "../styles/tasks.css" layer(components);
+@import "../styles/calendar.css" layer(components);
+@import "../styles/import.css" layer(components);
+@import "../styles/study.css" layer(components);
+@import "../styles/landing.css" layer(components);
 
 /* Tema: <html data-theme="light|dark">. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

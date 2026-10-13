@@ -1,0 +1,257 @@
+/* Tilde — Sesiones de estudio: timer, modo foco, historial y Wrapped.
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en
+   bloques min-width (600 · 768 · 1024 · 1101 · 1280), siempre de menor a mayor. Solo tokens de tokens.css. */
+
+.phase-row { display: flex; align-items: center; gap: var(--space-3); }
+.phase-pill { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); font-size: var(--text-body-s); font-weight: var(--weight-semibold); background: var(--color-accent-soft); color: var(--color-accent-text); }
+.phase-pill.is-break { background: var(--color-success-soft); color: var(--color-success-text); }
+.phase-pill.is-idle { background: var(--color-surface-sunken); color: var(--color-text-muted); }
+.cycle-label { font-size: var(--text-body-s); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.cycle-dots { display: inline-flex; gap: 5px; margin-left: var(--space-1); vertical-align: middle; }
+.cycle-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--color-border-strong); }
+.cycle-dots i.done { background: var(--color-accent); }
+.cycle-dots i.current { background: transparent; box-shadow: inset 0 0 0 2px var(--color-accent); }
+.timer-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.timer-ring .track { stroke: var(--color-surface-sunken); }
+:root[data-theme="dark"] .timer-ring .track { stroke: var(--color-surface-active); }
+.timer-ring .bar { stroke: var(--color-accent); transition: stroke-dashoffset 1s linear, stroke var(--duration-slow); }
+.timer-ring.is-break .bar { stroke: var(--color-success); }
+.timer-ring.is-idle .bar { stroke: var(--color-border-strong); }
+.play-btn { width: 72px; height: 72px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--color-primary); color: var(--color-on-primary); transition: transform var(--duration-fast) var(--ease-standard), background var(--duration-fast); }
+.play-btn:hover { background: var(--color-primary-hover); }
+.play-btn:active { transform: scale(0.96); }
+.play-btn:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.round-btn:hover { background: var(--color-surface-hover); }
+.round-btn:disabled { color: var(--color-text-disabled); background: transparent; border-color: var(--color-border); cursor: not-allowed; }
+.round-btn:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.session-options { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); width: 100%; }
+/* Cada renglón ocupa el ancho de la tarjeta: así lo que tiene adentro (el selector de materia) puede achicarse en vez de pasarse. */
+.session-options .row { display: flex; align-items: center; justify-content: center; gap: var(--space-3); flex-wrap: wrap; width: 100%; }
+.custom-row { display: flex; gap: var(--space-3); align-items: end; flex-wrap: wrap; justify-content: center; }
+.side-panel-head { padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-border); display: flex; flex-direction: column; gap: var(--space-2); }
+.side-panel-head .t { display: flex; align-items: center; justify-content: space-between; font-weight: var(--weight-semibold); }
+.side-panel-body { overflow: auto; padding: var(--space-2) var(--space-3) var(--space-3); }
+.mini-task:hover { background: var(--color-surface-hover); }
+.mini-task .mt-title { flex: 1; min-width: 0; font-size: var(--text-body-s); }
+.mini-task.is-done .mt-title { color: var(--color-text-subtle); text-decoration: line-through; }
+.mini-task .chip { max-width: 120px; }
+.focus-side h3 { font-family: var(--font-display); font-weight: 400; font-size: 28px; padding: 0 var(--space-3); }
+.summary-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.summary-stat { padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-sunken); }
+.summary-stat .v { font-size: 28px; font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-tight); line-height: 1.1; }
+.summary-stat .l { font-size: var(--text-caption); color: var(--color-text-muted); margin-top: 2px; }
+.bars .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: var(--space-1); height: 100%; }
+.bars .bar { width: 100%; max-width: 36px; border-radius: 4px 4px 0 0; background: var(--color-border-strong); min-height: 2px; position: relative; }
+.bars .bar.is-current { background: var(--color-accent); }
+.bars .bar-val { font-size: 11px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.bars-x span { text-align: center; font-size: 11px; color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+.hbar-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.hbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); align-items: center; font-size: var(--text-body-s); }
+.hbar .name { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.hbar .name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar .name .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--s-vivid); flex: none; }
+.hbar .val { color: var(--color-text-muted); font-variant-numeric: tabular-nums; font-size: var(--text-caption); }
+.hbar .progress { grid-column: 1 / -1; }
+/* ---------- Sesiones ---------- */
+.round-btn.is-sm { width: var(--hit-target); height: var(--hit-target); }
+.round-btn.is-primary { background: var(--color-primary); color: var(--color-on-primary); border-color: transparent; }
+.round-btn.is-primary:hover { background: var(--color-primary-hover); }
+.round-btn[aria-pressed="true"] { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent-text); }
+.summary-stats > :last-child:nth-child(odd) { grid-column: span 2; }
+.adjust-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.adjust-label { font-size: var(--text-caption); color: var(--color-text-muted); }
+.adjust-step { justify-content: center; gap: var(--space-1); padding: 0 var(--space-2); }
+.sound-list { display: flex; flex-direction: column; gap: 2px; }
+.sound-option { display: flex; align-items: center; gap: var(--space-3); min-height: var(--hit-target); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text); font-size: var(--text-body-s); text-align: left; }
+.sound-option:hover { background: var(--color-surface-hover); }
+.sound-option:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.sound-radio { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--color-border-control); }
+.sound-option[aria-checked="true"] .sound-radio { border: 5px solid var(--color-accent); }
+.sound-volume { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-body-s); }
+.sound-volume input { flex: 1; min-width: 0; height: var(--hit-target); accent-color: var(--color-accent); }
+/* Timer flotante: el borde de progreso del anillo, en un rectángulo redondeado que llena el marco */
+.mini-timer { position: relative; width: 100%; height: 100%; min-height: 128px; border-radius: 26px; background: var(--color-surface); container-type: size; }
+.mini-timer-border { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mini-timer-border rect { x: 5px; y: 5px; width: calc(100% - 10px); height: calc(100% - 10px); rx: 22px; fill: none; stroke-width: 6px; }
+.mini-timer-border .track { stroke: var(--color-surface-sunken); }
+:root[data-theme="dark"] .mini-timer-border .track { stroke: var(--color-surface-active); }
+.mini-timer-border .bar { stroke: var(--color-accent); stroke-dasharray: 1; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke var(--duration-slow); }
+.mini-timer.is-break .bar { stroke: var(--color-success); }
+.mini-timer.is-idle .bar { stroke: var(--color-border-strong); }
+.mini-timer-body { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); align-items: center; gap: 2px var(--space-3); padding: 18px 22px 16px; }
+.mini-timer-phase { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); font-size: var(--text-caption); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
+.mini-timer-phase strong { color: var(--color-accent-text); font-weight: var(--weight-semibold); }
+.mini-timer.is-break .mini-timer-phase strong { color: var(--color-success-text); }
+.mini-timer.is-idle .mini-timer-phase strong { color: var(--color-text-muted); }
+.mini-timer-phase span { overflow: hidden; text-overflow: ellipsis; }
+.mini-timer-time { font-size: clamp(40px, 38cqh, 112px); font-weight: var(--weight-light); letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mini-timer.is-long .mini-timer-time { font-size: clamp(34px, 30cqh, 88px); }
+.mini-timer-controls { display: flex; gap: var(--space-2); }
+/* El video que alimenta la ventana de imagen en imagen: tiene que estar en la página, pero no se ve. */
+.pip-source { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.floating-timer-actions { position: absolute; top: 8px; right: 12px; display: flex; gap: 2px; }
+.floating-timer .mini-timer-phase span { display: none; }
+.session-tasks { list-style: none; margin: 0 0 var(--space-2); padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.session-tasks li { display: flex; align-items: center; gap: var(--space-2); min-height: var(--hit-target); padding: 0 var(--space-1) 0 var(--space-3); font-size: var(--text-body-s); }
+.session-tasks li + li { border-top: 1px solid var(--color-border); }
+/* Wrapped */
+.wrapped-bar { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.wrapped-range { min-width: 150px; text-align: center; font-size: var(--text-body-s); font-weight: var(--weight-medium); }
+.wrapped-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.wrapped-kicker { font-size: var(--text-micro); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-accent-text); }
+.wrapped-line { max-width: 54ch; font-size: var(--text-body); line-height: 1.5; color: var(--color-text-muted); }
+.wrapped-card.is-cover, .wrapped-card.is-closing { background: var(--color-primary); color: var(--color-on-primary); }
+.wrapped-card.is-cover .wrapped-kicker, .wrapped-card.is-closing .wrapped-kicker, .wrapped-card.is-cover .wrapped-line, .wrapped-card.is-closing .wrapped-line { color: inherit; opacity: 0.78; }
+.wrapped-card.is-subject { background: var(--s-soft); }
+.wrapped-card.is-subject .wrapped-kicker, .wrapped-card.is-subject .wrapped-big { color: var(--s-on-soft); }
+.wrapped-dots { display: flex; justify-content: center; }
+.wrapped-dot { width: 26px; height: var(--hit-target); display: grid; place-items: center; border: 0; background: transparent; padding: 0; }
+.wrapped-dot::before { content: ""; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-border-strong); transition: width var(--duration-base) var(--ease-standard), background var(--duration-fast); }
+.wrapped-dot[aria-selected="true"]::before { width: 20px; background: var(--color-accent); }
+.wrapped-dot:focus-visible { outline: none; }
+.wrapped-dot:focus-visible::before { box-shadow: var(--shadow-focus); }
+.grip.mini-grip { width: 28px; height: var(--hit-target); }
+.mini-task-group:hover .mini-grip { opacity: 1; }
+.mini-task-group.is-dragging { position: relative; z-index: 2; border-radius: var(--radius-sm); background: var(--color-surface-raised); box-shadow: var(--shadow-drag); }
+.mini-task .subcount { padding: 0 2px; flex: none; }
+.mini-task .mt-main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--space-2); padding: var(--space-1-5) 0; }
+.mini-task .mt-title { flex: 1 1 130px; }
+.mini-task .chip { flex: none; }
+.round-btn[aria-disabled="true"] { color: var(--color-text-disabled); background: transparent; border-color: var(--color-border); cursor: not-allowed; }
+.focus-mode:focus-visible { outline: none; }
+.focus-side .side-panel-head { border-bottom: 0; padding: 0 var(--space-3) var(--space-2); }
+.focus-side .side-panel-body { padding: 0; overflow: visible; }
+
+/* ---------- Disposición (mobile first) ---------- */
+/* Sesión: en el teléfono el timer arriba y las tareas de hoy debajo; desde 1024 px, lado a lado. */
+.sessions-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.timer-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-5) var(--space-3) var(--space-6); border-radius: var(--radius-lg); background: var(--color-surface); border: 1px solid var(--color-border); }
+
+/* El anillo ocupa el ancho disponible (hasta su tamaño de diseño); el reloj y su rótulo se miden contra él. */
+.timer-ring { position: relative; width: min(380px, 100%); aspect-ratio: 1; display: grid; place-items: center; container-type: inline-size; }
+.timer-time { font-size: 25.3cqw; line-height: var(--leading-timer); font-weight: var(--weight-light); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.timer-sub { position: absolute; bottom: 29.5cqw; max-width: 72cqw; text-align: center; font-size: var(--text-body-s); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+/* Modo examen: el reloj lleva horas ("1:59:30") y necesita un cuerpo algo menor para entrar en el anillo. */
+.timer-ring.is-long .timer-time { font-size: 20cqw; }
+
+.timer-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-2); }
+.round-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); display: grid; place-items: center; }
+.custom-row .field { flex: 1 1 88px; min-width: 0; }
+
+.side-panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); display: flex; flex-direction: column; }
+.mini-task { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-2) 0 0; border-radius: var(--radius-sm); }
+/* Subtareas dentro de "Tareas de hoy": alineadas con el título de su tarea. */
+.mini-subtasks { display: flex; flex-direction: column; padding: 0 var(--space-2) var(--space-1) 58px; }
+
+/* Modo foco. En el teléfono, el timer y debajo las tareas, y se desplaza todo junto; desde 1024 px, las tareas al costado. */
+.focus-mode { position: fixed; inset: 0; z-index: var(--z-dialog); background: var(--color-bg); display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; align-content: start; overflow-y: auto; animation: fade-in var(--duration-slow) var(--ease-standard); }
+.focus-main { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-5); padding: calc(var(--space-16) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-6); position: relative; }
+/* En un examen no hay lista de tareas: el timer queda centrado en la pantalla. */
+.focus-mode.is-exam .focus-main { min-height: 100dvh; }
+.focus-main .timer-ring { width: min(440px, 100%); }
+.focus-main .timer-time { font-size: 27.2cqw; }
+.focus-main .timer-sub { bottom: 30cqw; }
+.focus-main .timer-ring.is-long .timer-time { font-size: 20.8cqw; }
+.focus-exit { position: absolute; top: calc(var(--space-3) + env(safe-area-inset-top, 0px)); right: var(--space-3); }
+.focus-side { border-top: 1px solid var(--color-border); background: var(--color-surface); display: flex; flex-direction: column; padding: var(--space-5) var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom, 0px)); gap: var(--space-3); }
+
+/* Historial */
+.history-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+.bars { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-1-5); align-items: end; height: 150px; padding-top: var(--space-4); border-bottom: 1px solid var(--color-border); }
+.bars-x { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-1-5); margin-top: var(--space-2); }
+/* Sesiones guardadas: en el teléfono cada sesión es una tarjeta (día, materia y tipo arriba; los números debajo, con su rótulo). Desde 768 px, la tabla. */
+.session-table { display: block; width: 100%; font-size: var(--text-body-s); }
+.session-table thead { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); }
+.session-table tbody { display: block; }
+.session-table tr { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-3) var(--space-12) var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
+.session-table tr:last-child { border-bottom: 0; }
+.session-table td { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.session-table td[data-cell="date"] { grid-column: 1 / span 2; font-weight: var(--weight-semibold); }
+.session-table td[data-cell="subject"] { grid-column: 3 / -1; align-items: flex-end; }
+.session-table td[data-cell="preset"] { grid-column: 1 / -1; align-items: flex-start; color: var(--color-text-muted); }
+.session-table td.num::before { content: attr(data-label); font-size: 11px; color: var(--color-text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-table .num { font-variant-numeric: tabular-nums; }
+.session-table td.actions { position: absolute; top: var(--space-1); right: var(--space-1); }
+
+/* Menús del timer: nunca más anchos que la pantalla. */
+.adjust-pop { display: flex; flex-direction: column; gap: var(--space-2); width: min(308px, calc(100vw - 32px)); max-width: none; }
+.sound-pop { display: flex; flex-direction: column; gap: var(--space-3); width: min(288px, calc(100vw - 32px)); }
+
+/* Sin ventana de imagen en imagen: un recuadro fijo dentro de la app, arriba de la barra de secciones. */
+.floating-timer { position: fixed; right: var(--space-3); bottom: calc(var(--space-3) + var(--app-bottom)); z-index: var(--z-sheet); width: min(288px, calc(100vw - 2 * var(--space-3))); height: 132px; border-radius: 26px; box-shadow: var(--shadow-popover); }
+
+/* Wrapped: en el teléfono el período arriba, a todo el ancho, y debajo las flechas con las fechas. */
+.wrapped-bar .seg { flex: 1 1 100%; }
+.wrapped-bar .seg-item { flex: 1; justify-content: center; }
+.wrapped-bar > .flex-1 { display: none; }
+.wrapped-nav { flex: 1 1 100%; display: flex; align-items: center; gap: var(--space-1); }
+.wrapped-nav .wrapped-range { flex: 1; min-width: 0; }
+.bars .bar-val { white-space: nowrap; }
+.wrapped-card { min-height: 280px; display: flex; flex-direction: column; justify-content: center; gap: var(--space-3); padding: var(--space-6) var(--space-5); border-radius: var(--radius-xl); background: var(--color-accent-soft); }
+.wrapped-big { font-family: var(--font-display); font-size: 40px; line-height: 1.04; letter-spacing: var(--tracking-display); overflow-wrap: anywhere; }
+
+@media (min-width: 600px) {
+  .timer-card { gap: var(--space-6); padding: var(--space-8) var(--space-6) var(--space-8); }
+  .timer-controls { flex-wrap: nowrap; gap: var(--space-4); }
+  .round-btn { width: 48px; height: 48px; }
+  .custom-row .field { flex: 0 1 auto; width: 112px; }
+  .history-grid { gap: var(--space-4); margin-bottom: var(--space-6); }
+  .bars { gap: var(--space-3); height: 180px; }
+  .bars-x { gap: var(--space-3); }
+  .wrapped-bar .seg { flex: 0 1 auto; }
+  .wrapped-bar .seg-item { flex: 0 1 auto; justify-content: normal; }
+  .wrapped-bar > .flex-1 { display: block; }
+  .wrapped-nav { flex: 0 1 auto; }
+  .wrapped-nav .wrapped-range { flex: 0 1 auto; min-width: 150px; }
+  .wrapped-card { min-height: 304px; padding: var(--space-8) var(--space-10); }
+  .wrapped-big { font-size: 64px; }
+}
+
+@media (min-width: 768px) {
+  .session-table { display: table; border-collapse: collapse; }
+  .session-table thead { display: table-header-group; position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; }
+  .session-table tbody { display: table-row-group; }
+  .session-table tr { position: static; display: table-row; padding: 0; border-bottom: 0; }
+  .session-table th { text-align: left; font-weight: var(--weight-medium); font-size: var(--text-caption); color: var(--color-text-subtle); padding: 0 var(--space-4); height: 40px; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+  .session-table td { display: table-cell; padding: 0 var(--space-4); height: 52px; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+  .session-table td[data-cell="date"] { font-weight: inherit; }
+  .session-table td[data-cell="preset"] { color: inherit; }
+  .session-table td.num::before { content: none; }
+  .session-table tr:last-child td { border-bottom: 0; }
+  .session-table .num { text-align: right; }
+  .session-table th.num { text-align: right; }
+  .session-table td.actions { position: static; width: 1%; padding: 0 var(--space-2) 0 0; text-align: right; }
+}
+
+@media (min-width: 1024px) {
+  .sessions-grid { grid-template-columns: minmax(0, 1fr) 300px; }
+  /* A partir de acá el anillo tiene su tamaño de diseño, y el reloj también. */
+  .timer-ring { width: 380px; height: 380px; }
+  .timer-time { font-size: var(--text-timer); }
+  .timer-sub { bottom: 112px; max-width: none; }
+  .timer-ring.is-long .timer-time { font-size: 76px; }
+  .side-panel { max-height: calc(100vh - 120px); position: sticky; top: calc(var(--topbar-height) + 8px); }
+  .focus-mode { grid-template-columns: minmax(0, 1fr) 340px; grid-auto-rows: auto; align-content: normal; overflow-y: visible; }
+  .focus-main { gap: var(--space-8); padding: var(--space-8); }
+  .focus-mode.is-exam .focus-main { min-height: auto; }
+  .focus-main .timer-ring { width: 440px; height: 440px; }
+  .focus-main .timer-time { font-size: 120px; }
+  .focus-main .timer-sub { bottom: 130px; }
+  .focus-main .timer-ring.is-long .timer-time { font-size: 104px; }
+  .focus-exit { top: var(--space-5); right: var(--space-5); }
+  .focus-side { border-top: 0; border-left: 1px solid var(--color-border); padding: var(--space-6) var(--space-4); overflow: auto; }
+  .floating-timer { right: var(--space-5); bottom: var(--space-5); width: 288px; height: 148px; }
+}
+@media (min-width: 1101px) {
+  .sessions-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-6); }
+  .history-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+}
+@media (min-width: 1280px) {
+  .sessions-grid { grid-template-columns: minmax(0, 1fr) 360px; }
+  .focus-mode { grid-template-columns: minmax(0, 1fr) 380px; }
+  .focus-main .timer-ring { width: 500px; height: 500px; }
+  .focus-main .timer-time { font-size: var(--text-timer-focus); }
+  .focus-main .timer-sub { bottom: 150px; }
+}
+/* Modo examen en curso: sin la lista de tareas, el timer ocupa todo el ancho (en cualquier tamaño). */
+.sessions-grid.is-exam, .focus-mode.is-exam { grid-template-columns: minmax(0, 1fr); }

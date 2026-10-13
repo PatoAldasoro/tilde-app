@@ -17,7 +17,8 @@ horario, tareas, calendario, notas y sesiones de estudio. El color de cada mater
 Las materias se ordenan arrastrándolas en Inicio. Cada materia (y cada actividad del horario) puede llevar un ícono además de su color. El color de acento de la
 app se elige en Ajustes entre los de la paleta.
 
-Pensada para desktop y tablets en modo escritorio (1024 a 1440 px, con touch). En español e inglés, con tema claro y oscuro.
+Mobile first: se usa desde un teléfono de 320 px hasta el escritorio, se puede instalar y sigue funcionando sin conexión
+(los cambios se guardan en el dispositivo y se suben al volver). En español e inglés, con tema claro y oscuro.
 
 ## Stack
 
@@ -54,7 +55,7 @@ Sin Supabase configurado la landing funciona igual, pero no se puede iniciar ses
 | `npm run typecheck` | Tipos (`next typegen` + `tsc --noEmit`) |
 | `npm run lint` | ESLint |
 | `npm run test` | Vitest: lógica de dominio, RLS y paridad de mensajes |
-| `npm run test:e2e` | Playwright: flujos principales, layout a 1024/1366/1440 y touch |
+| `npm run test:e2e` | Playwright: flujos principales, layout de 320 a 1440 px, teléfono, touch y sin conexión |
 | `npm run check` | typecheck + lint + test + build |
 | `npm run db:start` · `db:stop` · `db:reset` | Supabase local (Docker o Podman) |
 | `npm run db:types` | Regenera los tipos de la base |
@@ -111,7 +112,9 @@ src/app/[locale]/       rutas: landing (/ y /en) y app (/app, /app/schedule, /ap
 src/lib/domain/         reglas de negocio puras, con sus tests al lado
 src/lib/queries/        datos: TanStack Query + Supabase, con updates optimistas
 src/components/         ui/ (primitivas) y una carpeta por sección
-src/styles/             tokens del diseño, theme de Tailwind y componentes portados del prototipo
+src/styles/             tokens del diseño, theme de Tailwind y un archivo de estilos por área (mobile first)
+src/lib/offline/        modo sin conexión: cola de cambios y copia local de los datos
+public/sw.js            service worker: las pantallas de la app abren sin red
 ```
 
 Las convenciones y reglas duras del proyecto están en [CLAUDE.md](CLAUDE.md); las decisiones tomadas (incluidos los
@@ -126,6 +129,8 @@ conflictos entre el diseño y la consigna), en [docs/DECISIONS.md](docs/DECISION
   Hay que volver a verificarlos (ver `data/README.md`).
 - **Calendario vinculado.** La descarga por el servidor está probada contra calendarios públicos reales de Google
   Calendar; falta probarla con la dirección secreta de un calendario personal (misma forma de dirección y de archivo).
-- **Fuera de alcance:** amigos y lo social, layouts mobile, notificaciones, kanban, modo offline, notas parciales
+- **Sin probar en un teléfono de verdad.** El diseño mobile y el modo sin conexión están verificados con tests en
+  Chromium emulando un teléfono (320–390 px, táctil), no en iOS Safari ni en un Android real.
+- **Fuera de alcance:** amigos y lo social, notificaciones, kanban, notas parciales
   múltiples por materia, días no laborables y puentes, exportación de datos y escribir en Google Calendar (la
   vinculación es de una sola vía: Tilde lee).

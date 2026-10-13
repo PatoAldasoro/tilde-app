@@ -28,11 +28,13 @@ type CheckboxProps = {
 export function Checkbox({ checked, onChange, label, size = "md", variant = "check", blockedReason, onBlocked, className }: CheckboxProps) {
   const [tipOpen, setTipOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => () => clearTimeout(timer.current), []);
   const blocked = Boolean(blockedReason);
 
   const button = (
     <button
+      ref={buttonRef}
       type="button"
       role="checkbox"
       aria-checked={checked}
@@ -59,7 +61,16 @@ export function Checkbox({ checked, onChange, label, size = "md", variant = "che
 
   return (
     <Tooltip.Provider delayDuration={200}>
-      <Tooltip.Root open={tipOpen} onOpenChange={setTipOpen}>
+      <Tooltip.Root
+        open={tipOpen}
+        onOpenChange={(open) => {
+          // El motivo se muestra al pasar el mouse o al llegar con el teclado. El foco que le pone un panel al
+          // abrirse (es su primer control) no cuenta: taparía el encabezado y Esc cerraría el tooltip en vez del panel.
+          const node = buttonRef.current;
+          if (open && node && !node.matches(":hover") && !node.matches(":focus-visible")) return;
+          setTipOpen(open);
+        }}
+      >
         <Tooltip.Trigger asChild>{button}</Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content className="tooltip" side="top" align="start" sideOffset={6} collisionPadding={8}>

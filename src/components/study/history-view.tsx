@@ -192,9 +192,12 @@ export function HistoryView({ onStart }: { onStart: () => void }) {
               const exam = session.preset === "exam";
               return (
                 <tr key={session.id}>
-                  <td className="tnum">{dayLabel}</td>
-                  <td>{subject ? <SubjectChip subject={subject} /> : <span className="subtle">{t("no_subject")}</span>}</td>
-                  <td className="tnum">
+                  {/* data-cell y data-label: cómo se acomoda y se rotula cada dato cuando la tabla se ve como tarjetas (teléfono). */}
+                  <td className="tnum" data-cell="date">
+                    {dayLabel}
+                  </td>
+                  <td data-cell="subject">{subject ? <SubjectChip subject={subject} /> : <span className="subtle">{t("no_subject")}</span>}</td>
+                  <td className="tnum" data-cell="preset">
                     {exam ? (
                       <span className="badge badge-danger" title={t("exam_away_count", { n: session.away_count })}>
                         {t("mode_exam")}
@@ -206,11 +209,21 @@ export function HistoryView({ onStart }: { onStart: () => void }) {
                       session.preset.replace("-", "/")
                     )}
                   </td>
-                  <td className="num">{duration(session.focus_seconds)}</td>
-                  <td className="num">{duration(session.break_seconds)}</td>
-                  <td className="num">{session.cycles_completed}</td>
-                  <td className="num">{taskCount.get(session.id) ?? 0}</td>
-                  <td className="num">{session.subtasks_completed}</td>
+                  <td className="num" data-label={t("focus")}>
+                    {duration(session.focus_seconds)}
+                  </td>
+                  <td className="num" data-label={t("breaks")}>
+                    {duration(session.break_seconds)}
+                  </td>
+                  <td className="num" data-label={t("cycles")}>
+                    {session.cycles_completed}
+                  </td>
+                  <td className="num" data-label={t("tasks_done")}>
+                    {taskCount.get(session.id) ?? 0}
+                  </td>
+                  <td className="num" data-label={t("subtasks")}>
+                    {session.subtasks_completed}
+                  </td>
                   <td className="actions">
                     <Menu>
                       <MenuTrigger className="btn btn-ghost btn-icon" aria-label={t("session_options", { date: dayLabel })}>

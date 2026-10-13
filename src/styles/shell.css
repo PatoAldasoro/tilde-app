@@ -1,0 +1,75 @@
+/* Tilde — marco de la app: barra superior, barra de secciones, contenido y estado de la sincronización.
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en
+   bloques min-width (600 · 768 · 1024 · 1101 · 1280), siempre de menor a mayor. Solo tokens de tokens.css. */
+
+.toolbar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.toolbar .grow { flex: 1; }
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); padding: var(--space-16) var(--space-6); }
+.empty-title { font-family: var(--font-display); font-size: 32px; line-height: 1.1; letter-spacing: var(--tracking-display); }
+.empty-text { color: var(--color-text-muted); max-width: 440px; }
+.empty .btn { margin-top: var(--space-3); }
+
+/* ---------- Marco de la app (mobile first) ---------- */
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* Barra superior: menú, título de la sección, estado de la sincronización y acciones. */
+.topbar { position: sticky; top: 0; z-index: var(--z-topbar); height: var(--topbar-height); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--gutter) 0 calc(var(--gutter) - 8px); background: color-mix(in srgb, var(--color-bg) 92%, transparent); backdrop-filter: saturate(1.2) blur(8px); border-bottom: 1px solid transparent; transition: border-color var(--duration-base); }
+.topbar.is-scrolled { border-bottom-color: var(--color-border); }
+.topbar-title { min-width: 0; font-family: var(--font-display); font-size: 26px; line-height: 1.25; letter-spacing: var(--tracking-display); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-sub { display: none; font-size: var(--text-caption); color: var(--color-text-subtle); white-space: nowrap; margin-left: var(--space-1); margin-top: 6px; }
+.topbar-spacer { flex: 1; min-width: var(--space-1); }
+.topbar-actions { display: flex; align-items: center; gap: var(--space-1); }
+/* En el teléfono las acciones con ícono muestran solo el ícono; el texto sigue siendo su nombre para lectores de pantalla. */
+.topbar-actions .btn:not(.btn-icon):has(> .lucide) { width: var(--hit-target); padding: 0; }
+.topbar-actions .btn:not(.btn-icon):has(> .lucide) > .btn-label,
+.topbar-actions .btn:not(.btn-icon):has(> .lucide) > .badge { display: block; position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Contenido de la sección: deja lugar a la barra de secciones del pie. */
+.page { flex: 1; width: 100%; max-width: calc(var(--content-max) + 2 * var(--gutter)); margin: 0 auto; padding: var(--space-2) var(--gutter) calc(var(--space-10) + var(--app-bottom)); }
+.page-wide { max-width: none; }
+.page-narrow { max-width: calc(var(--content-narrow) + 2 * var(--gutter)); }
+
+/* Barra de secciones al pie (teléfono y tablet): las cinco secciones a un toque. En escritorio se navega con el menú lateral. */
+.bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-topbar); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); height: var(--app-bottom); padding: 0 var(--space-1) env(safe-area-inset-bottom, 0px); background: color-mix(in srgb, var(--color-surface) 94%, transparent); backdrop-filter: saturate(1.2) blur(10px); border-top: 1px solid var(--color-border); }
+.bottom-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; color: var(--color-text-subtle); font-size: 11px; font-weight: var(--weight-medium); line-height: 1.2; text-decoration: none; }
+.bottom-nav-icon { display: grid; place-items: center; width: 52px; height: 28px; border-radius: var(--radius-full); transition: background var(--duration-fast) var(--ease-standard); }
+.bottom-nav-item > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bottom-nav-item[aria-current="page"] { color: var(--color-accent-text); }
+.bottom-nav-item[aria-current="page"] .bottom-nav-icon { background: var(--color-accent-soft); }
+.bottom-nav-item:focus-visible { outline: none; }
+.bottom-nav-item:focus-visible .bottom-nav-icon { box-shadow: var(--shadow-focus); }
+
+/* Aviso de sincronización (sin conexión, subiendo, esperando al servidor). En el teléfono, solo el ícono y la cuenta. */
+.sync-pill { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1-5); height: var(--control-height); min-width: var(--hit-target); padding: 0 var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-full); background: var(--color-surface); color: var(--color-text-muted); font-size: var(--text-caption); font-weight: var(--weight-medium); white-space: nowrap; }
+.sync-pill:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.sync-pill:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.sync-pill.is-offline { background: var(--color-warning-soft); border-color: transparent; color: var(--color-warning-text); }
+.sync-pill.is-waiting { background: var(--color-danger-soft); border-color: transparent; color: var(--color-danger-text); }
+/* Subir algo lleva un instante: el aviso solo aparece si tarda. */
+.sync-pill.is-syncing { animation: fade-in var(--duration-base) var(--ease-standard) 900ms backwards; }
+.sync-pill-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sync-pill-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-full); background: color-mix(in srgb, currentColor 16%, transparent); font-size: 11px; }
+.sync-pop { display: flex; flex-direction: column; gap: var(--space-2); width: min(280px, calc(100vw - 32px)); }
+
+@media (min-width: 768px) {
+  /* Hay lugar: las acciones recuperan su texto. */
+  .topbar-actions { gap: var(--space-2); }
+  .topbar-actions .btn:not(.btn-icon):has(> .lucide) { width: auto; padding: 0 var(--space-4); }
+  .topbar-actions .btn:not(.btn-icon):has(> .lucide) > .btn-label { display: contents; }
+  .topbar-actions .btn:not(.btn-icon):has(> .lucide) > .badge { display: inline-flex; position: static; width: auto; height: 20px; margin: 0; padding: 0 7px; overflow: visible; clip: auto; }
+  .sync-pill { padding: 0 var(--space-3); }
+  .sync-pill-label { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; }
+}
+
+@media (min-width: 1024px) {
+  .topbar { gap: var(--space-3); }
+  .app[data-width="std"] .topbar { padding-right: max(var(--gutter), calc((100% - var(--content-max)) / 2)); }
+  .app[data-width="narrow"] .topbar { padding-right: max(var(--gutter), calc((100% - var(--content-narrow)) / 2)); }
+  .topbar-title { font-size: 30px; line-height: 1; overflow: visible; }
+  .topbar-sub { display: inline; }
+  .topbar-spacer { min-width: var(--space-4); }
+  .page { padding-bottom: var(--space-16); }
+  .bottom-nav { display: none; }
+}
+/* Con mouse, el aviso puede ser más bajo. */
+@media (min-width: 1024px) and (pointer: fine) { .sync-pill { height: var(--control-height-sm); } }

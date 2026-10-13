@@ -29,10 +29,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
     title: { default: "Tilde", template: "%s · Tilde" },
     description: t("app_tagline"),
+    // Instalada en el teléfono: su ícono y el nombre bajo el ícono.
+    icons: { apple: "/icons/apple-touch-icon.png" },
+    appleWebApp: { capable: true, title: "Tilde", statusBarStyle: "default" },
   };
 }
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // La app llega hasta los bordes del teléfono; los márgenes de seguridad los pone el CSS (env(safe-area-inset-*)).
+  viewportFit: "cover",
   colorScheme: "light dark",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FAF9F7" },

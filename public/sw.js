@@ -93,13 +93,14 @@ async function page(event, request, url) {
 async function storePage(cache, url, response) {
   const html = await response.text();
   await cache.put(pageKey(url), new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }));
-  // Si los archivos que pide esta pantalla cambiaron, hubo un deploy: lo guardado de las demás quedó viejo.
+  // La "firma" de una pantalla son los archivos que pide. Se compara cada pantalla consigo misma (cada una pide
+  // archivos distintos): si la misma pantalla ahora pide otros, hubo un deploy y lo guardado de las demás quedó viejo.
   const signature = staticUrls(html).sort().join("|");
   const meta = await readMeta();
-  if (meta.signature !== signature) {
-    await writeMeta({ ...meta, signature, warmedAt: 0 });
-    if (meta.paths.length > 0) await warm(meta.paths, true);
-  }
+  const known = meta.signatures[url.pathname];
+  if (known === signature) return;
+  await writeMeta({ ...meta, signatures: { ...meta.signatures, [url.pathname]: signature } });
+  if (known !== undefined && meta.paths.length > 0) await warm(meta.paths, true);
 }
 
 // ---------- dejar todo listo para usar sin conexión ----------
@@ -110,7 +111,7 @@ async function readMeta() {
   const cache = await caches.open(PAGES);
   const stored = await cache.match(META);
   const meta = stored ? await stored.json().catch(() => null) : null;
-  return { signature: "", warmedAt: 0, paths: [], ...(meta || {}) };
+  return { signatures: {}, warmedAt: 0, paths: [], ...(meta || {}) };
 }
 
 async function writeMeta(meta) {
@@ -140,16 +141,13 @@ async function warmNow(paths, force) {
 
   const pages = await caches.open(PAGES);
   const files = new Set();
-  let signature = meta.signature;
   for (const path of paths) {
     const response = await fetch(path, { credentials: "same-origin", headers: { accept: "text/html" } }).catch(() => null);
     // Una redirección quiere decir que no hay sesión: no se guarda nada.
     if (!response || !response.ok || response.redirected || !isHtml(response)) continue;
     const html = await response.text();
     await pages.put(path, new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }));
-    const urls = staticUrls(html);
-    urls.forEach((url) => files.add(url));
-    if (path === paths[0]) signature = meta.signature || urls.sort().join("|");
+    staticUrls(html).forEach((url) => files.add(url));
   }
 
   const cache = await caches.open(STATIC);
@@ -175,7 +173,9 @@ async function warmNow(paths, force) {
   // Los archivos de builds viejos se van: quedan los últimos que se guardaron.
   const keys = await cache.keys();
   await Promise.all(keys.slice(0, Math.max(0, keys.length - STATIC_LIMIT)).map((key) => cache.delete(key)));
-  await writeMeta({ signature, warmedAt: Date.now(), paths: [...new Set([...meta.paths, ...paths])] });
+  // Se relee: mientras tanto una navegación pudo haber anotado su firma.
+  const latest = await readMeta();
+  await writeMeta({ ...latest, warmedAt: Date.now(), paths: [...new Set([...latest.paths, ...paths])] });
 }
 
 // ---------- sin conexión y sin la pantalla guardada ----------

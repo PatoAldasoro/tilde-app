@@ -1,0 +1,92 @@
+/* Tilde — superposiciones: menú lateral, diálogos, paneles, popovers y avisos.
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en
+   bloques min-width (600 · 768 · 1024 · 1101 · 1280), siempre de menor a mayor. Solo tokens de tokens.css. */
+
+/* ---------- Overlays ---------- */
+.scrim { position: fixed; inset: 0; background: var(--color-scrim); animation: fade-in var(--duration-base) var(--ease-standard); }
+.drawer-layer { position: fixed; inset: 0; z-index: var(--z-drawer); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 var(--space-1) 0 var(--space-3); margin-bottom: var(--space-4); }
+.drawer-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item { display: flex; align-items: center; gap: var(--space-3); height: 44px; padding: 0 var(--space-3); border-radius: var(--radius-sm); color: var(--color-text-muted); text-decoration: none; font-weight: var(--weight-medium); font-size: var(--text-body); border: 0; background: transparent; width: 100%; text-align: left; }
+.nav-item:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.nav-item[aria-current="page"] { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.nav-item[aria-current="page"] .lucide { color: var(--color-accent); }
+.nav-item:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-focus-ring); }
+.drawer-foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.profile { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-1) var(--space-2); }
+.profile-name { font-weight: var(--weight-medium); font-size: var(--text-body-s); line-height: 1.3; }
+.profile-mail { font-size: var(--text-micro); color: var(--color-text-subtle); }
+.drawer-row { display: flex; gap: var(--space-2); align-items: center; }
+.drawer-row .seg { flex: 1; }
+.drawer-row .seg-item { flex: 1; justify-content: center; padding: 0 var(--space-2); }
+.dialog-title { font-size: var(--text-title-m); line-height: var(--leading-title-m); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.dialog-desc { color: var(--color-text-muted); font-size: var(--text-body-s); margin-top: var(--space-1); }
+.dialog-foot .spacer { flex: 1; }
+.form-grid .span-2 { grid-column: 1 / -1; }
+.sheet-layer { position: fixed; inset: 0; z-index: var(--z-sheet); }
+.sheet-layer .scrim { background: transparent; }
+.sheet { position: absolute; top: 0; right: 0; bottom: 0; width: min(var(--sheet-width), 100vw); background: var(--color-surface-raised); border-left: 1px solid var(--color-border); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; animation: slide-in-right var(--duration-slow) var(--ease-out); }
+.sheet-head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--topbar-height); padding: 0 var(--space-3) 0 var(--space-5); border-bottom: 1px solid var(--color-border); }
+.sheet-body { flex: 1; overflow: auto; padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }
+.sheet-foot { padding: var(--space-4) var(--space-5); border-top: 1px solid var(--color-border); display: flex; gap: var(--space-2); justify-content: flex-end; }
+.popover-layer { position: fixed; inset: 0; z-index: var(--z-popover); pointer-events: none; }
+.popover { position: relative; pointer-events: auto; min-width: 220px; max-width: min(340px, calc(100vw - 16px)); background: var(--color-surface-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-popover); border: 1px solid var(--color-border); padding: var(--space-1-5); animation: pop-in var(--duration-fast) var(--ease-out); }
+:root[data-theme="dark"] .popover { border-color: transparent; }
+.popover-pad { padding: var(--space-3) var(--space-3) var(--space-2); }
+.menu-item { display: flex; align-items: center; gap: var(--space-3); width: 100%; height: var(--hit-target); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text); font-size: var(--text-body-s); text-align: left; white-space: nowrap; text-decoration: none; }
+.menu-item .lucide { color: var(--color-text-muted); }
+.menu-item:hover, .menu-item:focus-visible { background: var(--color-surface-hover); outline: none; }
+.menu-item.danger, .menu-item.danger .lucide { color: var(--color-danger-text); }
+.menu-item.danger:hover { background: var(--color-danger-soft); }
+.menu-item:disabled { color: var(--color-text-disabled); cursor: not-allowed; background: transparent; }
+.menu-sep { height: 1px; background: var(--color-border); margin: var(--space-1) 0; }
+.toast-layer { position: fixed; left: 50%; bottom: calc(var(--space-6) + var(--app-bottom)); z-index: var(--z-toast); transform: translateX(-50%); display: flex; flex-direction: column; gap: var(--space-2); pointer-events: none; }
+.toast { position: relative; left: 50%; transform: translateX(-50%); width: max-content; max-width: min(560px, calc(100vw - 32px)); display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4); background: var(--color-primary); color: var(--color-on-primary); border-radius: var(--radius-md); box-shadow: var(--shadow-dialog); font-size: var(--text-body-s); pointer-events: auto; animation: toast-in var(--duration-base) var(--ease-out); }
+.toast .btn { --btn-fg: var(--color-on-primary); height: 40px; }
+.toast .btn:hover { --btn-bg: rgba(127,127,127,.22); }
+.toast .toast-action { --btn-fg: var(--color-on-primary); font-weight: var(--weight-semibold); text-decoration: underline; text-underline-offset: 3px; }
+.popover { z-index: var(--z-popover); }
+.popover:focus-visible { outline: none; }
+.menu-item { cursor: pointer; user-select: none; }
+.menu-item[data-highlighted] { background: var(--color-surface-hover); outline: none; }
+.menu-item.danger[data-highlighted] { background: var(--color-danger-soft); }
+.menu-item[data-disabled] { color: var(--color-text-disabled); cursor: not-allowed; background: transparent; }
+.dialog:focus-visible, .sheet:focus-visible, .drawer:focus-visible { outline: none; }
+.sheet-title { flex: 1; min-width: 0; font-size: var(--text-title-s); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-name, .profile-mail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Non-modal sheet: the layer must not block the page behind it. */
+.sheet-layer { pointer-events: none; }
+.sheet-layer .sheet { pointer-events: auto; }
+.popover.icon-popover { max-width: none; }
+/* Menús: título de un grupo de opciones. */
+.menu-label { padding: var(--space-1-5) var(--space-3) var(--space-1); font-size: var(--text-micro); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-subtle); }
+.menu-item [data-state="checked"] { color: var(--color-accent-text); }
+
+/* ---------- Disposición (mobile first) ---------- */
+
+/* Menú lateral: nunca más ancho que la pantalla. */
+.drawer { position: absolute; top: 0; bottom: 0; left: 0; width: min(var(--drawer-width), calc(100vw - 48px)); background: var(--color-surface); box-shadow: var(--shadow-drawer); display: flex; flex-direction: column; padding: var(--space-3) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); overflow-y: auto; animation: slide-in-left var(--duration-drawer) var(--ease-out); }
+
+/* Diálogos: en el teléfono suben desde abajo y ocupan todo el ancho; desde 600 px van centrados. */
+.dialog-layer { position: fixed; inset: 0; z-index: var(--z-dialog); display: grid; place-items: end center; padding: var(--space-6) 0 0; }
+.dialog { position: relative; width: 100%; max-height: calc(100dvh - var(--space-6)); display: flex; flex-direction: column; background: var(--color-surface-raised); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-dialog); animation: sheet-up var(--duration-slow) var(--ease-out); }
+.dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-3) var(--space-2) var(--space-5); }
+.dialog-body { padding: var(--space-3) var(--space-5) var(--space-4); overflow: auto; display: flex; flex-direction: column; gap: var(--space-5); }
+.dialog-foot { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-5) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--color-border); flex-wrap: wrap; }
+/* En el teléfono los botones del pie se reparten el ancho: quedan al alcance del pulgar. */
+.dialog-foot > .btn { flex: 1 1 auto; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.sheet-foot { padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); }
+
+@media (min-width: 600px) {
+  .dialog-layer { place-items: center; padding: var(--space-6); }
+  .dialog { width: min(520px, 100%); max-height: calc(100vh - 48px); border-radius: var(--radius-lg); animation: pop-in var(--duration-base) var(--ease-out); }
+  .dialog-lg { width: min(640px, 100%); }
+  .dialog-sm { width: min(420px, 100%); }
+  .dialog-xl { width: min(920px, 100%); }
+  .dialog-head { padding: var(--space-5) var(--space-5) var(--space-2) var(--space-6); }
+  .dialog-body { padding: var(--space-3) var(--space-6) var(--space-4); }
+  .dialog-foot { padding: var(--space-4) var(--space-6) var(--space-5); }
+  .dialog-foot > .btn { flex: none; }
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

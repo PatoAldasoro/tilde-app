@@ -76,11 +76,16 @@ export function GradesView({ subjects, onAddSubject }: GradesViewProps) {
                       {isArchived(subject) ? <span className="badge">{t("archived_tag")}</span> : null}
                     </div>
                   </th>
-                  <td className="tnum whitespace-nowrap">{termLabel(subject) || "—"}</td>
-                  <td className="num tnum">{subject.credits ?? "—"}</td>
+                  {/* data-label: el rótulo de cada dato cuando la tabla se ve como tarjetas (teléfono). */}
+                  <td className="tnum whitespace-nowrap" data-label={t("term")} data-wide="">
+                    {termLabel(subject) || "—"}
+                  </td>
+                  <td className="num tnum" data-label={t("credits")}>
+                    {subject.credits ?? "—"}
+                  </td>
                   <GradeCell subject={subject} field="grade_course" />
                   <GradeCell subject={subject} field="grade_final" />
-                  <td className="num">
+                  <td className="num" data-label={t("subject_avg")}>
                     <span className={cn("avg tnum", average === null && "is-empty")}>{formatDecimal(average, locale)}</span>
                   </td>
                 </tr>
@@ -123,7 +128,8 @@ function StatGroup({ title, sub, averages }: { title: string; sub: string; avera
         <div className="stat">
           <span className="stat-label">
             {t("avg_weighted")}
-            <HelpTip label={t("how_calculated")} text={t("avg_weighted_help")} />
+            {/* Está contra el borde derecho: se abre hacia la izquierda para no salirse de la pantalla. */}
+            <HelpTip label={t("how_calculated")} text={t("avg_weighted_help")} position="left" />
           </span>
           {value(averages.weighted)}
         </div>
@@ -157,7 +163,7 @@ function GradeCell({ subject, field }: { subject: SubjectRow; field: GradeField 
   }
 
   return (
-    <td className={cn("num", invalid && "cell-error is-invalid")}>
+    <td className={cn("num", invalid && "cell-error is-invalid")} data-label={t(field)}>
       <input
         className={cn("input input-number input-inline", invalid && "is-invalid")}
         inputMode="decimal"

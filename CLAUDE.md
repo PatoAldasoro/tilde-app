@@ -37,8 +37,10 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 - `src/lib/domain/` — **toda la lógica de negocio, en funciones puras** con tests al lado (`*.test.ts`).
 - `src/lib/queries/` — hooks de datos (TanStack Query + Supabase del navegador, pasan por RLS).
 - `src/components/ui/` — primitivas; `src/components/<sección>/` — pantallas.
-- `src/styles/` — `tokens.css` (tokens del diseño, claro/oscuro), `theme.css` (los registra en Tailwind),
-  `tilde.css` (componentes portados del prototipo), `extra.css` (lo que el prototipo no tenía).
+- `src/styles/` — `tokens.css` (tokens del diseño, claro/oscuro), `theme.css` (los registra en Tailwind) y un
+  archivo por área, **mobile first**: `base`, `controls`, `overlays`, `shell`, `home`, `schedule`, `tasks`,
+  `calendar`, `import`, `study`, `landing`.
+- `src/lib/offline/` — modo sin conexión (cola de cambios, copia local). `public/sw.js` — service worker.
 - `messages/es.json`, `messages/en.json` — todos los textos.
 
 ## Reglas duras
@@ -62,8 +64,11 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
    Única excepción: el color de fondo que el usuario elige al exportar el horario (es contenido suyo, no interfaz).
    El acento de la app es configurable (`<html data-accent>`, reglas al final de `tokens.css`): usar siempre los
    tokens `--color-accent*` y `--color-focus-ring`, nunca el naranja a mano.
-7. **Pantallas:** desktop y tablets en modo escritorio (1024–1440 px, con touch). Sin layouts mobile. Targets ≥ 40 px,
-   nada que dependa solo de hover, foco visible, todo operable con teclado, `prefers-reduced-motion`.
+7. **Pantallas: mobile first, de 320 px al escritorio.** En el CSS, las reglas sin `@media` son las del teléfono y
+   lo que cambia con más lugar va en bloques `min-width` (600 · 768 · 1024 · 1101 · 1280), de menor a mayor. **Nunca
+   `max-width`.** Nada puede pasarse del ancho de la pantalla, ni siquiera invisible (`e2e/layout.spec.ts` lo revisa
+   de 320 a 1440 px, en los dos idiomas). El escritorio (1024–1440) es el del diseño. Targets ≥ 40 px, nada que
+   dependa solo de hover, foco visible, todo operable con teclado, `prefers-reduced-motion`.
 8. **Secretos:** nunca en el repo. `.env.local` está ignorado; `.env.example` documenta las variables.
    `SUPABASE_SERVICE_ROLE_KEY` solo en scripts y tests locales (`scripts/lib/test-session.ts`), nunca en producción.
 9. **Fuera de alcance:** amigos y lo social, notificaciones, kanban, notas parciales múltiples,
@@ -74,8 +79,11 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 
 ## Convenciones
 
-- Las clases de `tilde.css` no deben llamarse igual que una utilidad de Tailwind (la utilidad gana: por eso el
-  bloque del Horario es `.sched-block` y no `.block`).
+- Las clases de `src/styles/` no deben llamarse igual que una utilidad de Tailwind (la utilidad gana: por eso el
+  bloque del Horario es `.sched-block` y no `.block`). Si una clase pisa a otra de un archivo distinto, tiene que
+  ganar por especificidad (`.grip.card-grip`), no por el orden en que se importan.
+- El texto de un `Button` va en un `span.btn-label` (lo hace el componente): en la barra superior del teléfono queda
+  solo el ícono. Un botón armado a mano con `className="btn"` tiene que envolver su texto igual.
 - Componentes cliente con `"use client"`; las páginas (`page.tsx`) son de servidor y solo arman metadata + vista.
 - Mutaciones: `useWrite` / `useOptimistic` de `src/lib/queries/table.ts`. Aplican el cambio en caché y anotan
   **operaciones** (`insertRows`, `updateRow`, `deleteRows`: datos, no funciones) en la cola de cambios pendientes

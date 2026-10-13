@@ -1,0 +1,138 @@
+/* Tilde — Inicio: materias, panel de una materia y notas.
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en
+   bloques min-width (600 · 768 · 1024 · 1101 · 1280), siempre de menor a mayor. Solo tokens de tokens.css. */
+
+/* ---------- Inicio · Materias ---------- */
+.home-head { display: flex; align-items: flex-end; gap: var(--space-4); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-6); flex-wrap: wrap; }
+.home-head .tabs { border-bottom: 0; }
+.home-head .grow { flex: 1; }
+.home-head .btn { margin-bottom: var(--space-2); }
+.subject-card { position: relative; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5) var(--space-4) var(--space-4) var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: left; transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-standard); overflow: hidden; }
+.subject-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--s-vivid); }
+.subject-card:hover { border-color: var(--color-border-strong); }
+.subject-card .card-open { position: absolute; inset: 0; border: 0; background: transparent; border-radius: inherit; z-index: 0; }
+.subject-card .card-open:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-focus-ring); }
+.subject-card > *:not(.card-open) { position: relative; z-index: 1; pointer-events: none; }
+.subject-card .card-menu, .subject-card a, .subject-card button:not(.card-open) { pointer-events: auto; }
+.card-top { display: flex; align-items: flex-start; gap: var(--space-3); }
+.card-title { flex: 1; min-width: 0; font-size: var(--text-title-s); line-height: 1.3; font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.card-menu { margin: -8px -4px 0 0; }
+.card-meta { display: flex; flex-direction: column; gap: 2px; font-size: var(--text-body-s); color: var(--color-text-muted); }
+.card-meta .row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.card-meta .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-meta .lucide { color: var(--color-text-subtle); }
+.card-progress { display: flex; align-items: center; gap: var(--space-3); }
+.card-progress .progress { flex: 1; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-caption); color: var(--color-text-subtle); border-top: 1px solid var(--color-border); padding-top: var(--space-3); margin-top: auto; }
+.card-foot .left { display: flex; align-items: center; gap: var(--space-1-5); }
+.subject-card.is-archived { background: var(--color-surface-sunken); }
+.subject-card.is-archived::before { background: var(--color-border-strong); }
+.subject-ghost:hover { border-color: var(--color-text-subtle); background: var(--color-surface); color: var(--color-text); }
+.subject-ghost strong { font-size: var(--text-title-s); color: var(--color-text); font-weight: var(--weight-semibold); }
+.first-run .steps { margin-top: var(--space-8); display: flex; flex-direction: column; gap: var(--space-3); counter-reset: s; }
+.first-run .steps li { display: flex; gap: var(--space-3); align-items: baseline; color: var(--color-text-muted); }
+.first-run .steps li::before { counter-increment: s; content: counter(s); font-family: var(--font-display); font-size: 22px; color: var(--color-accent-text); width: 18px; }
+/* Subject sheet */
+.doc-list { display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.doc-row { display: flex; align-items: center; gap: var(--space-2); min-height: 52px; padding: 0 var(--space-2) 0 var(--space-3); border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.doc-row:first-child { border-top: 0; }
+.doc-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--s-soft); color: var(--s-on-soft); flex: none; }
+.doc-name { flex: 1; min-width: 0; }
+.doc-name .input-inline { height: 36px; padding: 0 var(--space-2); font-size: var(--text-body-s); }
+.doc-actions { display: flex; gap: 2px; }
+.doc-empty { padding: var(--space-6) var(--space-4); text-align: center; color: var(--color-text-subtle); font-size: var(--text-body-s); border: 1.5px dashed var(--color-border-strong); border-radius: var(--radius-md); }
+.paste-row { display: flex; gap: var(--space-2); }
+.sheet-hero { display: flex; gap: var(--space-3); align-items: center; }
+.sheet-hero .swatch-lg { width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--s-vivid); flex: none; }
+.stat-group { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); padding: var(--space-4) var(--space-5) var(--space-5); }
+.stat-group-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.stat-group-title { font-weight: var(--weight-semibold); font-size: var(--text-body); }
+.stat-group-sub { font-size: var(--text-caption); color: var(--color-text-subtle); }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat-label { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-caption); color: var(--color-text-muted); }
+.stat-value { font-family: var(--font-sans); font-size: var(--text-stat); line-height: var(--leading-stat); font-weight: var(--weight-medium); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; }
+.stat-value.is-empty { color: var(--color-text-disabled); }
+.subject-cell .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--s-vivid); flex: none; }
+.subject-cell strong { font-weight: var(--weight-medium); }
+.notes-foot { margin-top: var(--space-4); color: var(--color-text-subtle); font-size: var(--text-caption); display: flex; gap: var(--space-2); align-items: center; }
+.subject-card.is-archived .subject-tile { background: var(--color-surface-hover); color: var(--color-text-subtle); }
+.subject-cell .s-icon, .hbar .name .s-icon { color: var(--s-solid, var(--color-text-subtle)); }
+/* ---------- Inicio: materias que se reordenan arrastrando ---------- */
+.sortable-subject { min-width: 0; display: flex; }
+.sortable-subject > .subject-card { flex: 1; min-width: 0; }
+.sortable-subject.is-dragging-source > .subject-card { opacity: 0.35; }
+/* .grip (tasks.css) fija otro alto: acá manda el de la tarjeta. */
+.grip.card-grip { width: 32px; height: 40px; margin: -8px -4px 0 0; }
+.subject-card:hover .card-grip { opacity: 1; }
+.subject-card.is-lifted { box-shadow: var(--shadow-drag); cursor: grabbing; }
+
+/* ---------- Disposición (mobile first) ---------- */
+/* Materias: una columna en el teléfono; a medida que hay lugar entran más. */
+.subject-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--space-3); }
+.subject-ghost { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: var(--space-2); min-height: 132px; padding: var(--space-5); border: 1.5px dashed var(--color-border-strong); border-radius: var(--radius-md); background: transparent; text-align: left; color: var(--color-text-muted); }
+
+/* Primer uso: en el teléfono, solo el texto y el botón; las tarjetas de ejemplo aparecen cuando hay lugar al costado. */
+.first-run { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-8); align-items: center; padding: var(--space-6) 0; }
+.first-run h2 { font-family: var(--font-display); font-weight: 400; font-size: var(--text-title-l); line-height: var(--leading-title-l); letter-spacing: var(--tracking-display); margin-bottom: var(--space-4); }
+.first-run p { color: var(--color-text-muted); font-size: var(--text-body); line-height: 1.5; max-width: 460px; }
+.first-run-stack { display: none; flex-direction: column; gap: var(--space-3); }
+
+/* Notas */
+.stat-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); margin-bottom: var(--space-6); }
+/* En el teléfono cada materia es una tarjeta: el nombre arriba, sus datos y las tres notas en fila, cada una con su rótulo. Desde 768 px, la tabla. */
+.grades { display: block; width: 100%; font-size: var(--text-body-s); }
+.grades thead { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); }
+.grades tbody { display: block; }
+.grades tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2) var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--color-border); }
+.grades tr:last-child { border-bottom: 0; }
+.grades tbody th { grid-column: 1 / -1; font-weight: var(--weight-regular); text-align: left; }
+.grades td { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.grades td::before { content: attr(data-label); font-size: var(--text-micro); color: var(--color-text-subtle); }
+.grades td[data-wide] { grid-column: span 2; }
+.grades .num { font-variant-numeric: tabular-nums; }
+.grades .avg { font-weight: var(--weight-semibold); font-size: var(--text-title-s); line-height: 40px; }
+.grades .avg.is-empty { color: var(--color-text-disabled); font-weight: var(--weight-regular); }
+.grades tr.is-archived td { color: var(--color-text-muted); }
+.grades tr.is-archived .subject-cell strong { color: var(--color-text-muted); }
+.grades .input-number { display: block; width: 100%; max-width: 96px; height: 40px; background: var(--color-surface-sunken); border-color: transparent; }
+.grades .input-number:hover { background: var(--color-surface); border-color: var(--color-border-control); }
+.grades tr.is-archived .input-number { background: transparent; }
+.subject-cell { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.cell-error { position: relative; }
+.cell-error .field-error { font-size: 11px; }
+
+@media (min-width: 600px) {
+  .subject-grid { gap: var(--space-4); }
+  .subject-ghost { min-height: 212px; }
+  .stat-groups { gap: var(--space-4); margin-bottom: var(--space-8); }
+}
+
+@media (min-width: 768px) {
+  .grades { display: table; border-collapse: collapse; }
+  .grades thead { display: table-header-group; position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; }
+  .grades tbody { display: table-row-group; }
+  .grades tr { display: table-row; padding: 0; border-bottom: 0; }
+  .grades th { text-align: left; font-weight: var(--weight-medium); font-size: var(--text-caption); color: var(--color-text-subtle); padding: 0 var(--space-4); height: 40px; border-bottom: 1px solid var(--color-border); white-space: nowrap; background: var(--color-surface); }
+  .grades td { display: table-cell; padding: 0 var(--space-4); height: 56px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+  .grades td::before { content: none; }
+  .grades tr:last-child td { border-bottom: 0; }
+  .grades .num { text-align: center; width: 112px; }
+  .grades th.num { text-align: center; }
+  .grades .avg { font-size: var(--text-body); line-height: inherit; }
+  .grades .input-number { width: 72px; max-width: none; margin: 0 auto; }
+  /* La celda de la materia es un encabezado de fila (<th scope="row">) pero se ve como las demás. */
+  .grades tbody th { display: table-cell; height: 56px; padding: 0 var(--space-4); border-bottom: 1px solid var(--color-border); background: transparent; color: inherit; font-size: inherit; font-weight: var(--weight-regular); text-align: left; white-space: normal; }
+  .grades tbody tr:last-child th { border-bottom: 0; }
+  .subject-cell { min-width: 220px; }
+  .cell-error .field-error { position: absolute; left: 50%; transform: translateX(-50%); bottom: 1px; white-space: nowrap; }
+}
+
+@media (min-width: 1024px) {
+  .first-run { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); padding: var(--space-12) 0; }
+  .first-run h2 { font-size: var(--text-display-l); line-height: var(--leading-display-l); }
+  .first-run p { font-size: var(--text-title-s); }
+  .first-run-stack { display: flex; }
+}
+@media (min-width: 1101px) { .stat-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .first-run { gap: var(--space-12); } }
