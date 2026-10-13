@@ -266,7 +266,13 @@ test("ordenar por prioridad, vista por materia y borrado con deshacer", async ({
   await page.goto("/app/todo");
   const today = day("Hoy", page);
 
-  await page.getByRole("button", { name: "Ordenar por prioridad" }).click();
+  // Ordenar por prioridad y dejarlo como orden propio.
+  await page.getByRole("button", { name: /^Ordenar/ }).click();
+  await page.getByRole("menuitemradio", { name: "Prioridad" }).click();
+  await expect.poll(() => titles(today)).toEqual(["Alta", "Baja", "Sin prioridad"]);
+  await page.getByRole("button", { name: /^Ordenar/ }).click();
+  await page.getByRole("menuitem", { name: "Guardar como mi orden" }).click();
+  await expect(page.locator(".toast")).toContainText("Guardado como mi orden");
   await expect.poll(() => titles(today)).toEqual(["Alta", "Baja", "Sin prioridad"]);
 
   // Por materia.

@@ -169,11 +169,73 @@ export function moveItem<T extends { id: string }>(list: readonly T[], item: T, 
 
 const PRIORITY_RANK: Record<Priority, number> = { high: 3, medium: 2, low: 1, none: 0 };
 
-/** "Ordenar por prioridad": acción puntual que reordena las pendientes (alta primero). */
-export function priorityOrderPatches(tasks: readonly Task[]): OrderPatch[] {
+// ---------- criterios de orden ----------
+
+/**
+ * Cómo se ordena la lista de cada día. "manual" es el orden propio (sort_order), el único que se
+ * acomoda arrastrando; los demás son una forma de mirar la lista y no lo tocan.
+ */
+export const TASK_SORTS = ["manual", "priority", "due", "exam", "subject", "oldest", "newest", "title"] as const;
+export type TaskSort = (typeof TASK_SORTS)[number];
+
+export const isTaskSort = (value: unknown): value is TaskSort => TASK_SORTS.includes(value as TaskSort);
+
+export type SortContext = {
+  /** Posición de cada materia en Inicio (id → índice). */
+  subjectRank: ReadonlyMap<string, number>;
+  /** Fecha del próximo examen de cada materia (id → día). Ver `nextExamBySubject` en calendar.ts. */
+  nextExam: ReadonlyMap<string, IsoDate>;
+};
+
+const LAST = Number.POSITIVE_INFINITY;
+/** Compara dos claves donde "no tiene" (null) va siempre al final. */
+const nullsLast = <T>(a: T | null | undefined, b: T | null | undefined, compare: (x: T, y: T) => number): number =>
+  a == null ? (b == null ? 0 : 1) : b == null ? -1 : compare(a, b);
+const byText = (a: string, b: string) => a.localeCompare(b);
+
+function comparatorFor(sort: TaskSort, context: SortContext): (a: Task, b: Task) => number {
+  const rank = (task: Task) => (task.subject_id ? (context.subjectRank.get(task.subject_id) ?? LAST) : LAST);
+  const exam = (task: Task) => (task.subject_id ? (context.nextExam.get(task.subject_id) ?? null) : null);
+  switch (sort) {
+    case "priority":
+      return (a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority];
+    case "due":
+      return (a, b) => nullsLast(a.due_date, b.due_date, byText);
+    case "exam":
+      return (a, b) => nullsLast(exam(a), exam(b), byText);
+    case "subject":
+      // Infinity − Infinity no es un número: las dos sin materia empatan.
+      return (a, b) => (rank(a) === rank(b) ? 0 : rank(a) - rank(b));
+    case "oldest":
+      return (a, b) => byText(a.created_at, b.created_at);
+    case "newest":
+      return (a, b) => byText(b.created_at, a.created_at);
+    case "title":
+      return (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true });
+    case "manual":
+      return () => 0;
+  }
+}
+
+/** Compara dos tareas con el criterio elegido; ante un empate decide el orden propio. */
+export function taskComparator(sort: TaskSort, context: SortContext): (a: Task, b: Task) => number {
+  const compare = comparatorFor(sort, context);
+  return (a, b) => compare(a, b) || byOrder(a, b);
+}
+
+/** Las tareas de un día (ya armadas por `tasksForDay`) con el criterio elegido. Las completadas siguen al fondo. */
+export function sortDayTasks(entries: readonly DayTask[], sort: TaskSort, context: SortContext): DayTask[] {
+  const compare = taskComparator(sort, context);
+  return [...entries].sort((a, b) => Number(isCompleted(a.task)) - Number(isCompleted(b.task)) || compare(a.task, b.task));
+}
+
+/**
+ * "Guardar como mi orden": deja las pendientes en el orden del criterio elegido, como si se las
+ * hubiera arrastrado una por una. Las completadas no se tocan.
+ */
+export function sortOrderPatches(tasks: readonly Task[], sort: TaskSort, context: SortContext): OrderPatch[] {
   const pending = tasks.filter((task) => !isCompleted(task));
-  const sorted = [...pending].sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || byOrder(a, b));
-  return orderPatches(sorted);
+  return orderPatches([...pending].sort(taskComparator(sort, context)));
 }
 
 /** sort_order para una tarea nueva: al final. */

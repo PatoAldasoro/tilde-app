@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { toast } from "@/components/ui/toast";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { playAlarm, playSound } from "@/lib/chime";
 import { formatClock, isExam, remainingMs, type TimerEvent } from "@/lib/domain/timer";
@@ -33,8 +34,8 @@ export function advanceStudyTimer() {
 
 /**
  * Mantiene vivo el timer en toda la app: lo avanza (aunque se esté en otra sección), avisa los
- * cambios de fase, muestra el tiempo restante en el título de la pestaña y, en modo examen,
- * registra las salidas de la página.
+ * cambios de fase, muestra el tiempo restante en el título de la pestaña, no deja que la pantalla
+ * se apague y, en modo examen, registra las salidas de la página.
  */
 export function StudyTimerRunner() {
   const t = useTranslations();
@@ -45,6 +46,9 @@ export function StudyTimerRunner() {
   const exam = timer.status === "active" && isExam(timer.config);
   const pageTitle = useRef<string | null>(null);
   const ownTitle = useRef<string | null>(null);
+
+  // Con el timer corriendo la pantalla no se apaga ni se bloquea sola; en pausa vuelve a lo normal.
+  useWakeLock(timer.status === "active" && timer.running);
   useEffect(() => {
     latest.t = t;
     latest.push = (path) => router.push(path);

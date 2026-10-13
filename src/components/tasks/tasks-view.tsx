@@ -12,7 +12,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ArrowDownWideNarrow, Calendar, CircleCheckBig, Ellipsis, GripVertical, Import, ListChecks, SquareCheck, Trash2 } from "lucide-react";
+import { ArrowDownWideNarrow, Calendar, CircleCheckBig, Ellipsis, GripVertical, Import, ListChecks, Pin, SquareCheck, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useToday } from "@/components/providers";
@@ -22,12 +22,13 @@ import { Button } from "@/components/ui/button";
 import { confirm } from "@/components/ui/confirm";
 import { DateField } from "@/components/ui/date-field";
 import { Empty } from "@/components/ui/empty";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
+import { Menu, MenuContent, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Progress } from "@/components/ui/progress";
 import { LoadError, Skeletons } from "@/components/ui/query-state";
 import { Segmented } from "@/components/ui/segmented";
 import { toast } from "@/components/ui/toast";
 import { useFlip } from "@/hooks/use-flip";
+import { nextExamBySubject } from "@/lib/domain/calendar";
 import { addDays, formatDayMonth, weekdayOf, type IsoDate } from "@/lib/domain/dates";
 import { progressOf } from "@/lib/domain/progress";
 import { activeSubjects, subjectClass } from "@/lib/domain/subjects";
@@ -38,13 +39,19 @@ import {
   isDaily,
   moveItem,
   orderPatches,
-  priorityOrderPatches,
+  sortDayTasks,
+  sortOrderPatches,
+  TASK_SORTS,
   tasksForDay,
   type DayTask,
+  type SortContext,
+  type TaskSort,
 } from "@/lib/domain/tasks";
 import type { Task } from "@/lib/domain/types";
+import { useCalendarEvents } from "@/lib/queries/calendar";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTaskMutations, useTasks } from "@/lib/queries/tasks";
+import { setTaskSort, useTaskSort } from "@/lib/task-sort-prefs";
 import { cn } from "@/lib/utils";
 import { DayGroup, type RowHandlers } from "./day-group";
 import { useDayLabel } from "./labels";
@@ -81,7 +88,11 @@ export function TasksView() {
   const dayLabel = useDayLabel(today);
   const tasksQuery = useTasks();
   const subjectsQuery = useSubjects();
+  const calendarQuery = useCalendarEvents();
   const mutations = useTaskMutations();
+  const sort = useTaskSort();
+  // Solo el orden propio se acomoda arrastrando; los demás criterios son una forma de mirar la lista.
+  const manual = sort === "manual";
 
   const [mode, setMode] = useState<Mode>("general");
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
@@ -114,10 +125,17 @@ export function TasksView() {
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
 
   const days = daysInRange(range, today, pickedDate);
+  const sortContext = useMemo<SortContext>(
+    () => ({
+      subjectRank: new Map(active.map((subject, index) => [subject.id, index])),
+      nextExam: nextExamBySubject(calendarQuery.data ?? [], today),
+    }),
+    [active, calendarQuery.data, today],
+  );
   const lists = useMemo(() => {
     const visibleDays = daysInRange(range, today, pickedDate);
-    return new Map(visibleDays.map((day) => [day, tasksForDay(tasks, day, today)]));
-  }, [tasks, range, today, pickedDate]);
+    return new Map(visibleDays.map((day) => [day, sortDayTasks(tasksForDay(tasks, day, today), sort, sortContext)]));
+  }, [tasks, range, today, pickedDate, sort, sortContext]);
   const todayEntries = useMemo(() => tasksForDay(tasks, today, today), [tasks, today]);
   const todayProgress = progressOf(todayEntries.map((entry) => entry.task));
   const allDone = todayProgress.total > 0 && todayProgress.done === todayProgress.total;
@@ -161,9 +179,11 @@ export function TasksView() {
     toast(t("tasks_deleted", { n: ids.length }), { action: { label: t("undo"), onAction: () => mutations.restore(deleted) } });
   }
 
-  function sortByPriority() {
-    mutations.reorder(priorityOrderPatches(tasks));
-    toast(t("sorted_priority"));
+  /** Deja el criterio elegido como orden propio (y vuelve a él), para seguir acomodando a mano desde ahí. */
+  function saveSortAsMine() {
+    mutations.reorder(sortOrderPatches(tasks, sort, sortContext));
+    setTaskSort("manual");
+    toast(t("sort_saved"));
   }
 
   function focusGrip(taskId: string, day: IsoDate) {
@@ -282,10 +302,31 @@ export function TasksView() {
       actions={
         selecting ? null : (
           <>
-            <Button variant="ghost" onClick={sortByPriority} disabled={tasks.length === 0}>
-              <ArrowDownWideNarrow size={18} />
-              {t("sort_priority")}
-            </Button>
+            <Menu>
+              <MenuTrigger className="btn btn-ghost" aria-label={t("sort_current", { name: t(`sort_${sort}`) })}>
+                <ArrowDownWideNarrow size={18} />
+                <span className="btn-label">{t("sort")}</span>
+                {manual ? null : <span className="badge badge-accent">{t(`sort_${sort}`)}</span>}
+              </MenuTrigger>
+              <MenuContent>
+                <MenuLabel>{t("sort_heading")}</MenuLabel>
+                <MenuRadioGroup value={sort} onValueChange={(value) => setTaskSort(value as TaskSort)}>
+                  {TASK_SORTS.map((key) => (
+                    <MenuRadioItem key={key} value={key}>
+                      {t(`sort_${key}`)}
+                    </MenuRadioItem>
+                  ))}
+                </MenuRadioGroup>
+                {manual ? null : (
+                  <>
+                    <MenuSeparator />
+                    <MenuItem icon={<Pin size={18} />} disabled={tasks.length === 0} onSelect={saveSortAsMine}>
+                      {t("sort_save")}
+                    </MenuItem>
+                  </>
+                )}
+              </MenuContent>
+            </Menu>
             <Button
               disabled={visibleIds.length === 0}
               onClick={() => {
@@ -362,6 +403,15 @@ export function TasksView() {
         )
       ) : null}
 
+      {manual ? null : (
+        <p className="notice -mt-2 mb-5" role="status">
+          <span className="grow">{t("sort_hint", { name: t(`sort_${sort}`) })}</span>
+          <Button variant="ghost" size="sm" onClick={() => setTaskSort("manual")}>
+            {t("sort_back")}
+          </Button>
+        </p>
+      )}
+
       {isError ? (
         <LoadError onRetry={() => { tasksQuery.refetch(); void subjectsQuery.refetch(); }} />
       ) : isPending ? (
@@ -423,6 +473,7 @@ export function TasksView() {
                 day={day}
                 today={today}
                 entries={lists.get(day) ?? tasksForDay(tasks, day, today)}
+                sortable={manual}
                 subjects={subjectMap}
                 expanded={expanded}
                 selecting={selecting}

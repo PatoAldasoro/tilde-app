@@ -242,3 +242,23 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     - Cuatrimestre según el calendario académico argentino: marzo a julio, agosto a diciembre, y el verano.
 42. **El tooltip de una tarea bloqueada** se dibuja fuera de su contenedor (portal), para que un panel con scroll no
     lo recorte. **El logo** usa el naranja de la marca y ya no sigue al acento elegido.
+
+## Cuarta tanda de cambios (13/10/2026)
+
+43. **La pantalla no se apaga con el timer corriendo.** Screen Wake Lock (`src/hooks/use-wake-lock.ts`), pedido
+    por el timer global, así vale en cualquier sección. En pausa se suelta: si la sesión está frenada no hay
+    motivo para tener la pantalla encendida. El navegador lo suelta solo al ocultar la pestaña y se vuelve a pedir
+    al volver. Donde no existe la API, o el sistema la niega (ahorro de batería), la sesión sigue igual.
+44. **Criterios de orden de las tareas.** Mi orden, prioridad, fecha límite, examen más cercano, materia, más
+    antiguas, más nuevas y nombre (`TASK_SORTS` en `src/lib/domain/tasks.ts`).
+    - Son una forma de mirar la lista, no un cambio en los datos: el orden propio (`sort_order`) no se toca, y el
+      criterio elegido se guarda en el dispositivo (`localStorage`), no en el perfil.
+    - Solo «Mi orden» se acomoda arrastrando. Con otro criterio las asas no están y un aviso lo explica.
+    - «Guardar como mi orden» reemplaza al viejo botón "Ordenar por prioridad": escribe el criterio elegido en
+      `sort_order` y vuelve a «Mi orden», para seguir acomodando a mano desde ahí.
+    - "Examen más cercano" ordena por la materia que rinde antes: parciales, finales y recuperatorios ya
+      confirmados, de hoy en adelante. Sin materia, o sin examen cargado, van al final.
+    - Ante un empate decide el orden propio, y las completadas quedan siempre al fondo.
+45. **Reordenar las tareas desde la sesión de estudio.** "Tareas de hoy" se arrastra desde un asa (mouse, dedo o
+    teclado). Es el mismo orden propio de Tareas, así que ahí siempre se ve en «Mi orden», sea cual sea el criterio
+    elegido en la otra pantalla. Las completadas no se mueven.

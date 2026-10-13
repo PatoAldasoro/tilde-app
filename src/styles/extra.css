@@ -280,8 +280,17 @@ span.ev { cursor: default; }
 .wrapped-dot:focus-visible { outline: none; }
 .wrapped-dot:focus-visible::before { box-shadow: var(--shadow-focus); }
 
+/* "Tareas de hoy" se reordena arrastrando desde el asa. */
+.mini-task { padding-left: 0; }
+.mini-grip { width: 28px; height: var(--hit-target); }
+.mini-task-group:hover .mini-grip { opacity: 1; }
+.mini-task-group.is-dragging { position: relative; z-index: 2; border-radius: var(--radius-sm); background: var(--color-surface-raised); box-shadow: var(--shadow-drag); }
 /* Subtareas dentro de "Tareas de hoy": alineadas con el título de su tarea. */
-.mini-subtasks { display: flex; flex-direction: column; padding: 0 var(--space-2) var(--space-1) 42px; }
+.mini-subtasks { display: flex; flex-direction: column; padding: 0 var(--space-2) var(--space-1) 58px; }
+/* Menús: título de un grupo de opciones. */
+.menu-label { padding: var(--space-1-5) var(--space-3) var(--space-1); font-size: var(--text-micro); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-subtle); }
+.menu-item [data-state="checked"] { color: var(--color-accent-text); }
+.btn .btn-label { display: contents; }
 .mini-task .subcount { padding: 0 2px; flex: none; }
 .mini-task .mt-main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--space-2); padding: var(--space-1-5) 0; }
 .mini-task .mt-title { flex: 1 1 130px; }

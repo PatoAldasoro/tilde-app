@@ -1,22 +1,29 @@
 "use client";
 
-import { ChevronDown, ListTodo } from "lucide-react";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, GripVertical, ListTodo } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useToday } from "@/components/providers";
 import { SubjectChip } from "@/components/subject-chip";
 import { TaskCheckbox } from "@/components/tasks/task-row";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeletons } from "@/components/ui/query-state";
 import { Switch } from "@/components/ui/switch";
-import { isArchived } from "@/lib/domain/subjects";
-import { isCompleted, pendingSubtasks, tasksForDay } from "@/lib/domain/tasks";
+import { isArchived, type SubjectBadge } from "@/lib/domain/subjects";
+import { isCompleted, orderPatches, pendingSubtasks, tasksForDay } from "@/lib/domain/tasks";
+import type { Task } from "@/lib/domain/types";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTaskMutations, useTasks } from "@/lib/queries/tasks";
 import { studyStore, useStudy } from "@/lib/study-store";
 import { cn } from "@/lib/utils";
 
-/** Las tareas de hoy (tasksForDay) para tildar durante la sesión; con materia elegida se pueden filtrar. */
+/**
+ * Las tareas de hoy (tasksForDay) para tildar durante la sesión; con materia elegida se pueden
+ * filtrar. Las pendientes se reordenan arrastrando desde el asa: es el mismo orden propio de Tareas.
+ */
 export function TodayTasks() {
   const t = useTranslations();
   const today = useToday();
@@ -25,17 +32,25 @@ export function TodayTasks() {
   const subjectsQuery = useSubjects();
   const mutations = useTaskMutations();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
   const subjectMap = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject])), [subjects]);
   const chosen = setup.subjectId ? subjectMap.get(setup.subjectId) : undefined;
+
   const entries = useMemo(() => {
     const archived = new Set(subjects.filter(isArchived).map((subject) => subject.id));
     const visible = (tasksQuery.data ?? []).filter((task) => !task.subject_id || !archived.has(task.subject_id));
     const list = tasksForDay(visible, today, today);
     return setup.filterBySubject && setup.subjectId ? list.filter((entry) => entry.task.subject_id === setup.subjectId) : list;
   }, [tasksQuery.data, subjects, today, setup.filterBySubject, setup.subjectId]);
-  const done = entries.filter((entry) => isCompleted(entry.task)).length;
+  const pending = useMemo(() => entries.map((entry) => entry.task).filter((task) => !isCompleted(task)), [entries]);
+  const pendingIds = pending.map((task) => task.id);
+  const done = entries.length - pending.length;
 
   const setOpen = (taskId: string, open: boolean) =>
     setExpanded((current) => {
@@ -45,6 +60,25 @@ export function TodayTasks() {
       else next.delete(taskId);
       return next;
     });
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const from = pendingIds.indexOf(String(active.id));
+    const to = pendingIds.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    mutations.reorder(orderPatches(arrayMove(pending, from, to)));
+  }
+
+  const titleOf = (id: string | number) => pending.find((task) => task.id === id)?.title ?? "";
+  const positionOf = (id: string | number) => pendingIds.indexOf(String(id)) + 1;
+  const rowProps = (task: Task) => ({
+    task,
+    subject: task.subject_id ? subjectMap.get(task.subject_id) : undefined,
+    open: task.subtasks.length > 0 && expanded.has(task.id),
+    onOpenChange: (open: boolean) => setOpen(task.id, open),
+    onToggle: () => void mutations.toggle(task),
+    onToggleSubtask: (subtaskId: string) => mutations.toggleSubtask(task, subtaskId),
+  });
 
   return (
     <>
@@ -75,61 +109,125 @@ export function TodayTasks() {
         ) : entries.length === 0 ? (
           <p className="day-empty p-4">{t("no_tasks_today")}</p>
         ) : null}
-        {entries.map(({ task }) => {
-          const subject = task.subject_id ? subjectMap.get(task.subject_id) : undefined;
-          const total = task.subtasks.length;
-          const left = pendingSubtasks(task);
-          const open = total > 0 && expanded.has(task.id);
-          return (
-            <div key={task.id} className="mini-task-group">
-              <div className={cn("mini-task", isCompleted(task) && "is-done")}>
-                {/* Bloqueada por subtareas pendientes: al tocarla se despliegan para poder tildarlas. */}
-                <TaskCheckbox task={task} size="sm" onToggle={() => mutations.toggle(task)} onBlocked={() => setOpen(task.id, true)} />
-                {/* Si no entran lado a lado (tarea con subtareas), la materia baja a un segundo renglón. */}
-                <span className="mt-main">
-                  <span className="mt-title">{task.title}</span>
-                  {subject ? <SubjectChip subject={subject} /> : null}
-                </span>
-                {total > 0 ? (
-                  <>
-                    <span
-                      className={cn("subcount", left === 0 && "is-complete")}
-                      aria-label={t("subtasks_progress", { done: total - left, total })}
-                    >
-                      <ListTodo size={14} />
-                      {total - left}/{total}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-icon btn-sm expand-btn"
-                      aria-expanded={open}
-                      aria-label={`${open ? t("collapse_subtasks") : t("expand_subtasks")}: ${task.title}`}
-                      onClick={() => setOpen(task.id, !open)}
-                    >
-                      <ChevronDown size={18} />
-                    </button>
-                  </>
-                ) : null}
-              </div>
-              {open ? (
-                <div className="mini-subtasks">
-                  {task.subtasks.map((subtask) => (
-                    <div key={subtask.id} className={cn("subtask", subtask.completed_at && "is-done")}>
-                      <Checkbox
-                        size="sm"
-                        checked={subtask.completed_at !== null}
-                        label={subtask.title}
-                        onChange={() => mutations.toggleSubtask(task, subtask.id)}
-                      />
-                      <span className="subtask-title">{subtask.title}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={onDragEnd}
+          accessibility={{
+            screenReaderInstructions: { draggable: t("today_tasks_dnd") },
+            announcements: {
+              onDragStart: ({ active }) => t("dnd_picked", { title: titleOf(active.id) }),
+              onDragOver: ({ over }) => (over ? t("subject_dnd_over", { position: positionOf(over.id), total: pendingIds.length }) : undefined),
+              onDragEnd: ({ active, over }) =>
+                over
+                  ? t("subject_dnd_dropped", { name: titleOf(active.id), position: positionOf(over.id), total: pendingIds.length })
+                  : t("dnd_cancelled"),
+              onDragCancel: () => t("dnd_cancelled"),
+            },
+          }}
+        >
+          <SortableContext items={pendingIds} strategy={verticalListSortingStrategy}>
+            {pending.map((task) => (
+              <SortableMiniTask key={task.id} {...rowProps(task)} />
+            ))}
+          </SortableContext>
+        </DndContext>
+        {entries
+          .filter((entry) => isCompleted(entry.task))
+          .map(({ task }) => (
+            <MiniTask key={task.id} {...rowProps(task)} grip={<span className="grip mini-grip" aria-disabled="true" />} />
+          ))}
       </div>
     </>
+  );
+}
+
+type MiniTaskProps = {
+  task: Task;
+  subject?: SubjectBadge;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onToggle: () => void;
+  onToggleSubtask: (subtaskId: string) => void;
+};
+
+/** Tarea pendiente: se arrastra (mouse, dedo o teclado) solo desde el asa, así tildar y hacer scroll siguen iguales. */
+function SortableMiniTask(props: MiniTaskProps) {
+  const t = useTranslations();
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id });
+  return (
+    <MiniTask
+      {...props}
+      groupRef={setNodeRef}
+      className={isDragging ? "is-dragging" : undefined}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      grip={
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className="grip mini-grip"
+          {...attributes}
+          {...listeners}
+          aria-label={t("drag_mini_task", { title: props.task.title })}
+          aria-roledescription={t("drag_handle")}
+        >
+          <GripVertical size={16} />
+        </button>
+      }
+    />
+  );
+}
+
+type MiniTaskViewProps = MiniTaskProps & {
+  grip: ReactNode;
+  groupRef?: (node: HTMLDivElement | null) => void;
+  className?: string;
+  style?: CSSProperties;
+};
+
+function MiniTask({ task, subject, open, onOpenChange, onToggle, onToggleSubtask, grip, groupRef, className, style }: MiniTaskViewProps) {
+  const t = useTranslations();
+  const total = task.subtasks.length;
+  const left = pendingSubtasks(task);
+  return (
+    <div ref={groupRef} className={cn("mini-task-group", className)} style={style} data-task={task.id}>
+      <div className={cn("mini-task", isCompleted(task) && "is-done")}>
+        {grip}
+        {/* Bloqueada por subtareas pendientes: al tocarla se despliegan para poder tildarlas. */}
+        <TaskCheckbox task={task} size="sm" onToggle={onToggle} onBlocked={() => onOpenChange(true)} />
+        {/* Si no entran lado a lado (tarea con subtareas), la materia baja a un segundo renglón. */}
+        <span className="mt-main">
+          <span className="mt-title">{task.title}</span>
+          {subject ? <SubjectChip subject={subject} /> : null}
+        </span>
+        {total > 0 ? (
+          <>
+            <span className={cn("subcount", left === 0 && "is-complete")} aria-label={t("subtasks_progress", { done: total - left, total })}>
+              <ListTodo size={14} />
+              {total - left}/{total}
+            </span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon btn-sm expand-btn"
+              aria-expanded={open}
+              aria-label={`${open ? t("collapse_subtasks") : t("expand_subtasks")}: ${task.title}`}
+              onClick={() => onOpenChange(!open)}
+            >
+              <ChevronDown size={18} />
+            </button>
+          </>
+        ) : null}
+      </div>
+      {open ? (
+        <div className="mini-subtasks">
+          {task.subtasks.map((subtask) => (
+            <div key={subtask.id} className={cn("subtask", subtask.completed_at && "is-done")}>
+              <Checkbox size="sm" checked={subtask.completed_at !== null} label={subtask.title} onChange={() => onToggleSubtask(subtask.id)} />
+              <span className="subtask-title">{subtask.title}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

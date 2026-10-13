@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { DropdownMenu as MenuPrimitive } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -28,4 +29,23 @@ export function MenuItem({ className, icon, danger, children, ...props }: MenuIt
 
 export function MenuSeparator() {
   return <MenuPrimitive.Separator className="menu-sep" />;
+}
+
+/** Título de un grupo de opciones dentro del menú. */
+export function MenuLabel({ className, ...props }: ComponentProps<typeof MenuPrimitive.Label>) {
+  return <MenuPrimitive.Label className={cn("menu-label", className)} {...props} />;
+}
+
+export const MenuRadioGroup = MenuPrimitive.RadioGroup;
+
+/** Opción de un grupo excluyente: la elegida lleva un tilde a la derecha. */
+export function MenuRadioItem({ className, children, ...props }: ComponentProps<typeof MenuPrimitive.RadioItem>) {
+  return (
+    <MenuPrimitive.RadioItem className={cn("menu-item", className)} {...props}>
+      <span className="min-w-0 flex-1">{children}</span>
+      <MenuPrimitive.ItemIndicator>
+        <Check size={18} />
+      </MenuPrimitive.ItemIndicator>
+    </MenuPrimitive.RadioItem>
+  );
 }

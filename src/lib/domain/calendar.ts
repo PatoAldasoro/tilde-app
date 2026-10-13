@@ -110,3 +110,20 @@ export function taskSyncFor(previousCategory: string | null, nextCategory: strin
   }
   return hasLinkedTask ? "delete" : "none";
 }
+
+// ---------- exámenes ----------
+
+/** Lo que se rinde: parciales, finales y los recuperatorios ya confirmados (uno tentativo todavía no es una fecha). */
+export const isExamDate = (event: Pick<CalendarEvent, "category" | "confirmed">): boolean =>
+  event.category === "parcial" || event.category === "final" || (event.category === "recuperatorio" && event.confirmed);
+
+/** El próximo examen de cada materia, de hoy en adelante (id de materia → día). Sirve para ordenar las tareas. */
+export function nextExamBySubject(events: readonly CalendarEvent[], today: IsoDate): Map<string, IsoDate> {
+  const next = new Map<string, IsoDate>();
+  for (const event of events) {
+    if (!event.subject_id || event.date < today || !isExamDate(event)) continue;
+    const current = next.get(event.subject_id);
+    if (!current || event.date < current) next.set(event.subject_id, event.date);
+  }
+  return next;
+}

@@ -29,6 +29,8 @@ type DayGroupProps = {
   day: IsoDate;
   today: IsoDate;
   entries: DayTask[];
+  /** Con el orden propio las pendientes se arrastran; con otro criterio, no. */
+  sortable: boolean;
   subjects: Map<string, SubjectBadge>;
   expanded: Set<string>;
   selecting: boolean;
@@ -45,7 +47,7 @@ type DayGroupProps = {
 
 /** Un día de la lista: encabezado con progreso, agregar rápido y sus tareas. */
 export function DayGroup(props: DayGroupProps) {
-  const { day, today, entries, subjects, expanded, selecting, selected, dragging, dropIndex, blocked, handlers } = props;
+  const { day, today, entries, sortable, subjects, expanded, selecting, selected, dragging, dropIndex, blocked, handlers } = props;
   const t = useTranslations();
   const headingId = useId();
   const dayLabel = useDayLabel(today);
@@ -107,7 +109,7 @@ export function DayGroup(props: DayGroupProps) {
             onSelect: () => handlers.onSelect(task),
             onExpand: () => handlers.onExpand(task),
           } satisfies TaskRowProps;
-          return isCompleted(task) || selecting ? (
+          return isCompleted(task) || selecting || !sortable ? (
             <TaskRow key={task.id} {...rowProps} grip={<span className="grip" aria-disabled="true" />} />
           ) : (
             <DraggableRow

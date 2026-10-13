@@ -7,8 +7,12 @@ import {
   moveItem,
   nextSortOrder,
   orderPatches,
-  priorityOrderPatches,
+  sortDayTasks,
+  sortOrderPatches,
   tasksForDay,
+  taskComparator,
+  TASK_SORTS,
+  type SortContext,
   toggleSubtask,
   toggleTask,
   visibilityOn,
@@ -18,6 +22,7 @@ import type { Priority, Subtask, Task } from "./types";
 
 const TODAY = "2026-10-13"; // martes
 const NOW = "2026-10-13T15:00:00Z";
+const NO_CONTEXT: SortContext = { subjectRank: new Map(), nextExam: new Map() };
 
 let counter = 0;
 function task(overrides: Partial<Task> & { done?: string } = {}): Task {
@@ -262,14 +267,14 @@ describe("orden", () => {
     expect(moveItem([o("a", 1), o("b", 2)], o("b", 2), -5).map((x) => x.id)).toEqual(["b", "a"]);
   });
 
-  it("ordenar por prioridad: alta primero, sin tocar las completadas y respetando el orden previo", () => {
+  it("guardar como mi orden: por prioridad, alta primero, sin tocar las completadas y respetando el orden previo", () => {
     const low = task({ priority: "low", sort_order: 1 });
     const high = task({ priority: "high", sort_order: 2 });
     const none = task({ priority: "none", sort_order: 3 });
     const medium = task({ priority: "medium", sort_order: 4 });
     const high2 = task({ priority: "high", sort_order: 5 });
     const done = task({ priority: "high", sort_order: 0, done: TODAY });
-    const patches = priorityOrderPatches([low, high, none, medium, high2, done]);
+    const patches = sortOrderPatches([low, high, none, medium, high2, done], "priority", NO_CONTEXT);
     const order = new Map([low, high, none, medium, high2].map((t) => [t.id, t.sort_order]));
     patches.forEach((p) => order.set(p.id, p.sort_order));
     const sorted = [...order.entries()].sort((a, b) => a[1] - b[1]).map(([id]) => id);
@@ -280,6 +285,82 @@ describe("orden", () => {
   it("una tarea nueva va al final", () => {
     expect(nextSortOrder([])).toBe(1);
     expect(nextSortOrder([o("a", 3), o("b", 7.5)])).toBe(8.5);
+  });
+});
+
+describe("criterios de orden", () => {
+  const entries = (tasks: Task[]) => tasks.map((item) => ({ task: item, carriedDays: 0 }));
+  const titles = (tasks: Task[], sort: (typeof TASK_SORTS)[number], context: SortContext = NO_CONTEXT) =>
+    sortDayTasks(entries(tasks), sort, context).map((entry) => entry.task.title);
+
+  it("mi orden: el que se armó arrastrando (sort_order)", () => {
+    const list = [task({ title: "b", priority: "high", sort_order: 2 }), task({ title: "a", sort_order: 1 })];
+    expect(titles(list, "manual")).toEqual(["a", "b"]);
+  });
+
+  it("prioridad: alta, media, baja, sin prioridad; a igual prioridad manda mi orden", () => {
+    const list = [
+      task({ title: "sin", sort_order: 1 }),
+      task({ title: "baja", priority: "low", sort_order: 2 }),
+      task({ title: "alta 2", priority: "high", sort_order: 4 }),
+      task({ title: "media", priority: "medium", sort_order: 3 }),
+      task({ title: "alta 1", priority: "high", sort_order: 0.5 }),
+    ];
+    expect(titles(list, "priority")).toEqual(["alta 1", "alta 2", "media", "baja", "sin"]);
+  });
+
+  it("fecha límite: la más cercana primero; las que no tienen, al final", () => {
+    const list = [
+      task({ title: "sin fecha", sort_order: 1 }),
+      task({ title: "viernes", due_date: "2026-10-16", sort_order: 2 }),
+      task({ title: "mañana", due_date: "2026-10-14", sort_order: 3 }),
+    ];
+    expect(titles(list, "due")).toEqual(["mañana", "viernes", "sin fecha"]);
+  });
+
+  it("examen más cercano: primero las de la materia que rinde antes; sin examen o sin materia, al final", () => {
+    const context: SortContext = { subjectRank: new Map(), nextExam: new Map([["fisica", "2026-10-20"], ["algebra", "2026-10-15"]]) };
+    const list = [
+      task({ title: "sin materia", sort_order: 1 }),
+      task({ title: "física", subject_id: "fisica", sort_order: 2 }),
+      task({ title: "historia (no rinde)", subject_id: "historia", sort_order: 3 }),
+      task({ title: "álgebra b", subject_id: "algebra", sort_order: 5 }),
+      task({ title: "álgebra a", subject_id: "algebra", sort_order: 4 }),
+    ];
+    expect(titles(list, "exam", context)).toEqual(["álgebra a", "álgebra b", "física", "sin materia", "historia (no rinde)"]);
+  });
+
+  it("materia: en el orden de Inicio, con las tareas sin materia al final", () => {
+    const context: SortContext = { subjectRank: new Map([["algebra", 0], ["fisica", 1]]), nextExam: new Map() };
+    const list = [
+      task({ title: "suelta 1", sort_order: 1 }),
+      task({ title: "física", subject_id: "fisica", sort_order: 2 }),
+      task({ title: "suelta 2", sort_order: 3 }),
+      task({ title: "álgebra", subject_id: "algebra", sort_order: 4 }),
+    ];
+    expect(titles(list, "subject", context)).toEqual(["álgebra", "física", "suelta 1", "suelta 2"]);
+  });
+
+  it("más antiguas, más nuevas y por nombre", () => {
+    const list = [
+      task({ title: "Práctica 10", created_at: "2026-10-03T00:00:00Z" }),
+      task({ title: "apunte", created_at: "2026-10-01T00:00:00Z" }),
+      task({ title: "Práctica 2", created_at: "2026-10-02T00:00:00Z" }),
+    ];
+    expect(titles(list, "oldest")).toEqual(["apunte", "Práctica 2", "Práctica 10"]);
+    expect(titles(list, "newest")).toEqual(["Práctica 10", "Práctica 2", "apunte"]);
+    // Sin distinguir mayúsculas y con los números como números.
+    expect(titles(list, "title")).toEqual(["apunte", "Práctica 2", "Práctica 10"]);
+  });
+
+  it("con cualquier criterio las completadas quedan al fondo", () => {
+    const list = [task({ title: "hecha", priority: "high", done: TODAY }), task({ title: "pendiente" })];
+    for (const sort of TASK_SORTS) expect(titles(list, sort).at(-1), sort).toBe("hecha");
+  });
+
+  it("el comparador nunca devuelve NaN (dos tareas sin materia)", () => {
+    const [a, b] = [task({ sort_order: 1 }), task({ sort_order: 2 })];
+    for (const sort of TASK_SORTS) expect(Number.isNaN(taskComparator(sort, NO_CONTEXT)(a, b)), sort).toBe(false);
   });
 });
 

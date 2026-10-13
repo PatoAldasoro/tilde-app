@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generatesTask, holidayNames, itemsByDate, linkedTaskFields, splitChips, taskSyncFor, tpTaskTitle, type CalendarEvent } from "./calendar";
+import { generatesTask, holidayNames, isExamDate, itemsByDate, linkedTaskFields, nextExamBySubject, splitChips, taskSyncFor, tpTaskTitle, type CalendarEvent } from "./calendar";
 import type { Holiday } from "./holidays";
 
 const event = (overrides: Partial<CalendarEvent>): CalendarEvent => ({
@@ -90,5 +90,45 @@ describe("TP genera tarea", () => {
     expect(taskSyncFor(null, "parcial", false)).toBe("none");
     expect(taskSyncFor("parcial", "final", false)).toBe("none");
     expect(taskSyncFor(null, "recuperatorio", false)).toBe("none");
+  });
+});
+
+describe("próximo examen de cada materia", () => {
+  const exam = (subject_id: string | null, category: string, date: string, confirmed = true): CalendarEvent => ({
+    id: `${subject_id}-${category}-${date}`,
+    subject_id,
+    category,
+    title: "",
+    date,
+    confirmed,
+    lead_days: null,
+  });
+
+  it("cuentan parciales, finales y recuperatorios confirmados; no los TP, los eventos ni un recuperatorio tentativo", () => {
+    expect(isExamDate(exam("a", "parcial", "2026-10-20"))).toBe(true);
+    expect(isExamDate(exam("a", "final", "2026-10-20"))).toBe(true);
+    expect(isExamDate(exam("a", "recuperatorio", "2026-10-20", true))).toBe(true);
+    expect(isExamDate(exam("a", "recuperatorio", "2026-10-20", false))).toBe(false);
+    expect(isExamDate(exam("a", "tp", "2026-10-20"))).toBe(false);
+    expect(isExamDate(exam("a", "evento", "2026-10-20"))).toBe(false);
+  });
+
+  it("toma el más cercano de hoy en adelante (hoy incluido) y saltea los que ya pasaron", () => {
+    const next = nextExamBySubject(
+      [
+        exam("fisica", "parcial", "2026-10-01"),
+        exam("fisica", "final", "2026-12-10"),
+        exam("fisica", "parcial", "2026-11-05"),
+        exam("algebra", "parcial", "2026-10-13"),
+        exam("historia", "tp", "2026-10-14"),
+        exam("quimica", "recuperatorio", "2026-10-15", false),
+        exam(null, "parcial", "2026-10-14"),
+      ],
+      "2026-10-13",
+    );
+    expect([...next]).toEqual([
+      ["fisica", "2026-11-05"],
+      ["algebra", "2026-10-13"],
+    ]);
   });
 });
