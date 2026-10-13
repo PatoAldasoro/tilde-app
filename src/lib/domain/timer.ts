@@ -62,6 +62,13 @@ export function clampCustom(values: Durations): Durations {
 
 export type Phase = "focus" | "break";
 
+/**
+ * Pasar de fase a mano: al cumplirse el tiempo de un foco o de un descanso, el timer no sigue solo
+ * sino que espera a que el usuario lo pase (para terminar un ejercicio antes de cortar, o no
+ * volver al foco hasta estar sentado). El tiempo de más sigue contando para esa fase.
+ */
+export type HoldOptions = { afterFocus: boolean; afterBreak: boolean };
+
 export type ActiveTimer = {
   status: "active";
   config: TimerConfig;
@@ -87,6 +94,13 @@ export type ActiveTimer = {
   awayCount?: number;
   awayMs?: number;
   awaySince?: number | null;
+  /** Pasar de fase a mano (no aplica al modo examen). */
+  hold?: HoldOptions;
+  /** La fase ya cumplió su tiempo y espera a que el usuario pase a la siguiente. */
+  waiting?: boolean;
+  /** Tiempo de más de esa espera: lo ya cerrado (en pausas) y, en marcha, desde cuándo corre. */
+  extraMs?: number;
+  extraSince?: number | null;
 };
 
 export type SessionSummary = {
@@ -103,11 +117,28 @@ export type SessionSummary = {
   awaySeconds?: number;
 };
 
-export type TimerState = { status: "idle" } | ActiveTimer | { status: "finished"; summary: SessionSummary };
+export type FinishedTimer = {
+  status: "finished";
+  summary: SessionSummary;
+  /**
+   * Cómo terminó. "completed": llegó al final del último ciclo. "manual": la cortó el usuario, y
+   * pudo ser sin querer. Sin dato: un resumen guardado por una versión anterior.
+   */
+  ended?: "completed" | "manual";
+  /** El timer como estaba al terminar, en pausa: para volver atrás o agregarle un ciclo. */
+  resumable?: ActiveTimer;
+  /** Si corría cuando se la cortó: al volver atrás sigue corriendo. */
+  wasRunning?: boolean;
+};
+
+export type TimerState = { status: "idle" } | ActiveTimer | FinishedTimer;
 
 export type TimerEvent =
   | { type: "break-started"; minutes: number }
   | { type: "focus-started"; cycle: number; cycles: number }
+  /** Con "pasar de fase a mano": la fase cumplió su tiempo y espera. `last`: era el último foco. */
+  | { type: "focus-over"; last: boolean }
+  | { type: "break-over" }
   | { type: "finished" };
 
 export const IDLE: TimerState = { status: "idle" };
@@ -116,9 +147,10 @@ const MINUTE = 60_000;
 const phaseDuration = (config: TimerConfig, phase: Phase) => (phase === "focus" ? config.focusMinutes : config.breakMinutes) * MINUTE;
 
 /** Inicia una sesión: primer foco, ciclo 1. */
-export function start(config: TimerConfig, subjectId: string | null, now: number): ActiveTimer {
+export function start(config: TimerConfig, subjectId: string | null, now: number, hold?: HoldOptions): ActiveTimer {
   return {
     status: "active",
+    ...(hold && !isExam(config) ? { hold } : {}),
     config,
     subjectId,
     startedAt: now,
@@ -157,6 +189,27 @@ function toSummary(timer: ActiveTimer, endedAt: number): SessionSummary {
   };
 }
 
+const NOT_WAITING = { waiting: undefined, extraMs: undefined, extraSince: undefined } as const;
+
+/** El timer al entrar a una fase en `at`: corriendo o en pausa, igual que venía, y sin espera pendiente. */
+function enterPhase(timer: ActiveTimer, phase: Phase, at: number): ActiveTimer {
+  const duration = phaseDuration(timer.config, phase);
+  return {
+    ...timer,
+    ...NOT_WAITING,
+    phase,
+    phaseEndsAt: timer.running ? at + duration : null,
+    remainingMs: timer.running ? null : duration,
+    segmentStartedAt: timer.running ? at : null,
+  };
+}
+
+/** La sesión llegó al final de su último ciclo. Se guarda el timer (ya cerrado) por si se le agrega un ciclo. */
+function completed(timer: ActiveTimer, endedAt: number): FinishedTimer {
+  const resumable: ActiveTimer = { ...timer, ...NOT_WAITING, running: false, phaseEndsAt: null, remainingMs: 0, segmentStartedAt: null };
+  return { status: "finished", ended: "completed", summary: toSummary(timer, endedAt), resumable };
+}
+
 /** ¿La sesión terminó antes de completar lo planeado? */
 export function isIncomplete(summary: Pick<SessionSummary, "cycles" | "cyclesCompleted">): boolean {
   return summary.cycles !== undefined && summary.cyclesCompleted < summary.cycles;
@@ -174,21 +227,29 @@ export function phaseProgress(timer: ActiveTimer, now: number): number {
   return Math.min(1, Math.max(0, 1 - remainingMs(timer, now) / total));
 }
 
-/** Tiempo real de foco y descanso hasta `now`, contando el tramo en curso. */
+/** Tiempo de más desde que la fase cumplió el suyo (solo mientras espera que la pasen a mano). */
+export function overtimeMs(timer: ActiveTimer, now: number): number {
+  if (!timer.waiting) return 0;
+  return (timer.extraMs ?? 0) + (timer.running && timer.extraSince != null ? Math.max(0, now - timer.extraSince) : 0);
+}
+
+/** Tiempo real de foco y descanso hasta `now`, contando el tramo en curso (y el tiempo de más de una espera). */
 export function elapsedTotals(timer: ActiveTimer, now: number): { focusMs: number; breakMs: number } {
-  const closed = closeSegment(timer, Math.min(now, timer.phaseEndsAt ?? now));
+  const closed = closeSegment(timer, timer.waiting ? now : Math.min(now, timer.phaseEndsAt ?? now));
   return { focusMs: closed.focusMs, breakMs: closed.breakMs };
 }
 
 export function pause(timer: ActiveTimer, now: number): ActiveTimer {
   if (!timer.running) return timer;
   const closed = closeSegment(timer, now);
-  return { ...closed, running: false, remainingMs: remainingMs(timer, now), phaseEndsAt: null, segmentStartedAt: null };
+  const extra = timer.waiting ? { extraMs: overtimeMs(timer, now), extraSince: null } : {};
+  return { ...closed, ...extra, running: false, remainingMs: remainingMs(timer, now), phaseEndsAt: null, segmentStartedAt: null };
 }
 
 export function resume(timer: ActiveTimer, now: number): ActiveTimer {
   if (timer.running) return timer;
-  return { ...timer, running: true, phaseEndsAt: now + (timer.remainingMs ?? 0), remainingMs: null, segmentStartedAt: now };
+  const extra = timer.waiting ? { extraSince: now } : {};
+  return { ...timer, ...extra, running: true, phaseEndsAt: now + (timer.remainingMs ?? 0), remainingMs: null, segmentStartedAt: now };
 }
 
 /**
@@ -198,53 +259,59 @@ export function resume(timer: ActiveTimer, now: number): ActiveTimer {
  */
 export function tick(state: TimerState, now: number): { state: TimerState; events: TimerEvent[] } {
   const events: TimerEvent[] = [];
-  if (state.status !== "active" || !state.running) return { state, events };
-
+  if (state.status !== "active" || !state.running || state.waiting) return { state, events };
   let timer = state;
   while (timer.phaseEndsAt !== null && now >= timer.phaseEndsAt) {
     const endedAt: number = timer.phaseEndsAt;
+    const focus = timer.phase === "focus";
+    const last = focus && timer.cycle >= timer.config.cycles;
+    const holds = !isExam(timer.config) && (focus ? timer.hold?.afterFocus : timer.hold?.afterBreak);
+    if (holds) {
+      // Pasar de fase a mano: la fase cumplió su tiempo y se queda esperando. El tramo sigue abierto,
+      // así que el tiempo de más cuenta para ella. El foco ya figura como ciclo completado.
+      timer = { ...timer, waiting: true, extraMs: 0, extraSince: endedAt, cyclesCompleted: timer.cyclesCompleted + (focus ? 1 : 0) };
+      events.push(focus ? { type: "focus-over", last } : { type: "break-over" });
+      break;
+    }
     const closed = closeSegment(timer, endedAt);
-    if (timer.phase === "focus") {
-      const cyclesCompleted = closed.cyclesCompleted + 1;
-      if (timer.cycle >= timer.config.cycles) {
+    if (focus) {
+      const done = { ...closed, cyclesCompleted: closed.cyclesCompleted + 1 };
+      if (last) {
         events.push({ type: "finished" });
-        return { state: { status: "finished", summary: toSummary({ ...closed, cyclesCompleted }, endedAt) }, events };
+        return { state: completed(done, endedAt), events };
       }
-      timer = {
-        ...closed,
-        cyclesCompleted,
-        phase: "break",
-        phaseEndsAt: endedAt + phaseDuration(timer.config, "break"),
-        segmentStartedAt: endedAt,
-      };
+      timer = enterPhase(done, "break", endedAt);
       events.push({ type: "break-started", minutes: timer.config.breakMinutes });
     } else {
-      timer = {
-        ...closed,
-        phase: "focus",
-        cycle: timer.cycle + 1,
-        phaseEndsAt: endedAt + phaseDuration(timer.config, "focus"),
-        segmentStartedAt: endedAt,
-      };
+      timer = enterPhase({ ...closed, cycle: timer.cycle + 1 }, "focus", endedAt);
       events.push({ type: "focus-started", cycle: timer.cycle, cycles: timer.config.cycles });
     }
   }
   return { state: timer, events };
 }
 
+/**
+ * Pasar a la fase siguiente a mano, desde una espera: el descanso (o el foco) empieza ahora, con su
+ * duración completa. Si era el último foco, la sesión queda terminada.
+ */
+export function advance(timer: ActiveTimer, now: number): TimerState {
+  if (!timer.waiting) return timer;
+  const closed = closeSegment(timer, now);
+  if (timer.phase === "break") return enterPhase({ ...closed, cycle: timer.cycle + 1 }, "focus", now);
+  if (timer.cycle >= timer.config.cycles) return completed(closed, now);
+  return enterPhase(closed, "break", now);
+}
+
+/** Cambia qué fases se pasan a mano, también con la sesión en curso. Lo que ya está esperando, sigue esperando. */
+export function setHold(timer: ActiveTimer, hold: HoldOptions): ActiveTimer {
+  return isExam(timer.config) ? timer : { ...timer, hold };
+}
+
 /** Saltar el descanso: solo durante un descanso. Empieza el foco del ciclo siguiente. */
 export function skipBreak(timer: ActiveTimer, now: number): ActiveTimer {
   if (timer.phase !== "break") return timer;
   const closed = closeSegment(timer, now);
-  const duration = phaseDuration(timer.config, "focus");
-  return {
-    ...closed,
-    phase: "focus",
-    cycle: timer.cycle + 1,
-    phaseEndsAt: timer.running ? now + duration : null,
-    remainingMs: timer.running ? null : duration,
-    segmentStartedAt: timer.running ? now : null,
-  };
+  return enterPhase({ ...closed, cycle: timer.cycle + 1 }, "focus", now);
 }
 
 // ---------- ajustar el tiempo a mano ----------
@@ -264,7 +331,7 @@ export function adjust(timer: ActiveTimer, deltaMs: number, now: number): Active
   const applied = left - nextLeft;
   if (applied === 0) return timer;
   // Se cierra el tramo en curso para que el ajuste opere sobre todo lo contado hasta ahora.
-  const closed = closeSegment(timer, now);
+  const closed = reopen(closeSegment(timer, now));
   const credited = timer.phase === "focus" ? { focusMs: Math.max(0, closed.focusMs + applied) } : { breakMs: Math.max(0, closed.breakMs + applied) };
   return {
     ...closed,
@@ -275,9 +342,18 @@ export function adjust(timer: ActiveTimer, deltaMs: number, now: number): Active
   };
 }
 
+/**
+ * Una fase que estaba esperando (ya había cumplido su tiempo) vuelve a tener tiempo por delante: deja
+ * de esperar y, si era un foco, su ciclo ya no figura como completado hasta que termine de nuevo.
+ */
+function reopen(timer: ActiveTimer): ActiveTimer {
+  if (!timer.waiting) return timer;
+  return { ...timer, ...NOT_WAITING, cyclesCompleted: timer.cyclesCompleted - (timer.phase === "focus" ? 1 : 0) };
+}
+
 /** Vuelve a empezar la fase en curso. El tiempo real ya contado no se pierde. */
 export function restartPhase(timer: ActiveTimer, now: number): ActiveTimer {
-  const closed = closeSegment(timer, now);
+  const closed = reopen(closeSegment(timer, now));
   const total = phaseDuration(timer.config, timer.phase);
   return { ...closed, phaseEndsAt: timer.running ? now + total : null, remainingMs: timer.running ? null : total, segmentStartedAt: timer.running ? now : null };
 }
@@ -288,16 +364,10 @@ export function restartPhase(timer: ActiveTimer, now: number): ActiveTimer {
  */
 export function skipFocus(timer: ActiveTimer, now: number): TimerState {
   if (timer.phase !== "focus") return timer;
-  const closed = closeSegment(timer, now);
-  if (timer.cycle >= timer.config.cycles) return { status: "finished", summary: toSummary(closed, now) };
-  const duration = phaseDuration(timer.config, "break");
-  return {
-    ...closed,
-    phase: "break",
-    phaseEndsAt: timer.running ? now + duration : null,
-    remainingMs: timer.running ? null : duration,
-    segmentStartedAt: timer.running ? now : null,
-  };
+  // Un foco que ya cumplió su tiempo no se "corta": se pasa al descanso con el ciclo completo.
+  if (timer.waiting) return advance(timer, now);
+  if (timer.cycle >= timer.config.cycles) return endSession(timer, now);
+  return enterPhase(closeSegment(timer, now), "break", now);
 }
 
 // ---------- modo examen: salidas de la página ----------
@@ -319,6 +389,38 @@ export function finish(timer: ActiveTimer, now: number): SessionSummary {
   return toSummary(closeSegment(timer, now), now);
 }
 
+// ---------- terminar, volver atrás y agregar un ciclo ----------
+
+/**
+ * El usuario termina la sesión (o la reinicia, o entrega el examen). Pudo ser sin querer: se guarda
+ * el timer tal como estaba, en pausa, para poder volver atrás. Si lo único que faltaba era pasar el
+ * último foco (ya cumplido, esperando), en realidad la completó.
+ */
+export function endSession(timer: ActiveTimer, now: number): FinishedTimer {
+  if (timer.waiting && timer.phase === "focus" && timer.cycle >= timer.config.cycles) return completed(closeSegment(timer, now), now);
+  return { status: "finished", ended: "manual", summary: finish(timer, now), resumable: pause(timer, now), wasRunning: timer.running };
+}
+
+export const canUndoFinish = (state: TimerState): state is FinishedTimer & { resumable: ActiveTimer } =>
+  state.status === "finished" && state.ended === "manual" && state.resumable !== undefined;
+
+/** Volver atrás un final hecho a mano: la sesión sigue donde estaba. El rato que estuvo el resumen en pantalla no cuenta. */
+export function undoFinish(state: TimerState, now: number): TimerState {
+  if (!canUndoFinish(state)) return state;
+  return state.wasRunning ? resume(state.resumable, now) : state.resumable;
+}
+
+/** Solo una sesión que llegó sola al final se puede alargar (un examen no tiene ciclos). */
+export const canAddCycle = (state: TimerState): state is FinishedTimer & { resumable: ActiveTimer } =>
+  state.status === "finished" && state.ended === "completed" && state.resumable !== undefined && !isExam(state.resumable.config);
+
+/** Agregar un ciclo a una sesión terminada: arranca ahora el descanso y después viene un foco más. */
+export function addCycle(state: TimerState, now: number): TimerState {
+  if (!canAddCycle(state)) return state;
+  const base = state.resumable;
+  return enterPhase({ ...base, running: true, config: { ...base.config, cycles: base.config.cycles + 1 } }, "break", now);
+}
+
 /**
  * "MM:SS" (los minutos pueden pasar de 59: 90:00). Con `hours`, "H:MM:SS" (modo examen).
  * Redondea hacia arriba para no mostrar 00:00 antes de tiempo.
@@ -332,6 +434,17 @@ export function formatClock(ms: number, options?: { hours?: boolean }): string {
     return `${hours}:${minutes}:${seconds}`;
   }
   return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${seconds}`;
+}
+
+/**
+ * Lo que marca el reloj: lo que le falta a la fase o, si ya cumplió su tiempo y espera que la pasen
+ * a mano, el tiempo de más con un "+" adelante ("+02:15").
+ */
+export function displayClock(timer: ActiveTimer, now: number): string {
+  const hours = isExam(timer.config);
+  if (!timer.waiting) return formatClock(remainingMs(timer, now), { hours });
+  // Hacia arriba se cuentan los segundos ya cumplidos (formatClock redondea para arriba, pensado para una cuenta regresiva).
+  return `+${formatClock(Math.floor(overtimeMs(timer, now) / 1000) * 1000, { hours })}`;
 }
 
 /** Lo mínimo de foco para que valga la pena preguntar si guardar una sesión que se corta. */
@@ -356,7 +469,10 @@ export function isTimerState(value: unknown): value is TimerState {
   if (typeof value !== "object" || value === null) return false;
   const state = value as Record<string, unknown>;
   if (state.status === "idle") return true;
-  if (state.status === "finished") return typeof state.summary === "object" && state.summary !== null;
+  if (state.status === "finished") {
+    // El timer guardado para volver atrás es opcional, pero si está tiene que servir.
+    return typeof state.summary === "object" && state.summary !== null && (state.resumable === undefined || ((state.resumable as { status?: unknown }).status === "active" && isTimerState(state.resumable)));
+  }
   if (state.status !== "active") return false;
   const config = state.config as Record<string, unknown> | undefined;
   return (

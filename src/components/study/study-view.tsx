@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, GraduationCap, History, Maximize2, Minimize2, Play, SlidersHorizontal, Sparkles, Timer, Volume2, VolumeX } from "lucide-react";
+import { BookOpenCheck, GraduationCap, History, Maximize2, Minimize2, Play, Plus, SlidersHorizontal, Sparkles, Timer, Undo2, Volume2, VolumeX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Dialog as DialogPrimitive } from "radix-ui";
@@ -16,7 +16,17 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { playSound, SOUND_KINDS, type SoundKind } from "@/lib/chime";
 import { activeSubjects } from "@/lib/domain/subjects";
-import { CUSTOM_LIMITS, EXAM_MINUTES, isExam, isIncomplete, tasksCompletedBetween, type PresetKey, type SessionSummary } from "@/lib/domain/timer";
+import {
+  canAddCycle,
+  canUndoFinish,
+  CUSTOM_LIMITS,
+  EXAM_MINUTES,
+  isExam,
+  isIncomplete,
+  tasksCompletedBetween,
+  type FinishedTimer,
+  type PresetKey,
+} from "@/lib/domain/timer";
 import { useStudyMutations } from "@/lib/queries/study";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTasks } from "@/lib/queries/tasks";
@@ -159,7 +169,7 @@ export function StudyView() {
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
 
-      {timer.status === "finished" ? <SummaryDialog summary={timer.summary} /> : null}
+      {timer.status === "finished" ? <SummaryDialog state={timer} /> : null}
       <WrappedDialog open={wrapped} onOpenChange={setWrapped} />
     </PageFrame>
   );
@@ -324,8 +334,16 @@ function SoundPopover() {
   );
 }
 
-/** Resumen al terminar, detener o reiniciar: tiempos reales, ciclos y lo que se tildó. Guardar o descartar. */
-function SummaryDialog({ summary }: { summary: SessionSummary }) {
+/**
+ * Resumen al terminar, detener o reiniciar: tiempos reales, ciclos y lo que se tildó. Guardar o descartar.
+ * - Si la cortó el usuario pudo ser sin querer: se puede volver atrás (botón, Esc o tocando afuera) y la
+ *   sesión sigue donde estaba.
+ * - Si llegó sola al final hay que decidir (no se cierra tocando afuera), y se puede agregar un ciclo.
+ */
+function SummaryDialog({ state }: { state: FinishedTimer }) {
+  const { summary } = state;
+  const undoable = canUndoFinish(state);
+  const extendable = canAddCycle(state);
   const t = useTranslations();
   const duration = useDuration();
   const tasksQuery = useTasks();
@@ -355,6 +373,13 @@ function SummaryDialog({ summary }: { summary: SessionSummary }) {
     toast(t("session_discarded"));
   }
 
+  /** Terminarla fue sin querer: la sesión sigue donde estaba. */
+  function goBack() {
+    if (saving) return;
+    studyStore.undoFinish();
+    toast(t("session_resumed"));
+  }
+
   const stat = (value: string | number, label: string) => (
     <div className="summary-stat">
       <div className="v">{value}</div>
@@ -363,14 +388,15 @@ function SummaryDialog({ summary }: { summary: SessionSummary }) {
   );
 
   return (
-    <Dialog open>
+    <Dialog open onOpenChange={(open) => !open && undoable && goBack()}>
       <DialogContent
         title={exam ? t("exam_summary") : t("session_summary")}
         description={isIncomplete(summary) ? t("session_incomplete", { done: summary.cyclesCompleted, total: summary.cycles ?? 0 }) : undefined}
-        size="sm"
+        // Con un tercer botón (volver o agregar un ciclo) el pie necesita más ancho.
+        size={undoable || extendable ? "md" : "sm"}
         hideClose
-        onEscapeKeyDown={(event) => event.preventDefault()}
-        onInteractOutside={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => !undoable && event.preventDefault()}
+        onInteractOutside={(event) => !undoable && event.preventDefault()}
       >
         <DialogBody>
           <div className="summary-stats">
@@ -391,8 +417,22 @@ function SummaryDialog({ summary }: { summary: SessionSummary }) {
           ) : (
             <p className="field-hint">{t("summary_tasks_none")}</p>
           )}
+          {extendable ? <p className="field-hint">{t("add_cycle_hint")}</p> : null}
         </DialogBody>
         <DialogFooter>
+          {undoable ? (
+            <Button variant="ghost" onClick={goBack} disabled={saving}>
+              <Undo2 size={18} />
+              {exam ? t("back_to_exam") : t("back_to_session")}
+            </Button>
+          ) : null}
+          {extendable ? (
+            <Button variant="ghost" onClick={() => studyStore.addCycle()} disabled={saving}>
+              <Plus size={18} />
+              {t("add_cycle")}
+            </Button>
+          ) : null}
+          <span className="spacer" />
           <Button onClick={discard} disabled={saving}>
             {t("discard")}
           </Button>

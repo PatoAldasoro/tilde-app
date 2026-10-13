@@ -75,7 +75,9 @@ test("sin conexión: se sigue usando, los cambios sobreviven a recargar y a camb
   await savedForOffline(page);
 
   await offline(context, page);
-  await expect(page.locator(".toast")).toContainText("Sin conexión. Se puede seguir usando");
+  // El aviso tarda unos segundos: un corte de un instante (el Wi-Fi que se reconecta) no molesta.
+  await expect(page.locator(".toast")).toHaveCount(0);
+  await expect(page.locator(".toast")).toContainText("Sin conexión. Se puede seguir usando", { timeout: 10_000 });
 
   // Tildar, agregar y cambiar una preferencia: todo responde igual que siempre.
   await today(page).getByRole("checkbox", { name: "Marcar como completada: Uno" }).click();

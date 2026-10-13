@@ -3,15 +3,17 @@
 import { useSyncExternalStore } from "react";
 import { isSoundKind, type SoundKind } from "@/lib/chime";
 import {
+  addCycle,
   adjust,
+  advance,
   comeBack,
   CUSTOM_DEFAULT,
   clampCustom,
   configFor,
   DEFAULT_CONFIG,
+  endSession,
   EXAM_DEFAULT_MINUTES,
   examConfig,
-  finish,
   IDLE,
   isExam,
   isTimerState,
@@ -19,11 +21,14 @@ import {
   pause,
   restartPhase,
   resume,
+  setHold,
   skipBreak,
   skipFocus,
   start,
   tick,
+  undoFinish,
   worthSaving,
+  type HoldOptions,
   type PresetKey,
   type TimerConfig,
   type TimerEvent,
@@ -52,6 +57,9 @@ export type StudySetup = {
   examMinutes: number;
   studyPreset: Exclude<PresetKey, "exam">;
   awayAlarm: boolean;
+  /** Pasar de fase a mano: al terminar el foco y/o el descanso, el timer espera a que lo toquen. */
+  holdFocus: boolean;
+  holdBreak: boolean;
 };
 
 export type StudySnapshot = { setup: StudySetup; timer: TimerState; now: number };
@@ -70,6 +78,8 @@ const INITIAL: StudySnapshot = {
     examMinutes: EXAM_DEFAULT_MINUTES,
     studyPreset: "25-5",
     awayAlarm: true,
+    holdFocus: false,
+    holdBreak: false,
   },
   timer: IDLE,
   now: 0,
@@ -91,6 +101,8 @@ function load() {
       ...merged,
       soundKind: isSoundKind(merged.soundKind) ? merged.soundKind : INITIAL.setup.soundKind,
       volume: typeof merged.volume === "number" && merged.volume >= 0 && merged.volume <= 1 ? merged.volume : INITIAL.setup.volume,
+      holdFocus: merged.holdFocus === true,
+      holdBreak: merged.holdBreak === true,
     };
     snapshot = { setup, timer: isTimerState(saved.timer) ? saved.timer : IDLE, now: Date.now() };
   } catch {
@@ -174,6 +186,15 @@ export const studyStore = {
   setVolume(volume: number) {
     commit({ setup: { ...getSnapshot().setup, volume: Math.max(0, Math.min(1, volume)) } });
   },
+  /** Pasar de fase a mano. Se puede cambiar con la sesión en curso: vale desde la próxima fase que termine. */
+  setHold(patch: Partial<HoldOptions>) {
+    const { setup, timer } = getSnapshot();
+    const hold: HoldOptions = { afterFocus: setup.holdFocus, afterBreak: setup.holdBreak, ...patch };
+    commit({
+      setup: { ...setup, holdFocus: hold.afterFocus, holdBreak: hold.afterBreak },
+      timer: timer.status === "active" ? setHold(timer, hold) : timer,
+    });
+  },
 
   /**
    * Iniciar, pausar o reanudar: el botón grande. Un examen en marcha no se pausa desde acá
@@ -182,7 +203,9 @@ export const studyStore = {
   toggle() {
     const { setup, timer } = getSnapshot();
     const now = Date.now();
-    if (timer.status === "idle") commit({ timer: start(setup.config, setup.subjectId, now) });
+    if (timer.status === "idle") {
+      commit({ timer: start(setup.config, setup.subjectId, now, { afterFocus: setup.holdFocus, afterBreak: setup.holdBreak }) });
+    }
     else if (timer.status !== "active") return;
     else if (!timer.running) commit({ timer: resume(timer, now) });
     else if (!isExam(timer.config)) commit({ timer: pause(timer, now) });
@@ -196,13 +219,18 @@ export const studyStore = {
 
   /**
    * Reiniciar. Si ya hay tiempo de foco que vale la pena, no se tira: queda el resumen para
-   * decidir si guardar la sesión (incompleta) o descartarla.
+   * decidir si guardar la sesión (incompleta), descartarla o volver atrás.
    */
   reset() {
     const { timer } = getSnapshot();
     const now = Date.now();
-    if (timer.status === "active" && worthSaving(timer, now)) commit({ timer: { status: "finished", summary: finish(timer, now) } });
+    if (timer.status === "active" && worthSaving(timer, now)) commit({ timer: endSession(timer, now) });
     else commit({ timer: IDLE });
+  },
+  /** Pasar a la fase siguiente, cuando el timer está esperando que lo toquen. */
+  advance() {
+    const { timer } = getSnapshot();
+    if (timer.status === "active") commit({ timer: advance(timer, Date.now()) });
   },
 
   /** Vuelve al estado inicial sin preguntar (después de guardar o de descartar el resumen). */
@@ -251,10 +279,18 @@ export const studyStore = {
     return next.awayCount ?? 0;
   },
 
-  /** Terminar o detener: deja el resumen listo para guardar o descartar. */
+  /** Terminar o detener: deja el resumen listo para guardar, descartar o volver atrás. */
   finish() {
     const { timer } = getSnapshot();
-    if (timer.status === "active") commit({ timer: { status: "finished", summary: finish(timer, Date.now()) } });
+    if (timer.status === "active") commit({ timer: endSession(timer, Date.now()) });
+  },
+  /** Se terminó sin querer: la sesión sigue donde estaba. */
+  undoFinish() {
+    commit({ timer: undoFinish(getSnapshot().timer, Date.now()) });
+  },
+  /** La sesión llegó al final y se quiere seguir: un descanso y un foco más. */
+  addCycle() {
+    commit({ timer: addCycle(getSnapshot().timer, Date.now()) });
   },
 
   /** Avanza el timer hasta ahora y devuelve los cambios de fase ocurridos. */

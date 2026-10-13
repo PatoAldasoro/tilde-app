@@ -113,6 +113,9 @@ function ProfileThemeSync() {
   return null;
 }
 
+/** Cuánto tiene que durar un corte para avisarlo con un toast. */
+const OFFLINE_TOAST_DELAY_MS = 4000;
+
 /**
  * Lo que hace que la app se pueda usar sin conexión: carga lo guardado en el dispositivo antes de
  * que las pantallas lean datos, lo mantiene al día, sube los cambios pendientes y avisa lo que pasa.
@@ -153,11 +156,12 @@ function useOfflineData(queryClient: QueryClient, userId: string, serverNow: str
 
   useEffect(() => registerServiceWorker(locale), [locale]);
 
-  // Avisa una vez al quedarse sin conexión.
-  const wasOnline = useRef(true);
+  // Avisa al quedarse sin conexión, pero no por un corte de un par de segundos (un Wi-Fi que se
+  // reconecta): para eso alcanza con el indicador de la barra, que sí aparece enseguida.
   useEffect(() => {
-    if (wasOnline.current && !online) toast(translate.current("offline_toast"));
-    wasOnline.current = online;
+    if (online) return;
+    const timer = setTimeout(() => toast(translate.current("offline_toast")), OFFLINE_TOAST_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [online]);
 
   return ready;

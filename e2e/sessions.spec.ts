@@ -63,9 +63,12 @@ test("reiniciar con tiempo de foco ofrece guardar la sesión incompleta", async 
 
 test("ajustar el tiempo: atrasar, adelantar, cortar el foco y volver a empezar la fase", async ({ page }) => {
   await page.goto("/app/study");
-  const adjust = card(page).getByRole("button", { name: /^Ajustar el tiempo/ });
-  // Sin sesión en curso no hay nada que ajustar.
-  await expect(adjust).toHaveAttribute("aria-disabled", "true");
+  const adjust = card(page).getByRole("button", { name: "Opciones del timer" });
+  // Sin sesión en curso el menú abre igual, pero todavía no hay tiempo que ajustar.
+  await adjust.click();
+  await expect(page.locator(".adjust-pop")).toContainText("Con una sesión en curso, acá también se ajusta el tiempo.");
+  await expect(page.locator(".adjust-pop").getByRole("group")).toHaveCount(0);
+  await page.keyboard.press("Escape");
 
   await card(page).getByRole("button", { name: "Iniciar", exact: true }).click();
   await page.clock.fastForward("10:00");
@@ -174,7 +177,7 @@ test("modo examen: de corrido, en rojo, a pantalla completa, sin tareas, con la 
   await expect(page).toHaveTitle(/^1:(29|30):\d\d · Examen · Tilde$/);
   // No hay descansos ni se ajusta el tiempo, y el botón principal entrega: a la vista no hay cómo pausar.
   await expect(focus.getByRole("button", { name: "Pausar", exact: true })).toHaveCount(0);
-  await expect(focus.getByRole("button", { name: /^Ajustar el tiempo/ })).toHaveCount(0);
+  await expect(focus.getByRole("button", { name: "Opciones del timer" })).toHaveCount(0);
   await expect(focus.getByRole("button", { name: /^Saltar descanso/ })).toHaveAttribute("aria-disabled", "true");
   await expect(focus.getByRole("button", { name: "Entregar el examen" })).toBeVisible();
 

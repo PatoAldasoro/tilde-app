@@ -173,6 +173,11 @@
 .session-table .num { font-variant-numeric: tabular-nums; }
 .session-table td.actions { position: absolute; top: var(--space-1); right: var(--space-1); }
 
+/* El timer espera que lo pasen de fase: el botón para hacerlo, y el anillo completo. */
+.advance-btn { min-width: min(260px, 100%); }
+.adjust-pop .section-label { margin-top: var(--space-1); }
+.adjust-pop .switch { width: 100%; }
+
 /* Menús del timer: nunca más anchos que la pantalla. */
 .adjust-pop { display: flex; flex-direction: column; gap: var(--space-2); width: min(308px, calc(100vw - 32px)); max-width: none; }
 .sound-pop { display: flex; flex-direction: column; gap: var(--space-3); width: min(288px, calc(100vw - 32px)); }

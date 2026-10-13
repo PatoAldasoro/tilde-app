@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/toast";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { playAlarm, playSound } from "@/lib/chime";
-import { formatClock, isExam, remainingMs, type TimerEvent } from "@/lib/domain/timer";
+import { displayClock, isExam, type TimerEvent } from "@/lib/domain/timer";
 import { studyStore, useStudy } from "@/lib/study-store";
 import { startTicker } from "@/lib/ticker";
 
@@ -27,6 +27,9 @@ export function advanceStudyTimer() {
   const last = events[events.length - 1];
   if (last.type === "break-started") toast(t("break_started", { n: last.minutes }));
   else if (last.type === "focus-started") toast(t("focus_started", { n: last.cycle, total: last.cycles }));
+  // Pasar de fase a mano: la fase cumplió su tiempo y el timer espera.
+  else if (last.type === "focus-over") toast(t(last.last ? "focus_over_last" : "focus_over"));
+  else if (last.type === "break-over") toast(t("break_over"));
   else if (pathname !== "/app/study") {
     toast(t("session_finished"), { action: { label: t("see_summary"), onAction: () => push?.("/app/study") } });
   }
@@ -111,7 +114,7 @@ export function StudyTimerRunner() {
     }
     const examMode = isExam(timer.config);
     const phase = !timer.running ? t("paused") : examMode ? t("phase_exam") : t(timer.phase === "focus" ? "phase_focus" : "phase_break");
-    const title = t("timer_title", { time: formatClock(remainingMs(timer, now), { hours: examMode }), phase });
+    const title = t("timer_title", { time: displayClock(timer, now), phase });
     if (document.title !== ownTitle.current) pageTitle.current = document.title;
     document.title = title;
     ownTitle.current = title;

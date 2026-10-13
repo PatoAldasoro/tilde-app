@@ -288,6 +288,11 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
       conserva todo salvo el timer flotante, que es una ventana del navegador. La página de "sin conexión" del
       service worker tiene sus textos y colores escritos a mano, en los dos idiomas: ahí no llegan ni los
       mensajes ni los tokens.
+    - El indicador de la barra aparece apenas se corta la conexión; el aviso (toast) recién si el corte dura más
+      de 4 segundos. Un Wi-Fi que se reconecta cada tanto no tiene que llenar la pantalla de avisos.
+    - Los tests e2e dependen de que la máquina tenga red: si el Wi-Fi se corta durante la corrida, el navegador
+      pasa a "sin conexión", la app deja de sincronizar (es lo que tiene que hacer) y fallan los tests que esperan
+      ver el cambio en la base. Volver a correrlos con la red estable.
     - Los datos que dependen de lo guardado en el dispositivo se muestran recién al terminar la hidratación
       (`useHydrated`): mientras tanto se dibuja lo mismo que el servidor.
 47. **Diseño mobile first.** La app se usa desde un teléfono de 320 px hasta el escritorio. No se le agregaron
@@ -322,3 +327,23 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
 48. **Instalable.** Manifiesto (`src/app/manifest.ts`) e íconos en `public/icons/`, generados del logo: Tilde se
     puede agregar a la pantalla de inicio y abre directo en la app. Junto con el modo sin conexión (46), funciona
     como una app instalada.
+49. **Terminar una sesión se puede deshacer.** "Terminar sesión", "Reiniciar", "Cortar el foco y terminar" y
+    "Entregar el examen" pueden tocarse sin querer. El resumen que abren ahora tiene "Volver a la sesión" (o "al
+    examen"), y también se vuelve con Esc o tocando afuera. La sesión sigue donde estaba: corriendo o en pausa, con
+    lo que le faltaba; el rato que el resumen estuvo en pantalla no cuenta. Tocar afuera **vuelve**, no descarta:
+    descartar sigue siendo un botón.
+50. **Agregar un ciclo.** Cuando la sesión llega sola al final del último ciclo, el resumen ofrece guardar, descartar
+    o "Agregar un ciclo": arranca un descanso y después un foco más, y todo queda como una sola sesión. Ese resumen
+    no se cierra con Esc ni tocando afuera (no hay adónde volver: hay que decidir). Un examen no tiene ciclos, así
+    que ahí no aparece.
+51. **Opciones del timer y pasar de fase a mano.** El menú que ajustaba el tiempo pasa a ser el de opciones del timer,
+    y abre también sin sesión en curso. Suma dos interruptores, "Esperar al terminar el foco" y "Esperar al terminar
+    el descanso", que se pueden cambiar antes o durante la sesión y se recuerdan en el dispositivo.
+    - Con la espera activa, al cumplirse el tiempo el timer avisa (sonido y aviso) y no sigue solo: muestra un
+      botón ("Empezar el descanso", "Empezar el foco") y el reloj cuenta hacia arriba ("+02:15").
+    - **El tiempo extra cuenta** para esa fase: si se usó para terminar un ejercicio, es foco. La fase siguiente
+      empieza entera cuando se la toca.
+    - El último foco también espera ("Terminar la sesión"): al tocarlo la sesión queda completa, no incompleta.
+    - Un examen nunca espera: cuando se cumple el tiempo, termina.
+    - Decisión propia: son dos interruptores y no uno, porque esperar antes del descanso (terminar el ejercicio) y
+      esperar antes del foco (no volver hasta estar sentado) son necesidades distintas.
