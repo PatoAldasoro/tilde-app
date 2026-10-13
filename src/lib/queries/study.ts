@@ -7,7 +7,7 @@ import type { PresetKey, SessionSummary } from "@/lib/domain/timer";
 import type { StudySessionRow, StudySessionTaskRow } from "@/lib/supabase/types";
 import { deleteRows, insertRows, newId, nowIso, patchById, removeByIds, updateRow, useRows, useWrite } from "./table";
 
-export const useStudySessions = () => useRows("study_sessions", "started_at");
+export const useStudySessions = () => useRows("study_sessions");
 export const useStudySessionTasks = () => useRows("study_session_tasks");
 
 /** Una tarea anotada en una sesión: enlazada a una tarea real (`id`) o solo su título. */
@@ -61,10 +61,7 @@ export function useStudyMutations() {
         const links = linkRows(session.id, completedTasks, now);
         return write(
           { study_sessions: (rows) => [...rows, session], study_session_tasks: (rows) => [...rows, ...links] },
-          async () => {
-            await insertRows("study_sessions", [session]);
-            await insertRows("study_session_tasks", links);
-          },
+          [insertRows("study_sessions", [session]), insertRows("study_session_tasks", links)],
         );
       },
 
@@ -76,10 +73,7 @@ export function useStudyMutations() {
         const links = linkRows(session.id, tasks, now);
         void write(
           { study_sessions: (rows) => [...rows, session], study_session_tasks: (rows) => [...rows, ...links] },
-          async () => {
-            await insertRows("study_sessions", [session]);
-            await insertRows("study_session_tasks", links);
-          },
+          [insertRows("study_sessions", [session]), insertRows("study_session_tasks", links)],
         );
         return session;
       },
@@ -95,11 +89,7 @@ export function useStudyMutations() {
             study_sessions: (rows) => patchById(rows, id, patch),
             study_session_tasks: (rows) => [...removeByIds(rows, oldIds), ...links],
           },
-          async () => {
-            await updateRow("study_sessions", id, patch);
-            await deleteRows("study_session_tasks", oldIds);
-            await insertRows("study_session_tasks", links);
-          },
+          [updateRow("study_sessions", id, patch), deleteRows("study_session_tasks", oldIds), insertRows("study_session_tasks", links)],
         );
       },
 
@@ -109,7 +99,7 @@ export function useStudyMutations() {
         const links = cachedLinks().filter((link) => link.session_id === id);
         void write(
           { study_sessions: (rows) => removeByIds(rows, [id]), study_session_tasks: (rows) => rows.filter((link) => link.session_id !== id) },
-          () => deleteRows("study_sessions", [id]),
+          deleteRows("study_sessions", [id]),
         );
         return { session, links };
       },
@@ -119,10 +109,7 @@ export function useStudyMutations() {
         if (!session) return;
         void write(
           { study_sessions: (rows) => [...rows, session], study_session_tasks: (rows) => [...rows, ...links] },
-          async () => {
-            await insertRows("study_sessions", [session]);
-            await insertRows("study_session_tasks", links);
-          },
+          [insertRows("study_sessions", [session]), insertRows("study_session_tasks", links)],
         );
       },
     };

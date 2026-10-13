@@ -812,5 +812,20 @@
   "sort_hint": "Orden: {name}. Para arrastrar las tareas, volver a «Mi orden».",
   "sort_back": "Volver a mi orden",
   "drag_mini_task": "Mover «{title}»",
-  "today_tasks_dnd": "Para mover la tarea, presionar Espacio o Enter. Con las flechas se mueve; Espacio la suelta y Escape cancela."
+  "today_tasks_dnd": "Para mover la tarea, presionar Espacio o Enter. Con las flechas se mueve; Espacio la suelta y Escape cancela.",
+  "sync_offline": "Sin conexión",
+  "sync_offline_text": "Se puede seguir usando: los cambios se guardan en este dispositivo y se suben solos al volver la conexión.",
+  "sync_pending": "{n, plural, one {{n} cambio sin subir} other {{n} cambios sin subir}}",
+  "sync_syncing": "Sincronizando",
+  "sync_syncing_text": "Se están subiendo los cambios.",
+  "sync_waiting": "Sin respuesta del servidor",
+  "sync_waiting_text": "Lo pendiente no se pudo subir. Queda guardado en este dispositivo y se reintenta solo cada tanto.",
+  "sync_retry": "Reintentar ahora",
+  "sync_rejected": "{n, plural, one {Un cambio no se pudo guardar y se descartó.} other {{n} cambios no se pudieron guardar y se descartaron.}}",
+  "sync_done": "{n, plural, one {Se subió {n} cambio pendiente} other {Se subieron {n} cambios pendientes}}",
+  "offline_toast": "Sin conexión. Se puede seguir usando: los cambios se suben al volver.",
+  "signout_pending_q": "¿Cerrar sesión con cambios sin subir?",
+  "signout_pending_body": "{n, plural, one {Hay {n} cambio que todavía no se subió} other {Hay {n} cambios que todavía no se subieron}}. Al cerrar sesión se pierden.",
+  "signout_anyway": "Cerrar sesión igual",
+  "needs_connection": "Hace falta conexión para esto."
 }

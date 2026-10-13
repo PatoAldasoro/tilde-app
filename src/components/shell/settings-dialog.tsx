@@ -6,12 +6,16 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useProfile, useSessionUser, useUpdateProfile } from "@/components/providers";
 import { Button } from "@/components/ui/button";
+import { confirm } from "@/components/ui/confirm";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { setAccentPreference, useAccentPreference } from "@/hooks/use-accent";
 import { localePrefix } from "@/i18n/routing";
 import type { Weekday } from "@/lib/domain/dates";
+import { clearCache } from "@/lib/offline/cache";
+import { outbox } from "@/lib/offline/outbox";
+import { purgeSavedPages } from "@/lib/offline/service-worker";
 import { getSupabase } from "@/lib/supabase/client";
 import { AccentSwatches } from "./accent-swatches";
 import { LocaleSegmented, ThemeSegmented } from "./preferences";
@@ -40,8 +44,23 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   }
 
   async function signOut() {
+    const pending = outbox.getSnapshot().pending;
+    if (pending > 0) {
+      const ok = await confirm({
+        title: t("signout_pending_q"),
+        body: t("signout_pending_body", { n: pending }),
+        confirmLabel: t("signout_anyway"),
+        danger: true,
+      });
+      if (!ok) return;
+    }
     setSigningOut(true);
-    await getSupabase().auth.signOut();
+    // Sin conexión no se puede avisar al servidor: igual se cierra la sesión de este dispositivo.
+    await getSupabase().auth.signOut({ scope: navigator.onLine ? "global" : "local" }).catch(() => undefined);
+    // Nada de esta cuenta queda guardado en el dispositivo.
+    outbox.clear();
+    clearCache(user.id);
+    await purgeSavedPages();
     queryClient.clear();
     window.location.assign(localePrefix(locale) || "/");
   }

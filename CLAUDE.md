@@ -66,7 +66,7 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
    nada que dependa solo de hover, foco visible, todo operable con teclado, `prefers-reduced-motion`.
 8. **Secretos:** nunca en el repo. `.env.local` está ignorado; `.env.example` documenta las variables.
    `SUPABASE_SERVICE_ROLE_KEY` solo en scripts y tests locales (`scripts/lib/test-session.ts`), nunca en producción.
-9. **Fuera de alcance:** amigos y lo social, mobile, notificaciones, kanban, offline, notas parciales múltiples,
+9. **Fuera de alcance:** amigos y lo social, notificaciones, kanban, notas parciales múltiples,
    días no laborables y puentes, exportación de datos y escribir en calendarios externos. Sí hay: importar tareas
    (JSON), importar fechas (.ics o calendario vinculado, siempre con vista previa) y exportar el horario como imagen.
 10. **Servidor:** `/api/ical` es lo único que descarga una dirección dada por el usuario. Solo acepta los servicios
@@ -77,7 +77,14 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 - Las clases de `tilde.css` no deben llamarse igual que una utilidad de Tailwind (la utilidad gana: por eso el
   bloque del Horario es `.sched-block` y no `.block`).
 - Componentes cliente con `"use client"`; las páginas (`page.tsx`) son de servidor y solo arman metadata + vista.
-- Mutaciones: `useOptimistic` de `src/lib/queries/table.ts` (aplica en caché, revierte si falla).
+- Mutaciones: `useWrite` / `useOptimistic` de `src/lib/queries/table.ts`. Aplican el cambio en caché y anotan
+  **operaciones** (`insertRows`, `updateRow`, `deleteRows`: datos, no funciones) en la cola de cambios pendientes
+  (`src/lib/offline/outbox.ts`), que las sube cuando hay conexión. Nunca escribir en Supabase directo desde un
+  componente: no funcionaría sin conexión. Si una baja arrastra otras filas en la base (cascadas), la caché tiene
+  que reflejarlo en el mismo `write`.
+- Sin conexión: los datos salen de la copia local (`src/lib/offline/cache.ts`) y las pantallas, del service worker
+  (`public/sw.js`). Lo que dependa de datos guardados en el dispositivo se muestra recién después de hidratar
+  (`useHydrated`, ya resuelto dentro de `useRows` y `useProfile`).
 - Los ids se generan en el cliente (`crypto.randomUUID()`), así el optimista y la base coinciden.
 - Confirmaciones con `confirm()` y avisos con `toast()` (`src/components/ui`). Borrados de tareas: toast "Deshacer" de 8 s.
 - La sesión de estudio en curso vive fuera de React (`src/lib/study-store.ts`, persistida en `localStorage`); el timer

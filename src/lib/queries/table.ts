@@ -1,114 +1,125 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { useCallback } from "react";
-import { toast } from "@/components/ui/toast";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
+import type { WriteOp } from "@/lib/domain/outbox";
+import { outbox } from "@/lib/offline/outbox";
 import { getSupabase } from "@/lib/supabase/client";
 import type { Row, TableName, Update } from "@/lib/supabase/types";
 
 /**
- * Acceso genérico a las tablas. Las filas se leen completas (RLS deja ver solo las propias)
- * y cada escritura actualiza la caché de TanStack Query de forma optimista.
+ * Acceso genérico a las tablas. Las filas se leen completas (RLS deja ver solo las propias).
+ * Cada escritura actualiza la caché de TanStack Query al instante y queda anotada en la cola de
+ * cambios pendientes (`lib/offline/outbox.ts`), que la sube cuando hay conexión.
  */
+
+/** Las tablas del usuario y el campo por el que se leen ordenadas. El perfil va aparte (es una sola fila). */
+export const TABLE_ORDER = {
+  subjects: "sort_order",
+  subject_documents: "created_at",
+  tasks: "sort_order",
+  subtasks: "sort_order",
+  calendar_events: "date",
+  calendar_feeds: "created_at",
+  schedule_blocks: "created_at",
+  schedule_events: "created_at",
+  schedule_exceptions: "created_at",
+  study_sessions: "started_at",
+  study_session_tasks: "created_at",
+} as const satisfies Record<Exclude<TableName, "profiles">, string>;
+export type DataTable = keyof typeof TABLE_ORDER;
 
 // El cliente tipado de Supabase no admite un nombre de tabla genérico; los tipos se
 // reponen en las firmas públicas de este archivo.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const table = (name: TableName) => getSupabase().from(name) as any;
 
-function fail(error: { message: string } | null) {
+export async function fetchRows<T extends DataTable>(name: T): Promise<Row<T>[]> {
+  // Con cambios sin subir, lo que devuelva el servidor todavía no los tiene: primero se sube la cola.
+  await outbox.whenIdle();
+  const { data, error } = await table(name).select("*").order(TABLE_ORDER[name], { ascending: true });
   if (error) throw new Error(error.message);
-}
-
-export async function fetchRows<T extends TableName>(name: T, orderBy = "created_at"): Promise<Row<T>[]> {
-  const { data, error } = await table(name).select("*").order(orderBy, { ascending: true });
-  fail(error);
   return data as Row<T>[];
 }
 
-export async function insertRows<T extends TableName>(name: T, rows: Row<T>[]): Promise<void> {
-  if (rows.length === 0) return;
-  const { error } = await table(name).insert(rows);
-  fail(error);
-}
-
-export async function updateRow<T extends TableName>(name: T, id: string, patch: Update<T>): Promise<void> {
-  const { error } = await table(name).update(patch).eq("id", id);
-  fail(error);
-}
-
-export async function deleteRows<T extends TableName>(name: T, ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-  const { error } = await table(name).delete().in("id", ids);
-  fail(error);
-}
-
-export function useRows<T extends TableName>(name: T, orderBy = "created_at") {
-  return useQuery({ queryKey: [name], queryFn: () => fetchRows(name, orderBy) });
-}
-
-type Changes = { [T in TableName]?: (rows: Row<T>[]) => Row<T>[] };
-type WriteOptions = {
-  /** Otras tablas que cambian en el servidor por esta escritura (cascadas, triggers). */
-  alsoInvalidate?: TableName[];
-};
-
-/** Escrituras en vuelo por tabla: se revalida una sola vez, cuando termina la última. */
-const inFlight = new Map<TableName, number>();
-
 /**
- * Escritura optimista sobre una o varias tablas: aplica los cambios en caché al instante,
- * los revierte (con un aviso) si el servidor falla y revalida al terminar.
+ * Las filas de una tabla. Con datos ya cargados (o guardados en el dispositivo) una relectura que
+ * falla no es un error para quien mira: `isError` solo avisa si no hay nada para mostrar.
  */
-export function useWrite() {
-  const queryClient = useQueryClient();
-  const t = useTranslations();
-  return useCallback(
-    async (changes: Changes, run: () => Promise<void>, options?: WriteOptions): Promise<boolean> => {
-      const tables = Object.keys(changes) as TableName[];
-      const previous = tables.map((name) => {
-        void queryClient.cancelQueries({ queryKey: [name] });
-        const rows = queryClient.getQueryData<Row<TableName>[]>([name]);
-        const change = changes[name] as ((rows: Row<TableName>[]) => Row<TableName>[]) | undefined;
-        if (rows && change) queryClient.setQueryData([name], change(rows));
-        inFlight.set(name, (inFlight.get(name) ?? 0) + 1);
-        return [name, rows] as const;
-      });
-      try {
-        await run();
-        return true;
-      } catch {
-        previous.forEach(([name, rows]) => queryClient.setQueryData([name], rows));
-        toast(t("error_generic"));
-        return false;
-      } finally {
-        for (const name of tables) {
-          const left = (inFlight.get(name) ?? 1) - 1;
-          inFlight.set(name, left);
-          if (left === 0) void queryClient.invalidateQueries({ queryKey: [name] });
-        }
-        options?.alsoInvalidate?.forEach((name) => void queryClient.invalidateQueries({ queryKey: [name] }));
-      }
-    },
-    [queryClient, t],
+export function useRows<T extends DataTable>(name: T) {
+  const query = useQuery({ queryKey: [name], queryFn: () => fetchRows(name) });
+  // Lo guardado en el dispositivo puede estar listo antes de que React termine de hidratar una
+  // pantalla: hasta entonces se muestra "cargando", igual que en el HTML del servidor.
+  const hydrated = useHydrated();
+  const { data, isPending, isLoadingError, refetch } = query;
+  return useMemo(
+    () =>
+      hydrated
+        ? { data, isPending, isError: isLoadingError, isSuccess: data !== undefined, refetch }
+        : { data: undefined, isPending: true, isError: false, isSuccess: false, refetch },
+    [hydrated, data, isPending, isLoadingError, refetch],
   );
 }
 
-type OptimisticOptions<T extends TableName, V> = {
+/** Deja en caché todas las tablas, también las de secciones que no se abrieron: así cualquiera se puede usar sin conexión. */
+export function prefetchAllTables(queryClient: QueryClient) {
+  for (const name of Object.keys(TABLE_ORDER) as DataTable[]) {
+    void queryClient.prefetchQuery({ queryKey: [name], queryFn: () => fetchRows(name), staleTime: 5 * 60_000 });
+  }
+}
+
+// ---------- operaciones (lo que se anota en la cola) ----------
+
+export const insertRows = <T extends DataTable>(name: T, rows: Row<T>[]): WriteOp => ({ kind: "insert", table: name, rows });
+export const updateRow = <T extends DataTable>(name: T, id: string, patch: Update<T>): WriteOp => ({ kind: "update", table: name, id, patch });
+export const deleteRows = <T extends DataTable>(name: T, ids: string[]): WriteOp => ({ kind: "delete", table: name, ids });
+
+type Changes = { [T in DataTable]?: (rows: Row<T>[]) => Row<T>[] };
+type Ops = WriteOp | readonly (WriteOp | null | false | undefined)[];
+type WriteOptions = {
+  /** Otras tablas que cambian en el servidor por esta escritura (cascadas, triggers). */
+  alsoInvalidate?: DataTable[];
+};
+
+/**
+ * Escritura optimista sobre una o varias tablas: aplica los cambios en caché al instante y anota
+ * las operaciones en la cola. Con conexión se suben enseguida; sin conexión quedan guardadas en el
+ * dispositivo. Cuando la cola se vacía se relee lo que tocó (si el servidor rechazó algo, ahí se
+ * corrige lo que se veía).
+ */
+export function useWrite() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (changes: Changes, ops: Ops, options?: WriteOptions): Promise<boolean> => {
+      for (const name of Object.keys(changes) as DataTable[]) {
+        // Una lectura en vuelo no tiene este cambio: se descarta.
+        void queryClient.cancelQueries({ queryKey: [name] });
+        const rows = queryClient.getQueryData<Row<DataTable>[]>([name]);
+        const change = changes[name] as ((rows: Row<DataTable>[]) => Row<DataTable>[]) | undefined;
+        if (rows && change) queryClient.setQueryData([name], change(rows));
+      }
+      outbox.enqueue(Array.isArray(ops) ? ops : [ops as WriteOp], [...Object.keys(changes), ...(options?.alsoInvalidate ?? [])]);
+      return Promise.resolve(true);
+    },
+    [queryClient],
+  );
+}
+
+type OptimisticOptions<T extends DataTable, V> = {
   /** Cómo queda la lista en caché apenas se dispara la mutación. */
   apply: (rows: Row<T>[], variables: V) => Row<T>[];
-  /** La escritura real en Supabase. */
-  run: (variables: V) => Promise<void>;
-  alsoInvalidate?: TableName[];
+  /** Las operaciones que hay que subir a Supabase. */
+  run: (variables: V) => Ops;
+  alsoInvalidate?: DataTable[];
 };
 
 /** Atajo de useWrite para mutaciones sobre una sola tabla. */
-export function useOptimistic<T extends TableName, V>(name: T, { apply, run, alsoInvalidate }: OptimisticOptions<T, V>) {
+export function useOptimistic<T extends DataTable, V>(name: T, { apply, run, alsoInvalidate }: OptimisticOptions<T, V>) {
   const write = useWrite();
   return {
     mutate: (variables: V) =>
-      void write({ [name]: (rows: Row<T>[]) => apply(rows, variables) } as Changes, () => run(variables), { alsoInvalidate }),
+      void write({ [name]: (rows: Row<T>[]) => apply(rows, variables) } as Changes, run(variables), { alsoInvalidate }),
   };
 }
 

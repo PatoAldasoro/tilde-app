@@ -11,6 +11,7 @@ import { useScrolled } from "@/hooks/use-scrolled";
 import { cn } from "@/lib/utils";
 import { Drawer } from "./drawer";
 import { SettingsDialog } from "./settings-dialog";
+import { SyncStatus } from "./sync-status";
 
 type ShellValue = { drawerOpen: boolean; openDrawer: () => void; openSettings: () => void };
 
@@ -82,6 +83,7 @@ export function PageFrame({ title, width = "std", sub, actions, children }: Page
         <h1 className="topbar-title">{title}</h1>
         {sub ? <span className="topbar-sub">{sub}</span> : null}
         <div className="topbar-spacer" />
+        <SyncStatus />
         <div className="topbar-actions">{actions}</div>
       </header>
       <main className={cn("page", width === "wide" && "page-wide", width === "narrow" && "page-narrow")} id="main" tabIndex={-1}>

@@ -38,12 +38,10 @@ export function useScheduleMutations() {
           created_at: new Date(base + index).toISOString(),
           ...input,
         }));
-        void write({ schedule_blocks: (current) => [...current, ...rows] }, () => insertRows("schedule_blocks", rows));
+        void write({ schedule_blocks: (current) => [...current, ...rows] }, insertRows("schedule_blocks", rows));
       },
       updateBlock(id: string, input: BlockInput) {
-        void write({ schedule_blocks: (rows) => patchById(rows, id, input) }, () =>
-          updateRow("schedule_blocks", id, input as Update<"schedule_blocks">),
-        );
+        void write({ schedule_blocks: (rows) => patchById(rows, id, input) }, updateRow("schedule_blocks", id, input as Update<"schedule_blocks">));
       },
       removeBlock(id: string) {
         void write(
@@ -51,18 +49,16 @@ export function useScheduleMutations() {
             schedule_blocks: (rows) => removeByIds(rows, [id]),
             schedule_exceptions: (rows) => rows.filter((row) => !(row.target_type === "block" && row.target_id === id)),
           },
-          () => deleteRows("schedule_blocks", [id]),
+          deleteRows("schedule_blocks", [id]),
         );
       },
 
       addActivity(input: ActivityInput) {
         const row: ScheduleEventRow = { id: newId(), user_id: user.id, created_at: nowIso(), ...input };
-        void write({ schedule_events: (rows) => [...rows, row] }, () => insertRows("schedule_events", [row]));
+        void write({ schedule_events: (rows) => [...rows, row] }, insertRows("schedule_events", [row]));
       },
       updateActivity(id: string, input: ActivityInput) {
-        void write({ schedule_events: (rows) => patchById(rows, id, input) }, () =>
-          updateRow("schedule_events", id, input as Update<"schedule_events">),
-        );
+        void write({ schedule_events: (rows) => patchById(rows, id, input) }, updateRow("schedule_events", id, input as Update<"schedule_events">));
       },
       removeActivity(id: string) {
         void write(
@@ -70,7 +66,7 @@ export function useScheduleMutations() {
             schedule_events: (rows) => removeByIds(rows, [id]),
             schedule_exceptions: (rows) => rows.filter((row) => !(row.target_type === "event" && row.target_id === id)),
           },
-          () => deleteRows("schedule_events", [id]),
+          deleteRows("schedule_events", [id]),
         );
       },
 
@@ -82,16 +78,12 @@ export function useScheduleMutations() {
         const existing = findException(target);
         if (kind === null) {
           if (!existing) return;
-          void write({ schedule_exceptions: (rows) => removeByIds(rows, [existing.id]) }, () =>
-            deleteRows("schedule_exceptions", [existing.id]),
-          );
+          void write({ schedule_exceptions: (rows) => removeByIds(rows, [existing.id]) }, deleteRows("schedule_exceptions", [existing.id]));
           return;
         }
         if (existing) {
           if (existing.kind === kind) return;
-          void write({ schedule_exceptions: (rows) => patchById(rows, existing.id, { kind }) }, () =>
-            updateRow("schedule_exceptions", existing.id, { kind }),
-          );
+          void write({ schedule_exceptions: (rows) => patchById(rows, existing.id, { kind }) }, updateRow("schedule_exceptions", existing.id, { kind }));
           return;
         }
         const row: ScheduleExceptionRow = {
@@ -103,7 +95,7 @@ export function useScheduleMutations() {
           kind,
           created_at: nowIso(),
         };
-        void write({ schedule_exceptions: (rows) => [...rows, row] }, () => insertRows("schedule_exceptions", [row]));
+        void write({ schedule_exceptions: (rows) => [...rows, row] }, insertRows("schedule_exceptions", [row]));
       },
     };
   }, [write, user.id, queryClient]);

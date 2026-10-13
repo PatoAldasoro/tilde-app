@@ -11,6 +11,8 @@ import { toast } from "@/components/ui/toast";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { setThemePreference } from "@/hooks/use-theme";
 import { Link } from "@/i18n/navigation";
+import { clearCache } from "@/lib/offline/cache";
+import { purgeSavedPages } from "@/lib/offline/service-worker";
 import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +23,19 @@ function AuthErrorNotice() {
   useEffect(() => {
     if (error) toast(t("auth_error"));
   }, [error, t]);
+  return null;
+}
+
+/**
+ * La landing solo se ve sin sesión: si quedó algo de una cuenta guardado para usar sin conexión
+ * (la sesión venció, o se cerró desde otro lado), se borra. Los cambios sin subir no: son de esa
+ * cuenta y se suben cuando vuelva a entrar.
+ */
+function ForgetAccountData() {
+  useEffect(() => {
+    clearCache();
+    void purgeSavedPages();
+  }, []);
   return null;
 }
 
@@ -68,6 +83,7 @@ export function LandingTop() {
       <Suspense>
         <AuthErrorNotice />
       </Suspense>
+      <ForgetAccountData />
     </header>
   );
 }

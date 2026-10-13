@@ -262,3 +262,31 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
 45. **Reordenar las tareas desde la sesión de estudio.** "Tareas de hoy" se arrastra desde un asa (mouse, dedo o
     teclado). Es el mismo orden propio de Tareas, así que ahí siempre se ve en «Mi orden», sea cual sea el criterio
     elegido en la otra pantalla. Las completadas no se mueven.
+46. **Modo sin conexión.** La app ya abierta se sigue usando sin red, y también se puede volver a abrir o cambiar
+    de sección. Antes ni tildar una tarea funcionaba. Tres piezas, cada una con una sola responsabilidad:
+    - **Cola de cambios** (`src/lib/offline/outbox.ts`, reglas en `src/lib/domain/outbox.ts`). Toda escritura se
+      aplica en la caché y se anota como una lista de operaciones simples (alta, cambio, baja, orden de tareas,
+      perfil), guardada en `localStorage` por usuario. Con conexión se sube enseguida; sin conexión espera y se
+      reintenta sola (al volver la red, al volver a la pestaña y con una espera que crece hasta un minuto).
+      Las operaciones se pueden repetir: los ids nacen en el cliente y un alta repetida se ignora.
+    - **Copia de los datos** (`src/lib/offline/cache.ts`). La caché de TanStack Query se guarda en el dispositivo y
+      se restaura al abrir. Con red, lo restaurado se vuelve a pedir: sirve para mostrar algo ya, no reemplaza al
+      servidor. Además, al abrir se traen todas las tablas, también las de secciones que no se visitaron.
+    - **Service worker** (`public/sw.js`). Guarda las cinco pantallas de la app y sus archivos. Con conexión manda
+      siempre la red; lo guardado se usa solo si la red no responde. No toca datos, ni `/api`, ni `/auth`. Solo se
+      registra en producción (`NEXT_PUBLIC_DISABLE_SW=1` lo apaga sin tocar código).
+    - **Conflictos:** gana el último que sincroniza. Cada operación pisa solo los campos que tocó, así que dos
+      dispositivos que cambian cosas distintas de la misma tarea no se pisan. Si el servidor rechaza un cambio
+      (por ejemplo, una subtarea de una tarea que se borró desde otro lado) se descarta, se avisa y se relee.
+    - Mientras hay cambios sin subir no se lee del servidor: lo que devolvería todavía no los tiene y pisaría la
+      pantalla. Primero sube la cola, después se relee.
+    - Al cerrar sesión se borra todo lo guardado de la cuenta (avisando si quedan cambios sin subir). La landing
+      hace lo mismo, por si la sesión venció.
+    - **Límites.** Sin red no funcionan iniciar sesión, vincular o importar un calendario por dirección, adjuntar
+      desde Drive ni la primera carga en un dispositivo. Una sección que nunca llegó a cargarse en ese dispositivo
+      queda en "cargando". Navegar sin red recarga la página (Next no tiene de dónde sacar la sección): se
+      conserva todo salvo el timer flotante, que es una ventana del navegador. La página de "sin conexión" del
+      service worker tiene sus textos y colores escritos a mano, en los dos idiomas: ahí no llegan ni los
+      mensajes ni los tokens.
+    - Los datos que dependen de lo guardado en el dispositivo se muestran recién al terminar la hidratación
+      (`useHydrated`): mientras tanto se dibuja lo mismo que el servidor.

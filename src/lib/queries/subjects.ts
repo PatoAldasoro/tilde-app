@@ -6,12 +6,12 @@ import { useSessionUser } from "@/components/providers";
 import { bySubjectOrder } from "@/lib/domain/subjects";
 import { nextSortOrder, type OrderPatch } from "@/lib/domain/tasks";
 import type { SubjectFormValues } from "@/lib/schemas";
-import type { SubjectDocumentRow, SubjectRow, Update } from "@/lib/supabase/types";
-import { deleteRows, insertRows, newId, nowIso, patchById, removeByIds, updateRow, useOptimistic, useRows } from "./table";
+import type { CalendarEventRow, ScheduleBlockRow, SubjectDocumentRow, SubjectRow, TaskRow, Update } from "@/lib/supabase/types";
+import { deleteRows, insertRows, newId, nowIso, patchById, removeByIds, updateRow, useOptimistic, useRows, useWrite } from "./table";
 
 /** Las materias, en el orden elegido por el usuario. */
 export function useSubjects() {
-  const query = useRows("subjects", "sort_order");
+  const query = useRows("subjects");
   // La caché se toca de forma optimista (altas, reordenar): el orden se vuelve a aplicar acá.
   const data = useMemo(() => (query.data ? [...query.data].sort(bySubjectOrder) : undefined), [query.data]);
   return { ...query, data };
@@ -34,16 +34,37 @@ export function useSubjectMutations() {
       const orders = new Map(patches.map((patch) => [patch.id, patch.sort_order]));
       return rows.map((row) => (orders.has(row.id) ? { ...row, sort_order: orders.get(row.id)! } : row));
     },
-    run: async (patches) => {
-      await Promise.all(patches.map((patch) => updateRow("subjects", patch.id, { sort_order: patch.sort_order })));
-    },
+    run: (patches) => patches.map((patch) => updateRow("subjects", patch.id, { sort_order: patch.sort_order })),
   });
-  const remove = useOptimistic("subjects", {
-    apply: (rows, id: string) => removeByIds(rows, [id]),
-    run: (id) => deleteRows("subjects", [id]),
-    // La base borra en cascada tareas, horarios, fechas y documentos de la materia.
-    alsoInvalidate: ["tasks", "subtasks", "calendar_events", "schedule_blocks", "schedule_exceptions", "subject_documents", "study_sessions"],
-  });
+  const write = useWrite();
+  /**
+   * Borra la materia. La base se lleva en cascada sus tareas, horarios, fechas y documentos, y deja
+   * sus sesiones sin materia: la caché hace lo mismo, así se ve bien también sin conexión.
+   */
+  const remove = (id: string) => {
+    const cached = <R,>(name: string) => queryClient.getQueryData<R[]>([name]) ?? [];
+    const taskIds = new Set(cached<TaskRow>("tasks").filter((task) => task.subject_id === id).map((task) => task.id));
+    const eventIds = new Set(cached<CalendarEventRow>("calendar_events").filter((event) => event.subject_id === id).map((event) => event.id));
+    const blockIds = new Set(cached<ScheduleBlockRow>("schedule_blocks").filter((block) => block.subject_id === id).map((block) => block.id));
+    // Las tareas de los TP de esa materia se van con su fecha.
+    cached<TaskRow>("tasks").forEach((task) => {
+      if (task.source_calendar_event_id && eventIds.has(task.source_calendar_event_id)) taskIds.add(task.id);
+    });
+    void write(
+      {
+        subjects: (rows) => removeByIds(rows, [id]),
+        subject_documents: (rows) => rows.filter((row) => row.subject_id !== id),
+        tasks: (rows) => rows.filter((row) => !taskIds.has(row.id)),
+        subtasks: (rows) => rows.filter((row) => !taskIds.has(row.task_id)),
+        calendar_events: (rows) => rows.filter((row) => !eventIds.has(row.id)),
+        schedule_blocks: (rows) => rows.filter((row) => !blockIds.has(row.id)),
+        schedule_exceptions: (rows) => rows.filter((row) => !(row.target_type === "block" && blockIds.has(row.target_id))),
+        study_sessions: (rows) => rows.map((row) => (row.subject_id === id ? { ...row, subject_id: null } : row)),
+        study_session_tasks: (rows) => rows.map((row) => (row.task_id && taskIds.has(row.task_id) ? { ...row, task_id: null } : row)),
+      },
+      deleteRows("subjects", [id]),
+    );
+  };
 
   return {
     create(values: SubjectFormValues): SubjectRow {
@@ -69,7 +90,7 @@ export function useSubjectMutations() {
       if (patches.length > 0) reorder.mutate(patches);
     },
     setArchived: (id: string, archived: boolean) => update.mutate({ id, patch: { archived_at: archived ? nowIso() : null } }),
-    remove: (id: string) => remove.mutate(id),
+    remove,
   };
 }
 

@@ -12,7 +12,7 @@ import { deleteRows, insertRows, newId, nowIso, patchById, removeByIds, updateRo
 import { buildTaskRow } from "./tasks";
 
 export function useCalendarEvents() {
-  return useRows("calendar_events", "date");
+  return useRows("calendar_events");
 }
 
 export function useCalendarFeeds() {
@@ -77,10 +77,7 @@ export function useCalendarMutations() {
             calendar_events: (rows) => [...rows, row],
             ...(task ? { tasks: (rows: TaskRow[]) => [...rows, task] } : {}),
           },
-          async () => {
-            await insertRows("calendar_events", [row]);
-            if (task) await insertRows("tasks", [task]);
-          },
+          [insertRows("calendar_events", [row]), task ? insertRows("tasks", [task]) : null],
         );
         return row;
       },
@@ -99,12 +96,16 @@ export function useCalendarMutations() {
               return rows;
             },
           },
-          async () => {
-            await updateRow("calendar_events", id, input as Update<"calendar_events">);
-            if (created) await insertRows("tasks", [created]);
-            else if (plan.sync === "update" && existing) await updateRow("tasks", existing.id, plan.fields);
-            else if (plan.sync === "delete" && existing) await deleteRows("tasks", [existing.id]);
-          },
+          [
+            updateRow("calendar_events", id, input as Update<"calendar_events">),
+            created
+              ? insertRows("tasks", [created])
+              : plan.sync === "update" && existing
+                ? updateRow("tasks", existing.id, plan.fields)
+                : plan.sync === "delete" && existing
+                  ? deleteRows("tasks", [existing.id])
+                  : null,
+          ],
           { alsoInvalidate: plan.sync === "delete" ? ["subtasks"] : undefined },
         );
       },
@@ -112,14 +113,12 @@ export function useCalendarMutations() {
       /** Crea la tarea de un TP que se había quedado sin ella. */
       createTask(eventId: string, fields: LinkedTaskFields) {
         const task = newTask(eventId, fields);
-        void write({ tasks: (rows) => [...rows, task] }, () => insertRows("tasks", [task]));
+        void write({ tasks: (rows) => [...rows, task] }, insertRows("tasks", [task]));
       },
 
       /** Un clic en un recuperatorio alterna tentativo ↔ confirmado. */
       setConfirmed(id: string, confirmed: boolean) {
-        void write({ calendar_events: (rows) => patchById(rows, id, { confirmed }) }, () =>
-          updateRow("calendar_events", id, { confirmed }),
-        );
+        void write({ calendar_events: (rows) => patchById(rows, id, { confirmed }) }, updateRow("calendar_events", id, { confirmed }));
       },
 
       /**
@@ -145,10 +144,7 @@ export function useCalendarMutations() {
               ? { calendar_feeds: (rows: CalendarFeedRow[]) => feedPatches.reduce((list, patch) => patchById(list, patch.id, { skipped: patch.skipped }), rows) }
               : {}),
           },
-          async () => {
-            await deleteRows("calendar_events", ids);
-            for (const patch of feedPatches) await updateRow("calendar_feeds", patch.id, { skipped: patch.skipped });
-          },
+          [deleteRows("calendar_events", ids), ...feedPatches.map((patch) => updateRow("calendar_feeds", patch.id, { skipped: patch.skipped }))],
           { alsoInvalidate: ["subtasks"] },
         );
       },
@@ -184,12 +180,12 @@ export function useCalendarMutations() {
             calendar_events: (rows) => [...moved.reduce((list, move) => patchById(list, move.id, { date: move.date, start_time: move.start_time }), rows), ...events],
             tasks: (rows) => [...movedTasks.reduce((list, move) => patchById(list, move.id, { due_date: move.due_date }), rows), ...tasks],
           },
-          async () => {
-            await insertRows("calendar_events", events);
-            await insertRows("tasks", tasks);
-            for (const move of moved) await updateRow("calendar_events", move.id, { date: move.date, start_time: move.start_time });
-            for (const move of movedTasks) await updateRow("tasks", move.id, { due_date: move.due_date });
-          },
+          [
+            insertRows("calendar_events", events),
+            insertRows("tasks", tasks),
+            ...moved.map((move) => updateRow("calendar_events", move.id, { date: move.date, start_time: move.start_time })),
+            ...movedTasks.map((move) => updateRow("tasks", move.id, { due_date: move.due_date })),
+          ],
         );
         return events.map((event) => event.id);
       },
@@ -197,14 +193,14 @@ export function useCalendarMutations() {
       /** Vincula un calendario por su dirección .ics. */
       addFeed(name: string, url: string): CalendarFeedRow {
         const row: CalendarFeedRow = { id: newId(), user_id: user.id, name, url, skipped: [], last_synced_at: null, created_at: nowIso() };
-        void write({ calendar_feeds: (rows) => [...rows, row] }, () => insertRows("calendar_feeds", [row]));
+        void write({ calendar_feeds: (rows) => [...rows, row] }, insertRows("calendar_feeds", [row]));
         return row;
       },
 
       /** Anota una sincronización: cuándo fue y qué eventos quedaron omitidos. */
       markFeedSynced(id: string, skipped: string[]) {
         const patch = { skipped, last_synced_at: nowIso() };
-        void write({ calendar_feeds: (rows) => patchById(rows, id, patch) }, () => updateRow("calendar_feeds", id, patch));
+        void write({ calendar_feeds: (rows) => patchById(rows, id, patch) }, updateRow("calendar_feeds", id, patch));
       },
 
       /** Desvincula un calendario. Sus fechas quedan, salvo que se pida quitarlas también. */
@@ -217,10 +213,7 @@ export function useCalendarMutations() {
             calendar_events: (rows) => (withEvents ? removeByIds(rows, eventIds) : rows.map((row) => (row.feed_id === id ? { ...row, feed_id: null } : row))),
             tasks: (rows) => rows.filter((task) => !task.source_calendar_event_id || !eventSet.has(task.source_calendar_event_id)),
           },
-          async () => {
-            await deleteRows("calendar_events", eventIds);
-            await deleteRows("calendar_feeds", [id]);
-          },
+          [deleteRows("calendar_events", eventIds), deleteRows("calendar_feeds", [id])],
           { alsoInvalidate: ["subtasks"] },
         );
       },

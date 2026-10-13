@@ -6,7 +6,7 @@ import { useProfile, useSessionUser } from "@/components/providers";
 import { dateInTimeZone, type IsoDate } from "@/lib/domain/dates";
 import { nextSortOrder, nextSubtaskOrder, toggleSubtask, toggleTask, type OrderPatch } from "@/lib/domain/tasks";
 import type { Priority, Task } from "@/lib/domain/types";
-import { getSupabase } from "@/lib/supabase/client";
+import type { WriteOp } from "@/lib/domain/outbox";
 import type { SubtaskRow, TaskRow, Update } from "@/lib/supabase/types";
 import { deleteRows, insertRows, newId, nowIso, patchById, removeByIds, updateRow, useRows, useWrite } from "./table";
 
@@ -28,8 +28,8 @@ export function assembleTasks(tasks: TaskRow[], subtasks: SubtaskRow[], timeZone
 
 /** Todas las tareas del usuario, con sus subtareas. */
 export function useTasks() {
-  const tasks = useRows("tasks", "sort_order");
-  const subtasks = useRows("subtasks", "sort_order");
+  const tasks = useRows("tasks");
+  const subtasks = useRows("subtasks");
   const timeZone = useProfile().timezone;
   const data = useMemo(
     () => (tasks.data && subtasks.data ? assembleTasks(tasks.data, subtasks.data, timeZone) : undefined),
@@ -58,14 +58,11 @@ export type NewTask = {
 
 export type DeletedTasks = { tasks: TaskRow[]; subtasks: SubtaskRow[] };
 
-async function setTaskOrder(patches: OrderPatch[]) {
-  if (patches.length === 0) return;
-  const { error } = await getSupabase().rpc("set_task_order", {
-    task_ids: patches.map((patch) => patch.id),
-    sort_orders: patches.map((patch) => patch.sort_order),
-  });
-  if (error) throw new Error(error.message);
-}
+const setTaskOrder = (patches: OrderPatch[]): WriteOp => ({
+  kind: "task_order",
+  ids: patches.map((patch) => patch.id),
+  orders: patches.map((patch) => patch.sort_order),
+});
 
 const applyOrder = (rows: TaskRow[], patches: OrderPatch[]): TaskRow[] => {
   const orders = new Map(patches.map((patch) => [patch.id, patch.sort_order]));
@@ -104,7 +101,7 @@ export function useTaskMutations() {
     return {
       create(input: NewTask): TaskRow {
         const row = buildTaskRow(user.id, input, nextSortOrder(cachedTasks()));
-        void write({ tasks: (rows) => [...rows, row] }, () => insertRows("tasks", [row]));
+        void write({ tasks: (rows) => [...rows, row] }, insertRows("tasks", [row]));
         return row;
       },
 
@@ -130,16 +127,13 @@ export function useTaskMutations() {
         );
         void write(
           { tasks: (rows) => [...rows, ...tasks], subtasks: (rows) => [...rows, ...subtasks] },
-          async () => {
-            await insertRows("tasks", tasks);
-            await insertRows("subtasks", subtasks);
-          },
+          [insertRows("tasks", tasks), insertRows("subtasks", subtasks)],
         );
         return tasks.map((task) => task.id);
       },
 
       update(id: string, patch: Update<"tasks">) {
-        void write({ tasks: (rows) => patchById(rows, id, patch as Partial<TaskRow>) }, () => updateRow("tasks", id, patch));
+        void write({ tasks: (rows) => patchById(rows, id, patch as Partial<TaskRow>) }, updateRow("tasks", id, patch));
       },
 
       /** Aplica un orden nuevo y, si la tarea cambió de día, su planned_date. */
@@ -152,12 +146,7 @@ export function useTaskMutations() {
               return move ? patchById(ordered, move.id, { planned_date: move.planned_date }) : ordered;
             },
           },
-          async () => {
-            await Promise.all([
-              setTaskOrder(patches),
-              move ? updateRow("tasks", move.id, { planned_date: move.planned_date }) : Promise.resolve(),
-            ]);
-          },
+          [setTaskOrder(patches), move ? updateRow("tasks", move.id, { planned_date: move.planned_date }) : null],
         );
       },
 
@@ -165,7 +154,7 @@ export function useTaskMutations() {
       toggle(task: Task): boolean {
         const result = toggleTask(task, nowIso());
         if (result === "blocked") return false;
-        void write({ tasks: (rows) => patchById(rows, task.id, result) }, () => updateRow("tasks", task.id, result));
+        void write({ tasks: (rows) => patchById(rows, task.id, result) }, updateRow("tasks", task.id, result));
         return true;
       },
 
@@ -178,12 +167,7 @@ export function useTaskMutations() {
             subtasks: (rows) => patchById(rows, subtaskId, result.subtask),
             ...(taskPatch ? { tasks: (rows: TaskRow[]) => patchById(rows, task.id, taskPatch) } : {}),
           },
-          async () => {
-            await Promise.all([
-              updateRow("subtasks", subtaskId, result.subtask),
-              taskPatch ? updateRow("tasks", task.id, taskPatch) : Promise.resolve(),
-            ]);
-          },
+          [updateRow("subtasks", subtaskId, result.subtask), taskPatch ? updateRow("tasks", task.id, taskPatch) : null],
         );
       },
 
@@ -204,15 +188,12 @@ export function useTaskMutations() {
             subtasks: (rows) => [...rows, row],
             ...(reopen ? { tasks: (rows: TaskRow[]) => patchById(rows, task.id, { completed_at: null }) } : {}),
           },
-          async () => {
-            await insertRows("subtasks", [row]);
-            if (reopen) await updateRow("tasks", task.id, { completed_at: null });
-          },
+          [insertRows("subtasks", [row]), reopen ? updateRow("tasks", task.id, { completed_at: null }) : null],
         );
       },
 
       removeSubtask(id: string) {
-        void write({ subtasks: (rows) => removeByIds(rows, [id]) }, () => deleteRows("subtasks", [id]));
+        void write({ subtasks: (rows) => removeByIds(rows, [id]) }, deleteRows("subtasks", [id]));
       },
 
       /** Borra tareas (y sus subtareas, en cascada). Devuelve lo borrado para poder deshacer. */
@@ -224,7 +205,7 @@ export function useTaskMutations() {
         };
         void write(
           { tasks: (rows) => removeByIds(rows, ids), subtasks: (rows) => rows.filter((row) => !idSet.has(row.task_id)) },
-          () => deleteRows("tasks", ids),
+          deleteRows("tasks", ids),
           { alsoInvalidate: ["study_session_tasks"] },
         );
         return deleted;
@@ -234,10 +215,7 @@ export function useTaskMutations() {
       restore(deleted: DeletedTasks) {
         void write(
           { tasks: (rows) => [...rows, ...deleted.tasks], subtasks: (rows) => [...rows, ...deleted.subtasks] },
-          async () => {
-            await insertRows("tasks", deleted.tasks);
-            await insertRows("subtasks", deleted.subtasks);
-          },
+          [insertRows("tasks", deleted.tasks), insertRows("subtasks", deleted.subtasks)],
         );
       },
     };

@@ -3,6 +3,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { HolidaysResponse } from "@/app/api/holidays/route";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type { Holiday } from "@/lib/domain/holidays";
 
 async function fetchHolidays(year: number): Promise<Holiday[]> {
@@ -23,5 +24,7 @@ export function useHolidays(years: number[]): Holiday[] {
     })),
     combine: (queries) => queries.map((query) => query.data),
   });
-  return useMemo(() => results.flatMap((holidays) => holidays ?? []), [results]);
+  // Pueden venir de lo guardado en el dispositivo: durante la hidratación, lo mismo que el servidor (ninguno).
+  const hydrated = useHydrated();
+  return useMemo(() => (hydrated ? results.flatMap((holidays) => holidays ?? []) : []), [hydrated, results]);
 }

@@ -812,5 +812,20 @@
   "sort_hint": "Order: {name}. To drag tasks, switch back to “My order”.",
   "sort_back": "Back to my order",
   "drag_mini_task": "Move “{title}”",
-  "today_tasks_dnd": "To move the task, press Space or Enter. Use the arrow keys to move it; Space drops it and Escape cancels."
+  "today_tasks_dnd": "To move the task, press Space or Enter. Use the arrow keys to move it; Space drops it and Escape cancels.",
+  "sync_offline": "Offline",
+  "sync_offline_text": "You can keep working: changes are saved on this device and upload on their own once the connection is back.",
+  "sync_pending": "{n, plural, one {{n} change not uploaded} other {{n} changes not uploaded}}",
+  "sync_syncing": "Syncing",
+  "sync_syncing_text": "Your changes are being uploaded.",
+  "sync_waiting": "No response from the server",
+  "sync_waiting_text": "Pending changes could not be uploaded. They stay saved on this device and are retried automatically.",
+  "sync_retry": "Retry now",
+  "sync_rejected": "{n, plural, one {A change could not be saved and was discarded.} other {{n} changes could not be saved and were discarded.}}",
+  "sync_done": "{n, plural, one {{n} pending change uploaded} other {{n} pending changes uploaded}}",
+  "offline_toast": "You are offline. You can keep working: changes upload when you are back.",
+  "signout_pending_q": "Sign out with changes not uploaded?",
+  "signout_pending_body": "{n, plural, one {There is {n} change that has not been uploaded yet} other {There are {n} changes that have not been uploaded yet}}. Signing out discards them.",
+  "signout_anyway": "Sign out anyway",
+  "needs_connection": "This needs a connection."
 }
