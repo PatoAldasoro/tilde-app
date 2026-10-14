@@ -12,9 +12,11 @@ const SHOT = { width: 1440, height: 846, sizes: "(max-width: 1100px) calc(100vw 
 const PHONE_SHOT = { width: 390, height: 844, sizes: "(max-width: 434px) calc(100vw - 74px), 360px" };
 const WIDE = "(min-width: 768px)";
 
-function Shot({ feature, theme, alt }: { feature: string; theme: "light" | "dark"; alt: string }) {
-  const { props: wide } = getImageProps({ ...SHOT, alt, src: `/landing/${feature}-${theme}.png` });
-  const { props: phone } = getImageProps({ ...PHONE_SHOT, alt, src: `/landing/${feature}-${theme}-mobile.png` });
+/** `eager`: la primera captura se ve enseguida en el teléfono (es lo más grande de la pantalla): no espera a la carga diferida. */
+function Shot({ feature, theme, alt, eager }: { feature: string; theme: "light" | "dark"; alt: string; eager: boolean }) {
+  const loading = eager ? "eager" : "lazy";
+  const { props: wide } = getImageProps({ ...SHOT, alt, loading, src: `/landing/${feature}-${theme}.png` });
+  const { props: phone } = getImageProps({ ...PHONE_SHOT, alt, loading, src: `/landing/${feature}-${theme}-mobile.png` });
   return (
     <picture>
       <source media={WIDE} srcSet={wide.srcSet} sizes={wide.sizes} />
@@ -50,7 +52,7 @@ export function Landing() {
               <p>{t(`feat_${feature}_text`)}</p>
               <div className="shot">
                 {(["light", "dark"] as const).map((theme) => (
-                  <Shot key={theme} feature={feature} theme={theme} alt={t(`shot_alt_${feature}`)} />
+                  <Shot key={theme} feature={feature} theme={theme} alt={t(`shot_alt_${feature}`)} eager={index === 0} />
                 ))}
               </div>
             </div>

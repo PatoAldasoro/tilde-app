@@ -180,8 +180,10 @@ export function HistoryView({ onStart }: { onStart: () => void }) {
               <th scope="col" className="num">
                 {t("subtasks")}
               </th>
-              {/* Sin texto visible: el nombre va en aria-label (un texto oculto con position: absolute se sale del scroll de la tabla). */}
-              <th scope="col" aria-label={t("more_options")} />
+              {/* Sin texto visible: el nombre va oculto. La celda es relative para que ese texto (position: absolute) no se salga del scroll de la tabla. */}
+              <th scope="col" className="relative">
+                <span className="visually-hidden">{t("more_options")}</span>
+              </th>
             </tr>
           </thead>
           <tbody>

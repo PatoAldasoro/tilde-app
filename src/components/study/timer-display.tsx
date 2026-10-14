@@ -262,7 +262,7 @@ function OptionsPopover({ active }: { active: ActiveTimer | null }) {
         </button>
       </PopoverTrigger>
       {exam ? (
-        <PopoverContent className="popover-pad adjust-pop" align="center">
+        <PopoverContent className="popover-pad adjust-pop" align="center" aria-label={t("exam_options")}>
           <strong className="text-body-s">{t("exam_options")}</strong>
           {active ? (
             <>
@@ -289,7 +289,7 @@ function OptionsPopover({ active }: { active: ActiveTimer | null }) {
           )}
         </PopoverContent>
       ) : (
-        <PopoverContent className="popover-pad adjust-pop" align="center">
+        <PopoverContent className="popover-pad adjust-pop" align="center" aria-label={t("timer_options")}>
           <strong className="text-body-s">{t("timer_options")}</strong>
           {active ? (
             <>

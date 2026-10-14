@@ -357,7 +357,7 @@ function DayPopover({ day, items, subjects, actions, onAdd, children }: DayPopov
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent aria-label={t("day_dates", { weekday, date: formatDayMonth(day) })}>
         <div className="day-list">
           <div className="day-list-head">
             <div className="t">{t("day_dates", { weekday, date: formatDayMonth(day) })}</div>

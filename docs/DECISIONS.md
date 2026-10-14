@@ -366,3 +366,15 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     tablas cuelgan de ahí con `on delete cascade`, así que se van todos sus datos. Después se borra lo del dispositivo
     (cola de cambios, copia local, pantallas guardadas) y se vuelve a la landing con un aviso. Pide conexión: sin
     red avisa y no hace nada. Cubierto en `tests/rls.test.ts` (solo borra la cuenta propia; sin sesión no se puede).
+56. **Accesibilidad verificada con axe** (`e2e/a11y.spec.ts`, WCAG 2.2 AA y buenas prácticas): landing, privacidad,
+    términos, cada sección de la app en claro y oscuro y las superposiciones principales, a 390 y 1366 px. Lo que
+    encontró y se corrigió:
+    - **Días de otro mes del Calendario**: el número usaba `--color-text-disabled` (2,2 : 1), pero esos días se abren
+      igual; pasa a `--color-text-subtle` (4,8 : 1). Se ve apenas más oscuro que en el diseño.
+    - El botón de editar un recuperatorio pasa de 22 a 24 px; el título de cada materia pasa de `h3` a `h2` (no
+      había `h2` antes); la columna sin título del historial tiene su nombre oculto dentro de la celda.
+    - El menú lateral es un `div` con rol de diálogo y adentro un `nav`; cada globo (popover) tiene nombre.
+    - `favicon.ico` (los navegadores lo piden aunque haya `icon.svg`) y la primera captura de la landing sin carga diferida.
+    - Lighthouse en modo teléfono (simulación de red lenta), con la app ya en producción local: accesibilidad 100 en
+      todas; rendimiento 85–89 en la landing y 73–84 en la app (LCP 4–5 s: los datos se piden desde el navegador al
+      abrir). SEO 63 en la app es a propósito (no se indexa).

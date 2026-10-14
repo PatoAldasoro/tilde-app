@@ -38,9 +38,9 @@ export function SubjectCard({ subject, progress, taskCounts, documentCount, onOp
       <button type="button" className="card-open" aria-label={t("open_subject", { name: subject.name })} onClick={onOpen} />
       <div className="card-top">
         <SubjectTile icon={subject.icon} />
-        <h3 className="card-title" id={titleId}>
+        <h2 className="card-title" id={titleId}>
           {subject.name}
-        </h3>
+        </h2>
         {archived ? (
           <button type="button" className="btn btn-secondary btn-sm card-menu m-0" onClick={() => onArchive(false)}>
             <ArchiveRestore size={16} />

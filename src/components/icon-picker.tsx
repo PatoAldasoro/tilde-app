@@ -66,7 +66,7 @@ export function IconPicker({ id, value, onChange, colorClass, labelledBy }: Icon
           <ChevronDown size={16} className="subtle flex-none" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="popover-pad icon-popover">
+      <PopoverContent className="popover-pad icon-popover" aria-label={t("icon")}>
         <div className={cn("icon-grid", colorClass)} role="radiogroup" aria-label={t("icon")} onKeyDown={onKeyDown}>
           {options.map((icon, index) => {
             const selected = icon === current;

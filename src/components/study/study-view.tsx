@@ -286,7 +286,7 @@ function SoundPopover() {
           <SlidersHorizontal size={18} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="popover-pad sound-pop" align="end">
+      <PopoverContent className="popover-pad sound-pop" align="end" aria-labelledby="sound-kind-label">
         <strong className="text-body-s" id="sound-kind-label">
           {t("sound_settings")}
         </strong>

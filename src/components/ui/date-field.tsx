@@ -43,7 +43,7 @@ export function DateField({ value, onChange, today, id, clearable, placeholder, 
           <Calendar size={16} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="mini-cal">
+      <PopoverContent className="mini-cal" aria-label={t("pick_date")}>
         <MiniCalendar
           value={value}
           today={today}

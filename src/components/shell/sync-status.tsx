@@ -31,7 +31,7 @@ export function SyncStatus() {
           {pending > 0 ? <span className="sync-pill-count tnum">{pending}</span> : null}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="popover-pad sync-pop" align="end">
+      <PopoverContent className="popover-pad sync-pop" align="end" aria-label={title}>
         <strong className="text-body-s">{title}</strong>
         <p className="field-hint">{text}</p>
         {count ? <p className="text-body-s">{count}</p> : null}

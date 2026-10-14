@@ -28,7 +28,8 @@ export function Drawer({ open, onOpenChange, onOpenSettings }: DrawerProps) {
         <div className="drawer-layer" role="presentation">
           <DialogPrimitive.Overlay className="scrim" />
           <DialogPrimitive.Content asChild aria-describedby={undefined} {...returnFocus}>
-            <nav className="drawer" id="drawer" aria-label={t("menu")}>
+            {/* Es un diálogo (Radix): el contenedor es un div; la navegación es la lista de secciones. */}
+            <div className="drawer" id="drawer" aria-label={t("menu")}>
               <DialogPrimitive.Title className="visually-hidden">{t("menu")}</DialogPrimitive.Title>
               <div className="drawer-head">
                 <Link href="/app" className="logo-link text-inherit" aria-label={`Tilde — ${t("nav_home")}`} onClick={close}>
@@ -38,7 +39,7 @@ export function Drawer({ open, onOpenChange, onOpenSettings }: DrawerProps) {
                   <X size={20} />
                 </DialogPrimitive.Close>
               </div>
-              <div className="drawer-nav">
+              <nav className="drawer-nav" aria-label={t("sections")}>
                 {NAV_ITEMS.map(({ id, href, icon: Icon, label }) => (
                   <Link
                     key={id}
@@ -51,7 +52,7 @@ export function Drawer({ open, onOpenChange, onOpenSettings }: DrawerProps) {
                     <span>{t(label)}</span>
                   </Link>
                 ))}
-              </div>
+              </nav>
               <div className="drawer-foot">
                 <div className="profile">
                   <Avatar user={user} />
@@ -69,7 +70,7 @@ export function Drawer({ open, onOpenChange, onOpenSettings }: DrawerProps) {
                   <ThemeSegmented onSaved={(theme) => updateProfile.mutate({ theme })} />
                 </div>
               </div>
-            </nav>
+            </div>
           </DialogPrimitive.Content>
         </div>
       </DialogPrimitive.Portal>

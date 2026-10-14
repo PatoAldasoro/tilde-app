@@ -204,7 +204,7 @@ export function ScheduleView() {
               <span className="badge tnum">{days.length}</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="popover-pad flex flex-col gap-2.5">
+          <PopoverContent className="popover-pad flex flex-col gap-2.5" aria-label={t("visible_days")}>
             <strong className="text-body-s">{t("visible_days")}</strong>
             <div className="daychips" role="group" aria-label={t("visible_days")}>
               {ALL_WEEKDAYS.map((day) => (
@@ -473,7 +473,7 @@ function BlockButton({ occurrence, title, subject, dayLabel, holiday, repeatLabe
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent aria-label={title}>
         <div className={cn("block-pop-head", color)}>
           {icon ? <SubjectTile icon={icon} size="sm" /> : <span className="sw" />}
           <div className="min-w-0">
