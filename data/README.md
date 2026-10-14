@@ -21,6 +21,11 @@ La app usa la API en vivo y cae a estos archivos solo si la API falla
   feriados trasladables en su fecha original (17/06, 17/08, 12/10, 20/11); `normalizeHolidays` los mueve
   según la Ley 27.399 (martes y miércoles → lunes anterior; jueves y viernes → lunes siguiente).
   Hay que volver a verificarlo cuando el Gobierno publique el calendario (suele ser a fin de año).
+  - 14/10/2026: el oficial sigue sin publicarse (`feriados-nacionales-2027` da 404). Contrastado contra las reglas:
+    Pascua 2027 es el 28/03, así que Carnaval cae 08/02 y 09/02 y Viernes Santo el 26/03; los inamovibles caen en
+    su fecha; los trasladables quedan 21/06 (Güemes, jueves → lunes), 16/08 (San Martín, martes → lunes), 11/10
+    (martes → lunes) y 20/11 (sábado: la ley no lo mueve). Lo único que falta es lo que se decide por decreto
+    (puentes, y algún traslado distinto al de la ley).
 
 Para actualizar un año: `curl https://api.argentinadatos.com/v1/feriados/2028 > data/feriados-2028.json`,
 contrastar con argentina.gob.ar y sumarlo a `BACKUPS` en `src/app/api/holidays/route.ts`.
