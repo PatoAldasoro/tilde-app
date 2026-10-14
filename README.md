@@ -60,7 +60,8 @@ Sin Supabase configurado la landing funciona igual, pero no se puede iniciar ses
 | `npm run db:start` · `db:stop` · `db:reset` | Supabase local (Docker o Podman) |
 | `npm run db:types` | Regenera los tipos de la base |
 | `npm run seed:demo` | Crea la cuenta demo con datos de ejemplo |
-| `npm run screenshots` | Captura cada sección (claro y oscuro) en `public/landing/` |
+| `npm run screenshots` | Captura cada sección (claro y oscuro, computadora y teléfono) en `public/landing/` |
+| `npm run og-image` | Arma la imagen para compartir el link (`public/og/`) a partir de la captura de Materias |
 
 ## Tests
 
@@ -92,7 +93,8 @@ Las capturas de la landing son reales. Con el Supabase local y la app corriendo:
 
 ```bash
 npm run seed:demo      # recrea la cuenta demo (demo@tilde.test) con materias, horario, tareas, fechas y sesiones
-npm run screenshots    # public/landing/<sección>-<light|dark>.png
+npm run screenshots    # public/landing/<sección>-<light|dark>.png y <sección>-<light|dark>-mobile.png
+npm run og-image       # public/og/<es|en>.png, la imagen al compartir el link (usa la captura de Materias)
 ```
 
 `seed:demo` borra y vuelve a crear la cuenta demo cada vez. El "hoy" de la demo es fijo (martes 18/08/2026) para

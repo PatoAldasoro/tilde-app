@@ -1,0 +1,22 @@
+/* Tilde — Privacidad y términos (y los links del pie, compartido con la landing).
+   Mobile first: las reglas sin @media son las del teléfono; lo que cambia con más lugar va en bloques
+   min-width, de menor a mayor. Solo tokens de tokens.css. */
+
+.legal-doc { max-width: 720px; margin: 0 auto; padding: var(--space-10) var(--space-5) 0; }
+.legal-doc h1 { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1.05; letter-spacing: var(--tracking-display); }
+.legal-updated { margin-top: var(--space-2); font-size: var(--text-caption); color: var(--color-text-subtle); }
+.legal-lead { margin-top: var(--space-6); font-size: var(--text-title-s); line-height: var(--leading-title-s); color: var(--color-text); text-wrap: pretty; }
+.legal-doc section { margin-top: var(--space-8); }
+.legal-doc h2 { font-size: var(--text-title-m); line-height: var(--leading-title-m); font-weight: var(--weight-medium); }
+.legal-doc section p { margin-top: var(--space-3); font-size: var(--text-body); line-height: 1.6; color: var(--color-text-muted); text-wrap: pretty; }
+.legal-doc a { color: var(--color-accent-text); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+
+.foot-links { display: flex; flex-wrap: wrap; margin: 0 calc(-1 * var(--space-2)); }
+.foot-links a { display: inline-flex; align-items: center; min-height: var(--hit-target); padding: 0 var(--space-2); border-radius: var(--radius-sm); color: inherit; text-decoration: none; }
+.foot-links a:hover { color: var(--color-text); text-decoration: underline; }
+.settings-links { font-size: var(--text-caption); color: var(--color-text-subtle); }
+
+@media (min-width: 768px) {
+  .legal-doc { padding: var(--space-16) var(--space-8) 0; }
+  .legal-doc h1 { font-size: 64px; }
+}

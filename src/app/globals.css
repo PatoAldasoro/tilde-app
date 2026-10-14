@@ -12,6 +12,7 @@
 @import "../styles/import.css" layer(components);
 @import "../styles/study.css" layer(components);
 @import "../styles/landing.css" layer(components);
+@import "../styles/legal.css" layer(components);
 
 /* Tema: <html data-theme="light|dark">. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

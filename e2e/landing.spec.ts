@@ -60,6 +60,8 @@ test("la landing es indexable en ambos idiomas", async ({ page, request }) => {
   expect(robots).toContain("Sitemap:");
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("/en</loc>");
+  expect(sitemap).toMatch(/<loc>https?:\/\/[^<]+\/<\/loc>/);
+  expect(sitemap).toContain("/en/privacy</loc>");
 });
 
 test("el ping de keep-alive consulta la base y responde ok", async ({ request }) => {
@@ -68,4 +70,57 @@ test("el ping de keep-alive consulta la base y responde ok", async ({ request })
   const body = await response.json();
   expect(body.ok).toBe(true);
   expect(Number.isNaN(Date.parse(body.at))).toBe(false);
+});
+
+test("al compartir el link sale la imagen de la landing, en cada idioma", async ({ page, request }) => {
+  for (const [path, locale] of [["/", "es"], ["/en", "en"]] as const) {
+    await page.goto(path);
+    const image = page.locator('meta[property="og:image"]');
+    await expect(image).toHaveAttribute("content", new RegExp(`/og/${locale}\\.png$`));
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute("content", "1200");
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+    await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute("content", new RegExp(`/og/${locale}\\.png$`));
+    const file = await request.get(`/og/${locale}.png`);
+    expect(file.status()).toBe(200);
+    expect(file.headers()["content-type"]).toBe("image/png");
+  }
+});
+
+test("en el teléfono la landing muestra capturas del teléfono y nada se pasa del ancho", async ({ browser }) => {
+  for (const width of [320, 390, 600, 768]) {
+    const context = await browser.newContext({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true, locale: "es-AR" });
+    const page = await context.newPage();
+    for (const path of ["/", "/en", "/privacy", "/en/terms"]) {
+      await page.goto(path);
+      const [inner, scroll] = await page.evaluate(() => [window.innerWidth, document.documentElement.scrollWidth]);
+      expect(inner, `${path} a ${width}`).toBe(width);
+      expect(scroll, `scroll horizontal en ${path} a ${width}`).toBeLessThanOrEqual(width);
+    }
+    await page.goto("/");
+    const shot = page.locator("section.feature").first().locator("img.shot-light");
+    await shot.scrollIntoViewIfNeeded();
+    await expect.poll(() => shot.evaluate((node: HTMLImageElement) => node.currentSrc)).toContain(width < 768 ? "-mobile.png" : "subjects-light.png");
+    await context.close();
+  }
+});
+
+test("privacidad y términos: públicos, en los dos idiomas y enlazados desde el pie", async ({ page }) => {
+  await page.goto("/");
+  const footer = page.locator("footer");
+  await footer.getByRole("link", { name: "Privacidad" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Privacidad" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Cómo borrar los datos" })).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/privacy$/);
+
+  await page.locator("footer").getByRole("link", { name: "Términos" }).click();
+  await expect(page).toHaveURL(/\/terms$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Términos de uso" })).toBeVisible();
+  await page.getByRole("link", { name: "política de privacidad" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+
+  await page.goto("/en/terms");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { level: 1, name: "Terms of use" })).toBeVisible();
+  await expect(page.locator("footer").getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/en/privacy");
 });

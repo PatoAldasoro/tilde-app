@@ -181,4 +181,28 @@ describe.skipIf(!reachable)("RLS", () => {
     const moved = await asBob.from("subjects").update({ user_id: alice.id }).eq("id", own.data!.id);
     expect(moved.error).not.toBeNull();
   });
+
+  it("borrar la cuenta borra solo la propia, con todos sus datos", async () => {
+    expect((await anon.rpc("delete_my_account")).error).not.toBeNull();
+
+    const carol = await ensureTestUser(`rls-carol-${Date.now()}@tilde.test`, "rls-password-123", "Carol");
+    try {
+      const asCarol = await userClient(carol);
+      const subject = await asCarol.from("subjects").insert({ name: "Para borrar", color_key: "cielo" }).select("id").single();
+      await asCarol.from("tasks").insert({ subject_id: subject.data!.id, title: "También", planned_date: "2026-10-14" });
+      expect((await asCarol.rpc("delete_my_account")).error).toBeNull();
+
+      const admin = adminClient();
+      expect((await admin.auth.admin.getUserById(carol.id)).data.user).toBeNull();
+      for (const table of ["profiles", "subjects", "tasks"] as const) {
+        const rows = await admin.from(table).select("user_id").eq("user_id", carol.id);
+        expect(rows.data, table).toEqual([]);
+      }
+      // Lo de las demás cuentas sigue ahí.
+      const others = await admin.from("subjects").select("id").eq("id", ids.subject);
+      expect(others.data).toHaveLength(1);
+    } finally {
+      await deleteTestUser(carol.id).catch(() => undefined);
+    }
+  });
 });

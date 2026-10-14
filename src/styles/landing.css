@@ -22,7 +22,8 @@
 :root[data-theme="dark"] .theme-icon-dark { display: inline-block; }
 :root[data-theme="dark"] .theme-icon-light { display: none; }
 /* ---------- Landing: real screenshots, one per theme ---------- */
-.shot img { display: block; width: 100%; height: auto; }
+/* Fuera del flujo: el alto del marco lo da su proporción, aunque la imagen todavía no haya cargado. */
+.shot img { position: absolute; top: 0; left: 0; display: block; width: 100%; height: auto; }
 .shot .shot-dark { display: none; }
 :root[data-theme="dark"] .shot .shot-dark { display: block; }
 :root[data-theme="dark"] .shot .shot-light { display: none; }
@@ -42,7 +43,8 @@
 .feature-inner { border-radius: var(--radius-lg); background: var(--color-surface); border: 1px solid var(--color-border); padding: var(--space-8) var(--space-5) 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); overflow: hidden; }
 .feature-inner > h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.01em; max-width: 760px; text-wrap: balance; }
 .feature-inner > p { font-size: var(--text-body); color: var(--color-text-muted); max-width: 560px; line-height: 1.5; text-wrap: balance; }
-.shot { position: relative; margin-top: var(--space-6); width: 100%; max-width: 960px; aspect-ratio: 16 / 9.4; border-radius: var(--radius-md) var(--radius-md) 0 0; border: 1px solid var(--color-border-strong); border-bottom: 0; overflow: hidden; background: var(--color-bg); text-align: left; }
+/* En el teléfono la captura es la de un teléfono (390 × 844); desde 768 px, la de la computadora. */
+.shot { position: relative; margin-top: var(--space-6); width: 100%; max-width: 360px; aspect-ratio: 390 / 844; border-radius: var(--radius-lg) var(--radius-lg) 0 0; border: 1px solid var(--color-border-strong); border-bottom: 0; overflow: hidden; background: var(--color-bg); text-align: left; }
 
 .landing-foot { max-width: 1160px; margin: var(--space-10) auto 0; padding: var(--space-5) var(--space-4) var(--space-8); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); color: var(--color-text-subtle); font-size: var(--text-caption); border-top: 1px solid var(--color-border); }
 
@@ -60,7 +62,7 @@
   .feature-inner { border-radius: var(--radius-xl); padding: var(--space-16) var(--space-12) 0; }
   .feature-inner > h2 { font-size: 44px; line-height: 1.02; }
   .feature-inner > p { font-size: var(--text-title-s); }
-  .shot { margin-top: var(--space-10); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .shot { margin-top: var(--space-10); max-width: 960px; aspect-ratio: 16 / 9.4; }
   .landing-foot { margin-top: var(--space-16); padding: var(--space-6) var(--space-8) var(--space-10); flex-wrap: nowrap; gap: var(--space-4); }
 }
 @media (min-width: 1101px) { .feature-inner > h2 { font-size: 52px; } }

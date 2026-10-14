@@ -26,20 +26,21 @@ cambios pedidos después de la entrega (desde el punto 22): esos mandan sobre el
 | `npm run db:start` · `db:stop` · `db:reset` | Supabase local (Docker o Podman). `db:reset` reaplica las migraciones |
 | `npm run db:types` | Regenera `src/lib/supabase/database.types.ts` desde la base local |
 | `npm run seed:demo` · `npm run screenshots` | Cuenta demo y capturas de la landing (`public/landing/`) |
+| `npm run og-image` | Imagen para compartir el link (`public/og/`), a partir de la captura de Materias |
 
 Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock`.
 
 ## Estructura
 
-- `src/app/[locale]/` — rutas. `/` landing (estática, indexable en `/` y `/en`); `/app`, `/app/schedule`,
-  `/app/todo`, `/app/calendar`, `/app/study`. Fuera del segmento de idioma: `/auth/callback`, `/api/*`
+- `src/app/[locale]/` — rutas. `/` landing (estática, indexable en `/` y `/en`); `/privacy` y `/terms`; `/app`,
+  `/app/schedule`, `/app/todo`, `/app/calendar`, `/app/study`. Fuera del segmento de idioma: `/auth/callback`, `/api/*`
   (`holidays`, `keepalive`, `ical`: descarga de calendarios vinculados).
 - `src/lib/domain/` — **toda la lógica de negocio, en funciones puras** con tests al lado (`*.test.ts`).
 - `src/lib/queries/` — hooks de datos (TanStack Query + Supabase del navegador, pasan por RLS).
 - `src/components/ui/` — primitivas; `src/components/<sección>/` — pantallas.
 - `src/styles/` — `tokens.css` (tokens del diseño, claro/oscuro), `theme.css` (los registra en Tailwind) y un
   archivo por área, **mobile first**: `base`, `controls`, `overlays`, `shell`, `home`, `schedule`, `tasks`,
-  `calendar`, `import`, `study`, `landing`.
+  `calendar`, `import`, `study`, `landing`, `legal`.
 - `src/lib/offline/` — modo sin conexión (cola de cambios, copia local). `public/sw.js` — service worker.
 - `messages/es.json`, `messages/en.json` — todos los textos.
 

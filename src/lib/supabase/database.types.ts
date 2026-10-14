@@ -245,7 +245,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "is_color_key":
+            "delete_my_account":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"is_color_key":
 { Args: { "value": string }; Returns: boolean
                            },
 "keepalive":

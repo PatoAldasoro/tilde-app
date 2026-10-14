@@ -1,12 +1,27 @@
 import { useTranslations } from "next-intl";
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import { GoogleButton } from "@/components/google-button";
-import { Logo, LogoSymbol } from "@/components/logo";
+import { LogoSymbol } from "@/components/logo";
+import { SiteFooter } from "@/components/site-footer";
 import { LandingTop } from "./landing-top";
 
 /** Un bloque por funcionalidad, con su captura real (scripts/screenshots.ts → public/landing). */
 const FEATURES = ["subjects", "schedule", "tasks", "calendar", "grades", "sessions"] as const;
-const SHOT = { width: 1440, height: 846 };
+/** Desde 768 px, la captura de la computadora; más angosto, la del teléfono (los anchos salen de landing.css). */
+const SHOT = { width: 1440, height: 846, sizes: "(max-width: 1100px) calc(100vw - 160px), 960px" };
+const PHONE_SHOT = { width: 390, height: 844, sizes: "(max-width: 434px) calc(100vw - 74px), 360px" };
+const WIDE = "(min-width: 768px)";
+
+function Shot({ feature, theme, alt }: { feature: string; theme: "light" | "dark"; alt: string }) {
+  const { props: wide } = getImageProps({ ...SHOT, alt, src: `/landing/${feature}-${theme}.png` });
+  const { props: phone } = getImageProps({ ...PHONE_SHOT, alt, src: `/landing/${feature}-${theme}-mobile.png` });
+  return (
+    <picture>
+      <source media={WIDE} srcSet={wide.srcSet} sizes={wide.sizes} />
+      <img {...phone} alt={alt} className={`shot-${theme}`} />
+    </picture>
+  );
+}
 
 /** Landing: barra fija, hero y un bloque por funcionalidad. Sin secciones extra. */
 export function Landing() {
@@ -35,29 +50,14 @@ export function Landing() {
               <p>{t(`feat_${feature}_text`)}</p>
               <div className="shot">
                 {(["light", "dark"] as const).map((theme) => (
-                  <Image
-                    key={theme}
-                    className={`shot-${theme}`}
-                    src={`/landing/${feature}-${theme}.png`}
-                    alt={t(`shot_alt_${feature}`)}
-                    width={SHOT.width}
-                    height={SHOT.height}
-                    sizes="(max-width: 1100px) calc(100vw - 160px), 960px"
-                  />
+                  <Shot key={theme} feature={feature} theme={theme} alt={t(`shot_alt_${feature}`)} />
                 ))}
               </div>
             </div>
           </section>
         ))}
       </main>
-      <footer className="landing-foot">
-        <span className="text-text">
-          <Logo size={22} />
-        </span>
-        <span>{t("footer_line")}</span>
-        <span className="grow" />
-        <span className="tnum">© 2026</span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -16,13 +16,16 @@ import { purgeSavedPages } from "@/lib/offline/service-worker";
 import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
-/** Avisa si el login volvió con error (/?error=auth). */
-function AuthErrorNotice() {
+/** Avisa si el login volvió con error (/?error=auth) o si se acaba de borrar la cuenta (/?deleted=1). */
+function LandingNotice() {
   const t = useTranslations();
-  const error = useSearchParams().get("error");
+  const params = useSearchParams();
+  const error = params.get("error");
+  const deleted = params.has("deleted");
   useEffect(() => {
     if (error) toast(t("auth_error"));
-  }, [error, t]);
+    else if (deleted) toast(t("account_deleted"));
+  }, [error, deleted, t]);
   return null;
 }
 
@@ -81,7 +84,7 @@ export function LandingTop() {
       </button>
       <GoogleButton />
       <Suspense>
-        <AuthErrorNotice />
+        <LandingNotice />
       </Suspense>
       <ForgetAccountData />
     </header>

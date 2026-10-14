@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { TestUser } from "../scripts/lib/test-session";
-import { removeUser, signInFreshUser } from "./session";
+import { adminClient, removeUser, signInFreshUser } from "./session";
 
 test.describe("landing", () => {
   test("es pública, en español por defecto y en inglés bajo /en", async ({ page }) => {
@@ -97,4 +97,35 @@ test.describe("shell con sesión", () => {
     await page.goto("/app/todo");
     await expect(page).toHaveURL(/localhost:\d+\/$/);
   });
+});
+
+test("borrar la cuenta borra el usuario y sus datos y vuelve a la landing", async ({ page, context }) => {
+  const user = await signInFreshUser(context, "Usuaria Para Borrar");
+  try {
+    const admin = adminClient();
+    await admin.from("subjects").insert({ user_id: user.id, name: "Álgebra", color_key: "pino" });
+    await page.goto("/app");
+    await expect(page.locator(".subject-card")).toHaveCount(1);
+    await page.getByRole("button", { name: "Abrir menú" }).click();
+    await page.getByRole("button", { name: "Ajustes" }).click();
+    const settings = page.getByRole("dialog", { name: "Ajustes" });
+    await expect(settings.getByRole("link", { name: "Privacidad" })).toHaveAttribute("href", "/privacy");
+
+    // Cancelar no borra nada.
+    await settings.getByRole("button", { name: "Borrar la cuenta" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Cancelar" }).click();
+    expect((await admin.auth.admin.getUserById(user.id)).data.user).not.toBeNull();
+
+    await settings.getByRole("button", { name: "Borrar la cuenta" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Borrar todo" }).click();
+    await expect(page).toHaveURL(/localhost:\d+\/\?deleted=1$/);
+    await expect(page.getByText("La cuenta y todos sus datos se borraron.")).toBeVisible();
+    expect((await admin.auth.admin.getUserById(user.id)).data.user).toBeNull();
+    expect((await admin.from("subjects").select("id").eq("user_id", user.id)).data).toEqual([]);
+    expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("tilde-cache:") || key.startsWith("tilde-outbox:")))).toEqual([]);
+    await page.goto("/app");
+    await expect(page).toHaveURL(/localhost:\d+\/$/);
+  } finally {
+    await removeUser(user).catch(() => undefined);
+  }
 });

@@ -1,8 +1,9 @@
 /**
  * npm run screenshots
  *
- * Captura cada sección de la app con la cuenta demo, en claro y en oscuro, y deja las imágenes en
- * public/landing/ (las usa la landing). Son capturas reales de la app corriendo.
+ * Captura cada sección de la app con la cuenta demo, en claro y en oscuro, en la computadora y en el
+ * teléfono, y deja las imágenes en public/landing/ (las usa la landing: `<sección>-<tema>.png` y
+ * `<sección>-<tema>-mobile.png`). Son capturas reales de la app corriendo.
  *
  * Requisitos: Supabase local levantado, `npm run seed:demo` ya corrido y la app en marcha
  * (`npm run dev` o `npm run build && npm run start`). El login de Google no se puede automatizar:
@@ -16,14 +17,18 @@ import { sessionCookies, userClient } from "./lib/test-session";
 
 const BASE_URL = process.env.SCREENSHOTS_BASE_URL ?? "http://localhost:3000";
 const OUT_DIR = path.join(process.cwd(), "public", "landing");
-/** Mismo tamaño que el marco de captura del diseño (16 : 9,4 a 1440 px). */
-const VIEWPORT = { width: 1440, height: 846 };
+/** Computadora: mismo tamaño que el marco de captura del diseño (16 : 9,4 a 1440 px). Teléfono: 390 × 844, en 2×. */
+const DEVICES = [
+  { suffix: "", phone: false, options: { viewport: { width: 1440, height: 846 } } },
+  { suffix: "-mobile", phone: true, options: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
+];
 
-type Shot = { name: string; path: string; ready: string; prepare?: (page: Page) => Promise<void> };
+/** `phoneReady`: qué esperar en el teléfono, si ahí no se ve lo mismo (el Horario muestra un solo día). */
+type Shot = { name: string; path: string; ready: string; phoneReady?: string; prepare?: (page: Page) => Promise<void> };
 
 const SHOTS: Shot[] = [
   { name: "subjects", path: "/app", ready: ".subject-card" },
-  { name: "schedule", path: "/app/schedule", ready: ".sched-block.is-skipped" },
+  { name: "schedule", path: "/app/schedule", ready: ".sched-block.is-skipped", phoneReady: ".sched-block" },
   {
     name: "tasks",
     path: "/app/todo",
@@ -61,9 +66,10 @@ async function main() {
   const cookies = await sessionCookies(user);
   const browser = await chromium.launch();
   try {
-    for (const theme of ["light", "dark"] as const) {
+    const runs = DEVICES.flatMap((device) => (["light", "dark"] as const).map((theme) => ({ device, theme })));
+    for (const { device, theme } of runs) {
       const context = await browser.newContext({
-        viewport: VIEWPORT,
+        ...device.options,
         colorScheme: theme,
         locale: "es-AR",
         timezoneId: "America/Argentina/Buenos_Aires",
@@ -76,11 +82,11 @@ async function main() {
 
       for (const shot of SHOTS) {
         await page.goto(BASE_URL + shot.path);
-        await page.waitForSelector(shot.ready);
+        await page.waitForSelector(`${(device.phone && shot.phoneReady) || shot.ready} >> visible=true`);
         await shot.prepare?.(page);
         await page.evaluate(() => document.fonts.ready);
         await page.waitForLoadState("networkidle");
-        const file = path.join(OUT_DIR, `${shot.name}-${theme}.png`);
+        const file = path.join(OUT_DIR, `${shot.name}-${theme}${device.suffix}.png`);
         await page.screenshot({ path: file });
         console.log(`✓ ${path.relative(process.cwd(), file)}`);
       }

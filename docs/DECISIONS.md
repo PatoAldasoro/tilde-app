@@ -323,7 +323,7 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     - **Tooltips.** Ocultos no ocupan lugar. Un tooltip invisible que se pasaba del borde le agregaba ancho a la
       página en el teléfono, y eso no se ve con `scrollWidth - innerWidth`: el navegador agranda la página entera.
       Por eso los tests de layout comparan contra el ancho de la pantalla.
-    - Pendiente: las capturas de la landing son de escritorio también en el teléfono.
+    - Las capturas de la landing en el teléfono: ver 52.
 48. **Instalable.** Manifiesto (`src/app/manifest.ts`) e íconos en `public/icons/`, generados del logo: Tilde se
     puede agregar a la pantalla de inicio y abre directo en la app. Junto con el modo sin conexión (46), funciona
     como una app instalada.
@@ -347,3 +347,22 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     - Un examen nunca espera: cuando se cumple el tiempo, termina.
     - Decisión propia: son dos interruptores y no uno, porque esperar antes del descanso (terminar el ejercicio) y
       esperar antes del foco (no volver hasta estar sentado) son necesidades distintas.
+52. **Capturas de teléfono en la landing.** `npm run screenshots` saca cada sección también a 390 × 844 (en 2×,
+    `public/landing/<sección>-<tema>-mobile.png`). La landing elige con `<picture>`: por debajo de 768 px, la del
+    teléfono, en un marco de hasta 360 px; desde 768 px, la de la computadora, como antes (el escritorio no cambia).
+53. **Imagen para compartir.** Al pegar el link en LinkedIn, X o WhatsApp sale una imagen de 1200 × 630
+    (`public/og/<idioma>.png`): logo, nombre, la primera frase de la portada y la captura de Materias. La arma
+    `npm run og-image` con los tokens y las fuentes del repo; hay que volver a correrlo si cambian la captura o la
+    frase. La landing declara `og:image` y la tarjeta grande de X (`summary_large_image`).
+54. **Privacidad y términos.** `/privacy` y `/terms` (y `/en/…`): texto público, estático, enlazado desde el pie de la
+    landing y desde Ajustes. Dicen qué se guarda (perfil de Google, lo cargado, links de apuntes y calendarios), dónde
+    (Supabase en Estados Unidos, Vercel), qué queda en el dispositivo, que no hay analítica ni cookies de terceros y
+    cómo borrar todo. Si se agrega analítica o registro de errores, **hay que actualizar la política**.
+    - El correo de contacto es opcional (`NEXT_PUBLIC_CONTACT_EMAIL`): sin él no se muestra en ningún lado. Decisión
+      propia: no publicar un correo personal sin que se elija.
+    - Las páginas no usan la barra de la landing, que borra lo guardado de una cuenta: también las abre alguien con sesión.
+55. **Borrar la cuenta.** Ajustes → "Borrar la cuenta", con confirmación. Llama a `delete_my_account()` (migración
+    `20261014000000`): una función `security definer` que borra al usuario de la sesión en `auth.users`; todas las
+    tablas cuelgan de ahí con `on delete cascade`, así que se van todos sus datos. Después se borra lo del dispositivo
+    (cola de cambios, copia local, pantallas guardadas) y se vuelve a la landing con un aviso. Pide conexión: sin
+    red avisa y no hace nada. Cubierto en `tests/rls.test.ts` (solo borra la cuenta propia; sin sesión no se puede).
