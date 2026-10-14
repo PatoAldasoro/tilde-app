@@ -46,7 +46,7 @@ export const taskKeyboardCoordinates: KeyboardCoordinateGetter = (event, { conte
   const centerY = collisionRect.top + collisionRect.height / 2;
   const down = event.code === "ArrowDown";
 
-  let best: { left: number; center: number } | undefined;
+  let best: number | undefined;
   for (const container of droppableContainers.getEnabled()) {
     const data = dropData(container);
     const rect = droppableRects.get(container.id);
@@ -57,8 +57,10 @@ export const taskKeyboardCoordinates: KeyboardCoordinateGetter = (event, { conte
     const center = rect.top + rect.height / 2;
     const ahead = down ? center > centerY + 4 : center < centerY - 4;
     if (!ahead) continue;
-    if (!best || (down ? center < best.center : center > best.center)) best = { left: rect.left, center };
+    if (best === undefined || (down ? center < best : center > best)) best = center;
   }
-  if (!best) return undefined;
-  return { x: best.left, y: best.center - collisionRect.height / 2 + (down ? 4 : -4) };
+  if (best === undefined) return undefined;
+  // Solo en vertical: si cambiara también la x (la fila levantada está agrandada y no arranca donde las
+  // otras), dnd-kit desplazaría la página y movería la fila a la vez, y el destino quedaría corrido.
+  return { x: collisionRect.left, y: best - collisionRect.height / 2 + (down ? 4 : -4) };
 };

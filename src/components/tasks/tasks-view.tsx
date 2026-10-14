@@ -4,6 +4,7 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -422,8 +423,12 @@ export function TasksView() {
         <DndContext
           sensors={sensors}
           collisionDetection={taskCollision}
+          // Con teclado, cuando el destino pasa la mitad de la pantalla dnd-kit desplaza la página en vez de
+          // mover la fila: las filas se vuelven a medir para que el destino salga de donde están ahora.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
           onDragStart={onDragStart}
           onDragMove={onDragMove}
+          onDragOver={onDragMove}
           onDragEnd={onDragEnd}
           onDragCancel={() => setDrag(null)}
           accessibility={{
