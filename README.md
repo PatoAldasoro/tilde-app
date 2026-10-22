@@ -4,17 +4,20 @@ Webapp para estudiantes universitarios. Se cargan las **materias** y todo lo dem
 horario, tareas, calendario, notas y sesiones de estudio. El color de cada materia la identifica en toda la app.
 
 - **Inicio** — materias (con documentos de Drive y progreso de sus tareas), notas con promedios y archivadas.
-- **Horario** — grilla semanal de 07:00 a 23:00 con clases, actividades recurrentes, excepciones y feriados. Se
-  exporta como imagen para usar de fondo de pantalla (horizontal 16:9 o 16:10, vertical 9:16 o 9:19,5; tema,
-  fondo y estilo de los bloques a elección).
+- **Horario** — grilla semanal de 07:00 a 23:00 con clases, actividades recurrentes, excepciones y feriados, a
+  cualquier minuto (18:50–21:33). Se exporta como imagen para usar de fondo de pantalla: con la medida de la pantalla
+  del dispositivo o en 16:9, 16:10, 9:16 o 9:19,5; trece temas completos (paleta, tipografía, esquinas y fondo), vista
+  grande y el horario escrito en cada bloque si hace falta.
 - **Tareas** — lista por día con subtareas, prioridad, arrastre de pendientes, entregas con anticipación y drag & drop.
+  Se ven hoy, los próximos 7 o 30 días, todas, hasta una fecha o un día puntual, con varios criterios de orden.
   Se pueden importar desde un JSON (por ejemplo, un plan armado por una IA).
 - **Calendario** — vista mensual con parciales, finales, TP (que generan su tarea), recuperatorios y feriados nacionales.
   Importa fechas de un archivo `.ics` o de un calendario vinculado (Google Calendar, Outlook, iCloud).
 - **Sesiones de estudio** — timer con presets, modo foco, modo examen, timer flotante, tareas de hoy (con sus
   subtareas), historial editable y un "Wrapped" de la semana, el mes o el cuatrimestre.
 
-Las materias se ordenan arrastrándolas en Inicio. Cada materia (y cada actividad del horario) puede llevar un ícono además de su color. El color de acento de la
+Las materias se ordenan arrastrándolas en Inicio. Cada materia (y cada actividad del horario) puede llevar un ícono además de su color
+(más de 250, agrupados por área y con buscador). El color de acento de la
 app se elige en Ajustes entre los de la paleta.
 
 Mobile first: se usa desde un teléfono de 320 px hasta el escritorio, se puede instalar y sigue funcionando sin conexión

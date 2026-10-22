@@ -29,6 +29,21 @@ export function timeOptions(fromMinutes: number, toMinutes: number, step = 30): 
 }
 
 /**
+ * La opción de una lista de horas ("HH:MM") que empieza con lo que se está escribiendo, o -1.
+ * Se ignoran los dos puntos y la hora puede ir sin el cero: "9", "93" y "09:3" llevan a "09:30".
+ */
+export function matchTimeOption(options: readonly string[], typed: string): number {
+  const digits = typed.replace(/\D/g, "");
+  if (!digits) return -1;
+  const candidates = digits.length % 2 === 1 ? [`0${digits}`, digits] : [digits, `0${digits}`];
+  for (const candidate of candidates) {
+    const index = options.findIndex((option) => option.replace(":", "").startsWith(candidate));
+    if (index >= 0) return index;
+  }
+  return -1;
+}
+
+/**
  * Hora escrita a mano: "14:30", "9:05", "1430", "930" o "14". Devuelve "HH:MM", null si
  * el campo está vacío o "invalid" si no es una hora.
  */

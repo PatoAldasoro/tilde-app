@@ -340,14 +340,22 @@ test("horario: el día manda en el encabezado y se exporta como fondo de pantall
   expect(await background(".wd")).not.toBe("rgba(0, 0, 0, 0)");
   expect(await background(".dn")).toBe("rgba(0, 0, 0, 0)");
 
-  // Exportar: por defecto horizontal 16:9 (3840 × 2160), fondo liso y bloques plenos.
+  // Exportar: por defecto, la pantalla de este dispositivo en su resolución real, el tema Tilde y su fondo.
   await page.getByRole("button", { name: "Exportar" }).click();
   const dialog = page.getByRole("dialog", { name: "Exportar el horario" });
   const canvas = dialog.getByTestId("wallpaper-canvas");
-  await expect(dialog.getByRole("radio", { name: "Horizontal 16:9" })).toHaveAttribute("aria-checked", "true");
-  await expect(dialog.getByRole("radio", { name: "Liso" })).toHaveAttribute("aria-checked", "true");
-  await expect(dialog.getByText("3840 × 2160 px · PNG")).toBeVisible();
   const size = () => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height]);
+  const device = await page.evaluate(() => [Math.round(screen.width * devicePixelRatio), Math.round(screen.height * devicePixelRatio)]);
+  await expect(dialog.getByRole("radio", { name: "Este dispositivo" })).toHaveAttribute("aria-checked", "true");
+  await expect(dialog.getByText(`La pantalla de este dispositivo, en su resolución real: ${device[0]} × ${device[1]} px.`)).toBeVisible();
+  await expect(dialog.getByText(`${device[0]} × ${device[1]} px · PNG`)).toBeVisible();
+  await expect.poll(size).toEqual(device);
+  const themes = dialog.getByRole("radiogroup", { name: "Tema" });
+  await expect(themes.getByRole("radio")).toHaveCount(13);
+  await expect(themes.getByRole("radio", { name: "Tilde", exact: true })).toHaveAttribute("aria-checked", "true");
+  await expect(dialog.getByRole("radio", { name: "Del tema" })).toHaveAttribute("aria-checked", "true");
+  await dialog.getByRole("radio", { name: "Horizontal 16:9" }).click();
+  await expect(dialog.getByText("3840 × 2160 px · PNG")).toBeVisible();
   await expect.poll(size).toEqual([3840, 2160]);
 
   /** Color de un punto de la imagen, en fracciones del ancho y del alto. */
@@ -365,12 +373,47 @@ test("horario: el día manda en el encabezado y se exporta como fondo de pantall
       }
       return seen.size;
     });
+  /** Una suma de todos los píxeles: cambia si cambia cualquier cosa del dibujo. */
+  const fingerprint = () =>
+    canvas.evaluate((element: HTMLCanvasElement) => {
+      const data = element.getContext("2d")!.getImageData(0, 0, element.width, element.height).data;
+      let sum = 0;
+      for (let index = 0; index < data.length; index += 4) sum = (sum + data[index] * 3 + data[index + 1] * 5 + data[index + 2] * 7) % 1_000_000_007;
+      return sum;
+    });
 
-  // Fondo "Con color": manchas con los colores de las materias (muchos más tonos que el liso).
+  // Fondo "Con color": manchas con los colores de las materias (muchos más tonos que el del tema).
   const plain = await colors();
   expect(plain).toBeGreaterThan(5);
   await dialog.getByRole("radio", { name: "Con color" }).click();
   await expect.poll(colors).toBeGreaterThan(plain + 40);
+  await dialog.getByRole("radio", { name: "Del tema" }).click();
+
+  // Temas completos: cada uno con su fondo, su tabla y sus bloques.
+  const blockColor = () => pixel(0.25, 0.2); // lunes de 08:00 a 10:00: Física II
+  const solid = await blockColor();
+  await themes.getByRole("radio", { name: "Suave", exact: true }).click();
+  await expect.poll(blockColor).not.toEqual(solid);
+  await themes.getByRole("radio", { name: "Brutalista" }).click();
+  await expect.poll(() => pixel(0.005, 0.01)).toEqual([255, 216, 77]);
+  await themes.getByRole("radio", { name: "Neón" }).click();
+  await expect.poll(async () => Math.max(...(await pixel(0.005, 0.01)))).toBeLessThan(50);
+  // Con las flechas se pasa al tema siguiente.
+  await themes.getByRole("radio", { name: "Neón" }).press("ArrowRight");
+  await expect(themes.getByRole("radio", { name: "Cuaderno" })).toHaveAttribute("aria-checked", "true");
+  await expect(themes.getByRole("radio", { name: "Cuaderno" })).toBeFocused();
+  await themes.getByRole("radio", { name: "Tilde", exact: true }).click();
+  await expect.poll(blockColor).toEqual(solid);
+
+  // El horario escrito en cada bloque: apagado si todo cae en la media hora; se puede prender.
+  const times = dialog.getByRole("switch", { name: "Escribir el horario en cada bloque" });
+  await expect(times).toHaveAttribute("aria-checked", "false");
+  const withoutTimes = await fingerprint();
+  await times.click();
+  await expect(times).toHaveAttribute("aria-checked", "true");
+  await expect.poll(fingerprint).not.toBe(withoutTimes);
+  await times.click();
+  await expect.poll(fingerprint).toBe(withoutTimes);
 
   // Fondo a elección: cualquier color, escribiendo su código o con el selector.
   await dialog.getByRole("radio", { name: "A elección" }).click();
@@ -391,13 +434,21 @@ test("horario: el día manda en el encabezado y se exporta como fondo de pantall
   expect(await pixel(0.04, 0.5)).not.toEqual([255, 136, 0]);
   expect(await pixel(0.96, 0.5)).not.toEqual([255, 136, 0]);
 
-  // Bloques plenos (el color de la materia de fondo) o suaves, como en la app.
-  const blockColor = () => pixel(0.25, 0.2); // lunes de 08:00 a 10:00: Física II
-  const solid = await blockColor();
-  await dialog.getByRole("radio", { name: "Suaves" }).click();
-  await expect.poll(blockColor).not.toEqual(solid);
-  await dialog.getByRole("radio", { name: "Plenos" }).click();
-  await expect.poll(blockColor).toEqual(solid);
+  // Vista grande: la misma imagen, ajustada a la pantalla o en tamaño real. Esc vuelve al diálogo.
+  await dialog.getByRole("button", { name: "Ver en grande" }).click();
+  const zoom = page.getByRole("dialog", { name: "Vista previa" });
+  const big = zoom.getByTestId("wallpaper-zoom");
+  await expect.poll(() => big.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([3840, 2160]);
+  const fitted = await big.boundingBox();
+  expect(fitted!.width).toBeLessThanOrEqual(1366);
+  expect(fitted!.height).toBeLessThanOrEqual(900);
+  await zoom.getByRole("button", { name: "Tamaño real" }).click();
+  await expect.poll(async () => (await big.boundingBox())!.width).toBe(3840);
+  await zoom.getByRole("button", { name: "Ajustar a la pantalla" }).click();
+  await expect.poll(async () => (await big.boundingBox())!.width).toBeLessThanOrEqual(1366);
+  await page.keyboard.press("Escape");
+  await expect(zoom).toBeHidden();
+  await expect(dialog).toBeVisible();
 
   const [landscape] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Descargar imagen" }).click()]);
   expect(landscape.suggestedFilename()).toBe("tilde-horario-16x9.png");
@@ -409,7 +460,7 @@ test("horario: el día manda en el encabezado y se exporta como fondo de pantall
   await expect(dialog.getByRole("radio", { name: "A elección" })).toHaveAttribute("aria-checked", "true");
   await expect(hex).toHaveValue("#FF8800");
   await dialog.getByRole("radio", { name: "Vertical 9:19,5" }).click();
-  await dialog.getByRole("radio", { name: "Oscuro" }).click();
+  await themes.getByRole("radio", { name: "Tilde oscuro" }).click();
   await expect(dialog.getByText("2160 × 4680 px · PNG")).toBeVisible();
   await expect.poll(size).toEqual([2160, 4680]);
   await expect.poll(() => pixel(0.5, 0.02)).toEqual([255, 136, 0]);
@@ -421,13 +472,35 @@ test("horario: el día manda en el encabezado y se exporta como fondo de pantall
   expect(phone.suggestedFilename()).toBe("tilde-horario-9x19.5.png");
   expect(await pngSize(await phone.path())).toEqual([2160, 4680]);
 
-  // Los otros dos formatos.
+  // Los otros formatos, y este dispositivo con su medida en el nombre del archivo.
   await page.getByRole("button", { name: "Exportar" }).click();
+  await expect(themes.getByRole("radio", { name: "Tilde oscuro" })).toHaveAttribute("aria-checked", "true");
   await dialog.getByRole("radio", { name: "Vertical 9:16" }).click();
   await expect.poll(size).toEqual([2160, 3840]);
   await dialog.getByRole("radio", { name: "Horizontal 16:10" }).click();
   await expect(dialog.getByText("3840 × 2400 px · PNG")).toBeVisible();
   await expect.poll(size).toEqual([3840, 2400]);
+  await dialog.getByRole("radio", { name: "Este dispositivo" }).click();
+  await expect.poll(size).toEqual(device);
+  const [own] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Descargar imagen" }).click()]);
+  expect(own.suggestedFilename()).toBe(`tilde-horario-${device[0]}x${device[1]}.png`);
+  expect(await pngSize(await own.path())).toEqual(device);
+});
+
+test("horario: un horario que no cae en la media hora se escribe en el bloque exportado", async ({ page }) => {
+  await db.from("schedule_blocks").insert({ subject_id: subjectId, weekday: 2, start_time: "18:50", end_time: "21:33" });
+  await page.goto("/app/schedule");
+  await expect(page.locator(".sched-block").filter({ hasText: "18:50–21:33" })).toBeVisible();
+  await page.getByRole("button", { name: "Exportar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Exportar el horario" });
+  // Sin elegir nada, se prende solo; apagarlo se recuerda.
+  const times = dialog.getByRole("switch", { name: "Escribir el horario en cada bloque" });
+  await expect(times).toHaveAttribute("aria-checked", "true");
+  await times.click();
+  await expect(times).toHaveAttribute("aria-checked", "false");
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await page.getByRole("button", { name: "Exportar" }).click();
+  await expect(times).toHaveAttribute("aria-checked", "false");
 });
 
 test("horario: sin nada que se repita no hay qué exportar", async ({ page }) => {
@@ -459,19 +532,40 @@ test("íconos: se eligen en la materia y en la actividad, y aparecen donde se mu
   await expect(trigger).toContainText("Sin ícono");
   await trigger.click();
   const grid = page.getByRole("radiogroup", { name: "Ícono" });
-  await expect(grid.getByRole("radio")).toHaveCount(65);
+  await expect(grid.getByRole("radio")).toHaveCount(259);
+  // Con mouse y teclado se arranca en el buscador.
+  const search = page.getByRole("searchbox", { name: "Buscar un ícono" });
+  await expect(search).toBeFocused();
+  // Flechas: del buscador se baja a la grilla. "Sin ícono" ocupa la primera fila y cada grupo empieza
+  // en una fila nueva, de ocho; arriba y abajo siguen la columna.
+  await page.keyboard.press("ArrowDown");
   await expect(grid.getByRole("radio", { name: "Sin ícono" })).toBeFocused();
-  // Flechas: "Sin ícono" ocupa la primera fila; después, ocho por fila.
   await page.keyboard.press("ArrowDown");
   await expect(grid.getByRole("radio", { name: "Libro abierto" })).toBeFocused();
-  await page.keyboard.press("ArrowDown");
-  await expect(grid.getByRole("radio", { name: "Calculadora" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
-  await expect(grid.getByRole("radio", { name: "Sigma" })).toBeFocused();
+  await expect(grid.getByRole("radio", { name: "Lectura" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(grid.getByRole("radio", { name: "Estantería" })).toBeFocused();
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("ArrowUp");
   await expect(grid.getByRole("radio", { name: "Sin ícono" })).toBeFocused();
-  await grid.getByRole("radio", { name: "Matraz" }).click();
+  await page.keyboard.press("ArrowUp");
+  await expect(search).toBeFocused();
+
+  // Buscador: sin tildes, por el nombre, por el área (química → los de Ciencias) y por la clave en inglés.
+  const results = page.getByRole("status").filter({ hasText: /íconos?$/ });
+  await search.fill("quimica");
+  await expect(grid.getByRole("radio").first()).toHaveAccessibleName("Átomo");
+  await expect(results).toHaveText("19 íconos");
+  await search.fill("flask");
+  await expect(grid.getByRole("radio")).toHaveCount(2);
+  await search.fill("zzz");
+  await expect(grid.getByRole("radio")).toHaveCount(0);
+  await expect(page.getByText("Ningún ícono coincide con «zzz».")).toBeVisible();
+  // Enter elige el primer resultado.
+  await search.fill("matraz");
+  await expect(results).toHaveText("1 ícono");
+  await search.press("Enter");
   await expect(trigger).toContainText("Matraz");
   await form.getByRole("button", { name: "Agregar materia" }).click();
   await expect(page.locator(".subject-card").filter({ hasText: "Química" }).locator('svg[data-icon="flask-conical"]')).toBeVisible();

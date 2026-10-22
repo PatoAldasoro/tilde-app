@@ -93,6 +93,25 @@ for (const width of [390, 1366]) {
     await page.locator(".task-title").first().click();
     await expect(page.locator(".sheet")).toBeVisible();
     await expectNoViolations(page, `panel de tarea a ${width}`);
+
+    // El selector de ícono (con su buscador), la lista de horas y el exportador del horario.
+    await page.goto(baseURL + "/app");
+    await page.getByRole("button", { name: "Agregar materia" }).first().click();
+    await page.getByRole("dialog", { name: "Nueva materia" }).getByRole("button", { name: /Ícono/ }).click();
+    await expect(page.getByRole("radiogroup", { name: "Ícono" })).toBeVisible();
+    await expectNoViolations(page, `selector de ícono a ${width}`);
+    await page.goto(baseURL + "/app/schedule");
+    await page.getByRole("button", { name: "Agregar", exact: true }).click();
+    await page.getByRole("dialog", { name: "Agregar al horario" }).getByLabel("Desde").click();
+    await expect(page.getByRole("listbox", { name: "Horarios" })).toBeVisible();
+    await expectNoViolations(page, `lista de horas a ${width}`);
+    await page.goto(baseURL + "/app/schedule");
+    await page.getByRole("button", { name: "Exportar" }).click();
+    await expect(page.getByRole("dialog", { name: "Exportar el horario" })).toBeVisible();
+    await expectNoViolations(page, `exportar el horario a ${width}`);
+    await page.getByRole("button", { name: "Ver en grande" }).click();
+    await expect(page.getByRole("dialog", { name: "Vista previa" })).toBeVisible();
+    await expectNoViolations(page, `vista grande a ${width}`);
     await context.close();
   });
 }

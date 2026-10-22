@@ -76,6 +76,10 @@
 /* En el teléfono los botones del pie se reparten el ancho: quedan al alcance del pulgar. */
 .dialog-foot > .btn { flex: 1 1 auto; }
 .form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+/* Diálogo de pantalla completa (vista grande de una imagen): igual en todos los tamaños. */
+/* Una imagen en tamaño real se desplaza adentro: no agranda el diálogo. */
+.dialog-layer.is-full { padding: 0; place-items: stretch; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+.dialog.dialog-full { width: 100%; min-width: 0; height: 100dvh; max-height: none; border-radius: 0; animation: fade-in var(--duration-base) var(--ease-standard); }
 .sheet-foot { padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); }
 
 @media (min-width: 600px) {

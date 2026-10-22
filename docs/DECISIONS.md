@@ -378,3 +378,58 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     - Lighthouse en modo teléfono (simulación de red lenta), con la app ya en producción local: accesibilidad 100 en
       todas; rendimiento 85–89 en la landing y 73–84 en la app (LCP 4–5 s: los datos se piden desde el navegador al
       abrir). SEO 63 en la app es a propósito (no se indexa).
+
+## Quinta tanda de cambios (22/10/2026)
+
+57. **Más íconos, agrupados y con buscador.** De 64 a 258, todos de Lucide, en trece grupos (estudio, matemática,
+    ciencias, naturaleza, salud, tecnología, ingeniería, economía y derecho, humanidades, arte y diseño, deporte,
+    comida y vida diaria). El selector tiene un buscador arriba que no distingue tildes ni mayúsculas y busca en el
+    nombre del ícono, en las palabras de su grupo ("química" trae los de Ciencias, "álgebra" los de Matemática) y en
+    su clave de Lucide (en inglés). Enter elige el primero. Las flechas siguen la columna aunque los grupos dejen filas
+    incompletas. Con mouse el foco arranca en el buscador; con el dedo, en la opción elegida (el teclado del teléfono
+    taparía la grilla).
+    - Decisión propia: una lista elegida y traducida, no todo Lucide (más de 1800 íconos). Buscar en todo Lucide
+      sería solo en inglés, cargaría los íconos de a uno (sin conexión no aparecerían) y el exportador del horario
+      necesita los trazos de cada ícono dibujados de antemano. La regla de la lista cerrada sigue (CLAUDE.md, regla 3).
+    - Las claves que ya estaban se quedan igual: "building-2" es el nombre viejo de "building-complex" en Lucide.
+58. **Horarios a cualquier minuto.** Las clases y actividades pueden ser de 18:50 a 21:33. El selector de hora pasa a
+    ser un campo con lista (`TimeField`): se elige una media hora de la lista o se escribe cualquier hora ("18:50",
+    "1850"); lo que no es una hora, o queda fuera de 07:00–23:00, vuelve al valor anterior al salir del campo. La
+    grilla sigue con filas de media hora: el bloque se ubica en su minuto exacto y el horario se lee en el bloque y en
+    su detalle. La base ya aceptaba cualquier minuto: no hizo falta migración.
+59. **Ordenar las tareas desde la sesión de estudio.** "Tareas de hoy" tiene el mismo menú de orden que Tareas (mi
+    orden, prioridad, fecha límite, examen más cercano, materia, antigüedad, nombre), con "Guardar como mi orden".
+    El criterio es uno solo para los dos lados: elegirlo en la sesión lo cambia en Tareas. Solo con "Mi orden" se
+    arrastra.
+60. **Temas completos para el horario exportado.** Trece: Tilde y Tilde oscuro (como la app, bloques plenos), Suave y
+    Suave oscuro (bloques suaves con borde), Simple (blanco, recto, una franja de color por bloque), Pastel (redondeado,
+    Nunito), Editorial (papel, serif Fraunces, bordes de tinta), Brutalista (amarillo, bordes gruesos y sombras duras,
+    Space Grotesk), Neón (noche, trazos que brillan, JetBrains Mono), Cuaderno (hoja rayada con margen rojo,
+    resaltador, Caveat), Pizarrón (verde, tiza, Caveat), Blanco y negro y Atardecer (degradado y tabla de vidrio).
+    - Cada tema define fondo, tabla, líneas, encabezado, bloques (relleno, borde, franja, halo, sombra), esquinas y
+      tipografía. Los colores de los bloques salen siempre de la paleta de la materia, transformada por el tema
+      (pastel, apagada, neón), para que cada materia se siga reconociendo. Un test verifica que el texto de los
+      bloques se lea en todos.
+    - Reemplazan a las opciones "Tema" (claro/oscuro) y "Bloques" (plenos/suaves): lo guardado se traduce al tema
+      equivalente. "Fondo" queda: el del tema, con color (manchas) o a elección.
+    - Las tipografías nuevas se sirven desde la app (`@fontsource-variable`, sin pedir nada a Google) y solo se
+      descargan al abrir el exportador.
+    - Decisión propia: "Escribir el horario en cada bloque" (18:50–21:33). Sin tocarlo, se prende solo si algún
+      bloque no cae en la media hora, porque la grilla ya no alcanza para leerlo.
+61. **La medida de este dispositivo.** El formato "Este dispositivo" exporta con la resolución real de la pantalla:
+    `screen.width × screen.height × devicePixelRatio` (el zoom del navegador cambia los dos factores al revés, así
+    que el resultado no se mueve). Es el formato por defecto para quien no eligió otro. Si la pantalla es más grande
+    de lo que dibuja un canvas en Safari (16,7 megapíxeles u 8192 px de lado), se achica sin cambiar la proporción.
+    El archivo lleva la medida en el nombre (`tilde-horario-1179x2556.png`).
+62. **Vista previa en grande.** Un botón sobre la vista previa la abre a pantalla completa, ajustada a la pantalla o,
+    tocándola (o con "Tamaño real"), en su tamaño real con desplazamiento. Desde ahí también se descarga.
+63. **Arrastrar en la sesión ya no baja sin fin.** La fila arrastrada en "Tareas de hoy" se movía en su lugar y, al
+    llevarla más allá del final, agrandaba el área del panel; el desplazamiento automático la seguía y el panel
+    bajaba sin parar. Ahora el arrastre no sale de la lista de pendientes (y va solo para arriba y para abajo).
+    En Tareas no pasaba: ahí lo que se mueve es una copia fija (`DragOverlay`).
+64. **Más filtros de fecha en Tareas.** Además de hoy, próximos 7 días y una fecha: próximos 30 días, todas y hasta
+    una fecha (arranca dos semanas adelante). Los largos son una agenda: hoy como siempre (arrastradas, vencidas y
+    entregas en su ventana) y después cada pendiente **una sola vez**, en su día (la fecha límite o, si no tiene, el
+    día planeado), sin los días vacíos. Decisión propia: en 30 días o más, repetir cada entrega en todos los días de su
+    ventana llenaría la lista de copias; "Próximos 7 días" sigue como antes.
+

@@ -14,7 +14,8 @@ export const DialogClose = DialogPrimitive.Close;
 type DialogContentProps = Omit<ComponentProps<typeof DialogPrimitive.Content>, "title"> & {
   title: ReactNode;
   description?: ReactNode;
-  size?: "sm" | "md" | "lg";
+  /** "full": ocupa toda la pantalla (vista grande de una imagen). */
+  size?: "sm" | "md" | "lg" | "full";
   /** Sin botón de cierre: el diálogo exige elegir una de sus acciones. */
   hideClose?: boolean;
 };
@@ -25,10 +26,10 @@ export function DialogContent({ title, description, size = "md", hideClose, clas
   const returnFocus = useReturnFocus();
   return (
     <DialogPrimitive.Portal>
-      <div className="dialog-layer" role="presentation">
+      <div className={cn("dialog-layer", size === "full" && "is-full")} role="presentation">
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
-          className={cn("dialog", size === "sm" && "dialog-sm", size === "lg" && "dialog-lg", className)}
+          className={cn("dialog", size === "sm" && "dialog-sm", size === "lg" && "dialog-lg", size === "full" && "dialog-full", className)}
           {...(description ? {} : { "aria-describedby": undefined })}
           onOpenAutoFocus={(event) => {
             returnFocus.onOpenAutoFocus();

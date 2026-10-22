@@ -149,6 +149,72 @@ test("sesión de estudio: las tareas de hoy se reordenan arrastrando, y es el mi
   await expect.poll(() => today(page).locator(".task .task-title").allTextContents()).toEqual(["Tres", "Uno", "Ya hecha", "Dos"]);
 });
 
+test("sesión de estudio: arrastrar más allá del final no estira el panel ni sigue bajando", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 700 });
+  await db.from("tasks").insert(Array.from({ length: 12 }, (_, index) => ({ title: `Tarea ${index + 1}`, planned_date: "2026-03-10", sort_order: index + 1 })));
+  await page.goto("/app/study");
+  const panel = page.getByRole("complementary", { name: "Tareas de hoy" });
+  await expect(panel.locator(".mini-task")).toHaveCount(12);
+  const body = panel.locator(".side-panel-body");
+  const height = () => body.evaluate((element) => element.scrollHeight);
+  const before = await height();
+
+  // Se lleva la primera hasta el borde de abajo de la pantalla y se espera.
+  const grip = await panel.getByRole("button", { name: "Mover «Tarea 1»" }).boundingBox();
+  await page.mouse.move(grip!.x + grip!.width / 2, grip!.y + grip!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip!.x + grip!.width / 2, grip!.y + 20, { steps: 4 });
+  await page.mouse.move(grip!.x + grip!.width / 2, 698, { steps: 8 });
+  await page.waitForTimeout(1500);
+  expect(await height()).toBe(before);
+  const scrolled = await body.evaluate((element) => element.scrollTop);
+  expect(scrolled).toBeLessThanOrEqual(before - (await body.evaluate((element) => element.clientHeight)));
+  await page.mouse.up();
+  await expect.poll(() => panel.locator(".mt-title").last().textContent()).toBe("Tarea 1");
+});
+
+test("sesión de estudio: las tareas de hoy se ordenan con los mismos criterios que Tareas", async ({ page }) => {
+  await db.from("tasks").insert([
+    { title: "Bravo", planned_date: "2026-03-10", sort_order: 1, priority: "low" },
+    { title: "Alfa", planned_date: "2026-03-10", sort_order: 2, priority: "high" },
+    { title: "Charlie", planned_date: "2026-03-10", sort_order: 3, priority: "medium" },
+  ]);
+  await page.goto("/app/study");
+  const panel = page.getByRole("complementary", { name: "Tareas de hoy" });
+  const names = () => panel.locator(".mt-title").allTextContents();
+  await expect.poll(names).toEqual(["Bravo", "Alfa", "Charlie"]);
+  await expect(panel.locator("button.mini-grip")).toHaveCount(3);
+
+  // Por prioridad: sin asas para arrastrar, con el aviso y la vuelta a «Mi orden».
+  await panel.getByRole("button", { name: "Ordenar. Ahora: Mi orden" }).click();
+  await page.getByRole("menuitemradio", { name: "Prioridad", exact: true }).click();
+  await expect.poll(names).toEqual(["Alfa", "Charlie", "Bravo"]);
+  await expect(panel.getByRole("button", { name: "Ordenar. Ahora: Prioridad" })).toContainText("Prioridad");
+  await expect(panel.locator("button.mini-grip")).toHaveCount(0);
+  await expect(panel.getByText("Orden: Prioridad. Para arrastrar las tareas, volver a «Mi orden».")).toBeVisible();
+  await panel.getByRole("button", { name: "Volver a mi orden" }).click();
+  await expect.poll(names).toEqual(["Bravo", "Alfa", "Charlie"]);
+  await expect(panel.locator("button.mini-grip")).toHaveCount(3);
+
+  // El criterio es el mismo en Tareas.
+  await panel.getByRole("button", { name: /^Ordenar/ }).click();
+  await page.getByRole("menuitemradio", { name: "Nombre (A–Z)", exact: true }).click();
+  await expect.poll(names).toEqual(["Alfa", "Bravo", "Charlie"]);
+  await page.getByRole("button", { name: "Abrir menú" }).click();
+  await page.locator("#drawer").getByRole("link", { name: "Tareas", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Ordenar. Ahora: Nombre (A–Z)" })).toBeVisible();
+  await expect.poll(() => titles(today(page))).toEqual(["Alfa", "Bravo", "Charlie"]);
+
+  // Desde la sesión también se guarda como mi orden.
+  await page.goto("/app/study");
+  await panel.getByRole("button", { name: /^Ordenar/ }).click();
+  await page.getByRole("menuitem", { name: "Guardar como mi orden" }).click();
+  await expect(page.getByText("Guardado como mi orden")).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Ordenar. Ahora: Mi orden" })).toBeVisible();
+  await expect.poll(order).toEqual(["Alfa", "Bravo", "Charlie"]);
+  await expect.poll(names).toEqual(["Alfa", "Bravo", "Charlie"]);
+});
+
 test("con el timer corriendo se pide que la pantalla no se apague; en pausa y al terminar se suelta", async ({ page, context }) => {
   // El permiso de verdad depende del equipo: acá se registra cuándo se pide y cuándo se suelta.
   await context.addInitScript(() => {

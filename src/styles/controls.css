@@ -242,6 +242,16 @@
 .icon-option:hover { background: var(--color-surface-hover); color: var(--color-text); }
 .icon-option[aria-checked="true"] { background: var(--s-soft, var(--color-accent-soft)); color: var(--s-on-soft, var(--color-accent-text)); box-shadow: inset 0 0 0 2px var(--s-solid, var(--color-accent)); }
 .icon-option:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+/* Hora con lista: el campo se escribe y la flecha abre las medias horas. */
+.time-field { position: relative; min-width: 0; }
+.time-field .input { width: 100%; padding-right: 34px; }
+.time-field-toggle { position: absolute; top: 0; right: 0; bottom: 0; width: 34px; display: grid; place-items: center; border: 0; background: transparent; color: var(--color-text-subtle); cursor: pointer; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.time-field-toggle:hover { color: var(--color-text); }
+.popover.time-list { min-width: 0; width: max(var(--radix-popover-trigger-width, 120px), 104px); padding: 0; overflow: hidden; }
+.time-scroll { max-height: min(264px, var(--radix-popover-content-available-height, 264px)); overflow-y: auto; overscroll-behavior: contain; padding: var(--space-1); }
+.time-option { display: flex; align-items: center; height: var(--hit-target); padding: 0 var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-body-s); cursor: pointer; user-select: none; }
+.time-option:hover, .time-option.is-active { background: var(--color-surface-hover); }
+.time-option[aria-selected="true"] { font-weight: var(--weight-semibold); color: var(--color-accent-text); }
 .color-field { display: flex; align-items: center; gap: var(--space-2); }
 .color-field .input { width: 112px; text-transform: uppercase; }
 /* El selector de color del navegador, con forma de muestra. */
@@ -276,7 +286,17 @@
 /* Ajustes: color de acento (el original + los 12 de la paleta). */
 .swatches.is-accent { grid-template-columns: repeat(6, var(--hit-target)); }
 .icon-grid { display: grid; grid-template-columns: repeat(6, var(--hit-target)); gap: 2px; }
+/* Selector de ícono: buscador fijo arriba y la grilla agrupada con su propio desplazamiento. */
+.icon-search { position: relative; display: block; margin-bottom: var(--space-2); }
+.icon-search .lucide { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--color-text-subtle); pointer-events: none; }
+.icon-search .input { width: 100%; padding-left: 34px; }
+/* Sin la cruz azul del navegador (no es del diseño): se borra como cualquier campo. */
+.icon-search .input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.icon-scroll { width: fit-content; max-height: min(340px, calc(var(--radix-popover-content-available-height, 70vh) - 84px)); overflow: hidden auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.icon-group-label { grid-column: 1 / -1; padding: var(--space-3) var(--space-1) var(--space-1); font-size: var(--text-micro); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-subtle); }
+.icon-empty { width: calc(6 * var(--hit-target) + 10px); padding: var(--space-5) var(--space-2); text-align: center; font-size: var(--text-body-s); color: var(--color-text-muted); overflow-wrap: anywhere; }
 @media (min-width: 600px) {
+  .icon-empty { width: calc(8 * var(--hit-target) + 14px); }
   .swatches.is-accent { grid-template-columns: repeat(7, var(--hit-target)); }
   .icon-grid { grid-template-columns: repeat(8, var(--hit-target)); }
 }

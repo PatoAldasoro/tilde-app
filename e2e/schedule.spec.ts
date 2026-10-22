@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { userClient, type TestUser } from "../scripts/lib/test-session";
 import type { Database } from "../src/lib/supabase/database.types";
@@ -19,6 +19,11 @@ test.afterEach(async () => removeUser(user));
 
 const column = (page: Page, label: RegExp) => page.locator(".sched-col").filter({ has: page.locator(`xpath=self::*[@aria-label]`) }).and(page.getByRole("group", { name: label }));
 const blocksIn = (page: Page, label: RegExp) => column(page, label).locator(".sched-block");
+/** Escribe una hora en un campo de hora y la confirma con Enter. */
+async function setTime(field: Locator, time: string) {
+  await field.fill(time);
+  await field.press("Enter");
+}
 
 test("grilla semanal: días visibles, hoy, hora actual y estado vacío", async ({ page }) => {
   await page.goto("/app/schedule");
@@ -49,11 +54,11 @@ test("clases: varios bloques con aulas distintas, clic en un hueco y validación
   const dialog = page.getByRole("dialog", { name: "Agregar al horario" });
 
   // Primer bloque: lunes 08:00–10:00, aula 305. La hora de fin tiene que ser posterior.
-  await dialog.getByLabel("Desde").selectOption("08:00");
-  await dialog.getByLabel("Hasta").selectOption("07:30");
+  await setTime(dialog.getByLabel("Desde"), "08:00");
+  await setTime(dialog.getByLabel("Hasta"), "07:30");
   await dialog.getByRole("button", { name: "Agregar", exact: true }).click();
   await expect(dialog.getByText("La hora de fin tiene que ser posterior a la de inicio.")).toBeVisible();
-  await dialog.getByLabel("Hasta").selectOption("10:00");
+  await setTime(dialog.getByLabel("Hasta"), "10:00");
   await dialog.getByLabel("Aula").fill("Aula 305");
 
   // Segundo bloque: miércoles, otra aula.
@@ -107,8 +112,8 @@ test("actividades: en una fecha, todos los días y días específicos con fecha 
   await dialog.getByLabel("Título").fill("Vóley");
   await dialog.getByRole("radio", { name: "Días específicos" }).click();
   await dialog.getByRole("button", { name: "viernes" }).click(); // lunes ya viene marcado
-  await dialog.getByLabel("Desde").selectOption("21:00");
-  await dialog.getByLabel("Hasta").selectOption("23:00");
+  await setTime(dialog.getByLabel("Desde"), "21:00");
+  await setTime(dialog.getByLabel("Hasta"), "23:00");
   await dialog.getByRole("button", { name: "Agregar", exact: true }).click();
   await expect(page.getByText("Vóley agregada al horario")).toBeVisible();
 
@@ -178,7 +183,7 @@ test("archivar la materia saca sus clases del Horario; editar y eliminar un bloq
   await blocksIn(page, thursday).click();
   await page.getByRole("button", { name: "Editar", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Editar horario de clase" });
-  await dialog.getByLabel("Hasta").selectOption("12:30");
+  await setTime(dialog.getByLabel("Hasta"), "12:30");
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(blocksIn(page, thursday)).toContainText("09:00–12:30");
 
@@ -196,4 +201,54 @@ test("archivar la materia saca sus clases del Horario; editar y eliminar un bloq
   await page.getByRole("alertdialog", { name: "¿Eliminar este horario?" }).getByRole("button", { name: "Eliminar" }).click();
   await expect(page.locator(".sched-block")).toHaveCount(0);
   await expect.poll(async () => (await db.from("schedule_blocks").select("id")).data).toEqual([]);
+});
+
+test("horarios intermedios: cualquier minuto, escrito o elegido de la lista", async ({ page }) => {
+  await page.goto("/app/schedule");
+  await page.getByRole("button", { name: "Agregar clase" }).click();
+  const dialog = page.getByRole("dialog", { name: "Agregar al horario" });
+  const from = dialog.getByLabel("Desde");
+  const to = dialog.getByLabel("Hasta");
+  await expect(dialog.getByText("Se puede elegir de la lista o escribir cualquier hora (por ejemplo, 18:50).")).toBeVisible();
+
+  // La lista ofrece las medias horas: con las flechas se recorre y Enter elige.
+  await from.click();
+  const list = page.getByRole("listbox", { name: "Horarios" });
+  await expect(list).toBeVisible();
+  await expect(from).toHaveAttribute("aria-expanded", "true");
+  await list.getByRole("option", { name: "17:30" }).click();
+  await expect(from).toHaveValue("17:30");
+  await expect(list).toBeHidden();
+  await from.focus();
+  await from.press("ArrowDown");
+  await from.press("ArrowDown");
+  await expect(from).toHaveValue("18:00");
+  await from.press("Enter");
+  await expect(from).toHaveValue("18:00");
+
+  // Escrita a mano: 18:50 (o 1850) y 21:33.
+  await setTime(from, "1850");
+  await expect(from).toHaveValue("18:50");
+  await to.fill("21:33");
+  await to.press("Tab");
+  await expect(to).toHaveValue("21:33");
+  // Lo que no es una hora, o queda fuera de la grilla, vuelve a lo que había.
+  await setTime(to, "25:10");
+  await expect(to).toHaveValue("21:33");
+  await setTime(from, "05:00");
+  await expect(from).toHaveValue("18:50");
+  await dialog.getByRole("button", { name: "Agregar", exact: true }).click();
+  await expect(page.getByText("1 horario agregado a Física II")).toBeVisible();
+
+  // En la grilla las filas siguen siendo de media hora; el bloque arranca a dos tercios de la de las 18:30.
+  const block = blocksIn(page, /^lunes 09\/03/);
+  await expect(block).toContainText("18:50–21:33");
+  const slot = await column(page, /^lunes 09\/03/).getByRole("button", { name: "Agregar el lunes a las 18:30" }).boundingBox();
+  const box = await block.boundingBox();
+  expect(box!.y - slot!.y).toBeGreaterThan(slot!.height * 0.55);
+  expect(box!.y - slot!.y).toBeLessThan(slot!.height * 0.8);
+  // El detalle muestra el horario exacto.
+  await block.click();
+  await expect(page.locator(".block-pop-head")).toContainText("18:50–21:33");
+  expect((await db.from("schedule_blocks").select("start_time, end_time")).data).toEqual([{ start_time: "18:50:00", end_time: "21:33:00" }]);
 });

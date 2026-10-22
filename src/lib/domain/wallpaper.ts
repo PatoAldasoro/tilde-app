@@ -6,9 +6,9 @@
 import type { WeekItem } from "./schedule";
 
 /**
- * Proporciones disponibles. Las dos de 16:9 son las clásicas; 16:10 es la de la mayoría de las
+ * Proporciones fijas. Las dos de 16:9 son las clásicas; 16:10 es la de la mayoría de las
  * notebooks y 9:19,5 la de los teléfonos actuales (una imagen 9:16 les queda corta de alto y el
- * teléfono la agranda recortando los costados).
+ * teléfono la agranda recortando los costados). Además está "device": la pantalla de este equipo.
  */
 export const WALLPAPER_FORMATS = {
   "16x9": { width: 3840, height: 2160 },
@@ -17,15 +17,50 @@ export const WALLPAPER_FORMATS = {
   "9x19.5": { width: 2160, height: 4680 },
 } as const;
 
-export type WallpaperFormat = keyof typeof WALLPAPER_FORMATS;
+export type FixedWallpaperFormat = keyof typeof WALLPAPER_FORMATS;
+export type WallpaperFormat = FixedWallpaperFormat | "device";
+export type WallpaperSize = { width: number; height: number };
 
-export const WALLPAPER_FORMAT_KEYS = Object.keys(WALLPAPER_FORMATS) as WallpaperFormat[];
+export const WALLPAPER_FORMAT_KEYS = Object.keys(WALLPAPER_FORMATS) as FixedWallpaperFormat[];
 
 export function isWallpaperFormat(value: unknown): value is WallpaperFormat {
-  return typeof value === "string" && value in WALLPAPER_FORMATS;
+  return value === "device" || (typeof value === "string" && value in WALLPAPER_FORMATS);
 }
 
-export const isPortrait = (format: WallpaperFormat): boolean => WALLPAPER_FORMATS[format].height > WALLPAPER_FORMATS[format].width;
+export const isPortrait = (size: WallpaperSize): boolean => size.height > size.width;
+
+/** Lo más grande que dibuja un canvas en todos los navegadores (Safari: 16,7 megapíxeles y 8192 de lado). */
+const MAX_AREA = 16_777_216;
+const MAX_SIDE = 8192;
+
+/**
+ * La medida de la pantalla en píxeles reales: la de CSS (`screen.width`, `screen.height`) por la
+ * densidad (`devicePixelRatio`). El zoom del navegador cambia los dos en sentido contrario, así
+ * que el producto no se mueve. Si no entra en un canvas, se achica sin cambiar la proporción.
+ */
+export function deviceWallpaperSize(screen: WallpaperSize, pixelRatio: number): WallpaperSize | null {
+  const ratio = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+  let width = Math.round(screen.width * ratio);
+  let height = Math.round(screen.height * ratio);
+  if (!(width > 0 && height > 0)) return null;
+  const scale = Math.min(1, Math.sqrt(MAX_AREA / (width * height)), MAX_SIDE / Math.max(width, height));
+  if (scale < 1) {
+    width = Math.floor(width * scale);
+    height = Math.floor(height * scale);
+  }
+  return { width, height };
+}
+
+/** El tamaño de la imagen para un formato ("device" necesita la medida de la pantalla). */
+export function wallpaperSize(format: WallpaperFormat, device: WallpaperSize | null): WallpaperSize {
+  if (format === "device") return device ?? WALLPAPER_FORMATS["16x9"];
+  return WALLPAPER_FORMATS[format];
+}
+
+/** ¿Algún bloque empieza o termina fuera de la media hora? (entonces conviene escribir su horario) */
+export function hasOffGridTimes(items: readonly Pick<WeekItem, "start" | "end">[]): boolean {
+  return items.some((item) => item.start % WALLPAPER_STEP !== 0 || item.end % WALLPAPER_STEP !== 0);
+}
 
 /**
  * Medidas en unidades de diseño: el ancho de la imagen son 1920 unidades (horizontal) o 1080
@@ -47,7 +82,6 @@ const MIN_HOURS = 6;
 export type Rect = { x: number; y: number; width: number; height: number };
 
 export type WallpaperLayout = {
-  format: WallpaperFormat;
   portrait: boolean;
   /** Tamaño de la imagen, en píxeles. */
   width: number;
@@ -83,10 +117,11 @@ export function wallpaperRange(items: readonly Pick<WeekItem, "start" | "end">[]
 }
 
 /**
- * Calcula dónde va cada cosa. Solo se dibujan los días de `weekdays` (los visibles en el Horario).
+ * Calcula dónde va cada cosa, para una imagen de cualquier medida. Solo se dibujan los días de
+ * `weekdays` (los visibles en el Horario).
  */
-export function wallpaperLayout(items: readonly WeekItem[], weekdays: readonly number[], format: WallpaperFormat): WallpaperLayout {
-  const { width, height } = WALLPAPER_FORMATS[format];
+export function wallpaperLayout(items: readonly WeekItem[], weekdays: readonly number[], size: WallpaperSize): WallpaperLayout {
+  const { width, height } = size;
   const portrait = height > width;
   const spec = portrait ? SPEC.portrait : SPEC.landscape;
   const unit = width / spec.units;
@@ -110,7 +145,6 @@ export function wallpaperLayout(items: readonly WeekItem[], weekdays: readonly n
   const gap = 2;
 
   return {
-    format,
     portrait,
     width,
     height,

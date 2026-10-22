@@ -53,8 +53,10 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
    y a `tests/rls.test.ts`.
 3. **Íconos: solo `lucide-react`.** Sin emojis, sin otras librerías, sin SVG a mano. Excepciones: la "G" de
    Google (`google-button.tsx`) y el logo (`logo.tsx`). Los gráficos (barras del historial, anillo del timer) no son íconos.
-   Los íconos que se pueden elegir para una materia o actividad son una lista cerrada: `src/lib/domain/icons.ts`
-   (clave) + `src/components/subject-icon.tsx` (componente) + un mensaje `icon_<clave>` en cada idioma.
+   Los íconos que se pueden elegir para una materia o actividad son una lista cerrada, agrupada por área:
+   `src/lib/domain/icons.ts` (clave y grupo) + `src/components/subject-icon.tsx` (componente) + un mensaje
+   `icon_<clave>` en cada idioma (y `icon_group_<grupo>` / `icon_tags_<grupo>` para el buscador). Una clave que ya
+   se guardó no se saca nunca de la lista.
 4. **Ningún texto hardcodeado** en componentes: todo en `messages/*.json`, en ambos idiomas (lo verifica
    `tests/messages.test.ts`). Tono: cercano, sin voseo, botones en infinitivo. Inglés en variante US.
 5. **Fechas:** los días son `YYYY-MM-DD` (`date`) y las horas `HH:MM` (`time`), sin zona horaria. Nunca `new Date()`
@@ -62,7 +64,9 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
    Semana desde el lunes (1 = lunes … 7 = domingo), formato 24 h, fechas visibles como DD/MM.
 6. **Colores:** solo tokens (`var(--color-*)`, utilidades de Tailwind generadas de ellos). El color de una materia
    es una clave de la paleta (`color_key`), nunca un hex: se aplica con la clase `subj-<clave>` y las variables `--s-*`.
-   Única excepción: el color de fondo que el usuario elige al exportar el horario (es contenido suyo, no interfaz).
+   Excepciones: el horario exportado (es contenido que se descarga, no interfaz): sus temas tienen colores y
+   tipografías propios (`src/lib/domain/wallpaper-themes.ts`, cuentas de color en `domain/color.ts`) y el fondo lo
+   puede elegir el usuario. Los bloques igual salen de la paleta de la materia.
    El acento de la app es configurable (`<html data-accent>`, reglas al final de `tokens.css`): usar siempre los
    tokens `--color-accent*` y `--color-focus-ring`, nunca el naranja a mano.
 7. **Pantallas: mobile first, de 320 px al escritorio.** En el CSS, las reglas sin `@media` son las del teléfono y
@@ -96,6 +100,10 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
   (`useHydrated`, ya resuelto dentro de `useRows` y `useProfile`).
 - Los ids se generan en el cliente (`crypto.randomUUID()`), así el optimista y la base coinciden.
 - Confirmaciones con `confirm()` y avisos con `toast()` (`src/components/ui`). Borrados de tareas: toast "Deshacer" de 8 s.
+- Horas: `TimeField` (`src/components/ui/time-field.tsx`), una lista de medias horas en la que también se escribe
+  cualquier hora. Nada de `<input type="time">` (depende del formato del sistema).
+- Arrastrar sin `DragOverlay` (la fila se mueve en su lugar): limitar el movimiento a su lista con un modificador, o
+  la fila agranda el área que se desplaza y el desplazamiento automático no termina nunca (`today-tasks.tsx`).
 - La sesión de estudio en curso vive fuera de React (`src/lib/study-store.ts`, persistida en `localStorage`); el timer
   flotante es un canvas transmitido como video a la ventana de imagen en imagen (`src/lib/pip-store.ts`,
   `pip-canvas.ts`): ahí no hay HTML, lo que se muestra se dibuja. Los tooltips que pueden quedar dentro de un panel con scroll van con el

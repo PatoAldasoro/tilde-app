@@ -1,6 +1,6 @@
 "use client";
 
-import { closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent, type Modifier } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, GripVertical, ListTodo } from "lucide-react";
@@ -9,20 +9,39 @@ import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useToday } from "@/components/providers";
 import { SubjectChip } from "@/components/subject-chip";
 import { TaskCheckbox } from "@/components/tasks/task-row";
+import { TaskSortMenu } from "@/components/tasks/task-sort-menu";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeletons } from "@/components/ui/query-state";
 import { Switch } from "@/components/ui/switch";
-import { isArchived, type SubjectBadge } from "@/lib/domain/subjects";
-import { isCompleted, orderPatches, pendingSubtasks, tasksForDay } from "@/lib/domain/tasks";
+import { toast } from "@/components/ui/toast";
+import { nextExamBySubject } from "@/lib/domain/calendar";
+import { activeSubjects, isArchived, type SubjectBadge } from "@/lib/domain/subjects";
+import { isCompleted, orderPatches, pendingSubtasks, sortDayTasks, sortOrderPatches, tasksForDay, type SortContext } from "@/lib/domain/tasks";
 import type { Task } from "@/lib/domain/types";
+import { useCalendarEvents } from "@/lib/queries/calendar";
 import { useSubjects } from "@/lib/queries/subjects";
 import { useTaskMutations, useTasks } from "@/lib/queries/tasks";
 import { studyStore, useStudy } from "@/lib/study-store";
+import { setTaskSort, useTaskSort } from "@/lib/task-sort-prefs";
 import { cn } from "@/lib/utils";
 
 /**
+ * La tarea arrastrada se mueve solo hacia arriba y hacia abajo, y nunca más allá de la lista de
+ * pendientes: si se pasara del final, agrandaría el panel y el desplazamiento automático
+ * seguiría bajando sin fin.
+ */
+const withinList: Modifier = ({ transform, draggingNodeRect, containerNodeRect }) => {
+  if (!draggingNodeRect || !containerNodeRect) return { ...transform, x: 0 };
+  const min = containerNodeRect.top - draggingNodeRect.top;
+  const max = containerNodeRect.bottom - draggingNodeRect.bottom;
+  return { ...transform, x: 0, y: Math.min(Math.max(transform.y, min), max) };
+};
+
+/**
  * Las tareas de hoy (tasksForDay) para tildar durante la sesión; con materia elegida se pueden
- * filtrar. Las pendientes se reordenan arrastrando desde el asa: es el mismo orden propio de Tareas.
+ * filtrar. Se ordenan con los mismos criterios que Tareas (y el criterio es el mismo en los dos
+ * lados). Con "Mi orden", las pendientes se reordenan arrastrando desde el asa.
  */
 export function TodayTasks() {
   const t = useTranslations();
@@ -30,7 +49,10 @@ export function TodayTasks() {
   const { setup } = useStudy();
   const tasksQuery = useTasks();
   const subjectsQuery = useSubjects();
+  const calendarQuery = useCalendarEvents();
   const mutations = useTaskMutations();
+  const sort = useTaskSort();
+  const manual = sort === "manual";
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -42,12 +64,20 @@ export function TodayTasks() {
   const subjectMap = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject])), [subjects]);
   const chosen = setup.subjectId ? subjectMap.get(setup.subjectId) : undefined;
 
+  const sortContext = useMemo<SortContext>(
+    () => ({
+      subjectRank: new Map(activeSubjects(subjects).map((subject, index) => [subject.id, index])),
+      nextExam: nextExamBySubject(calendarQuery.data ?? [], today),
+    }),
+    [subjects, calendarQuery.data, today],
+  );
   const entries = useMemo(() => {
     const archived = new Set(subjects.filter(isArchived).map((subject) => subject.id));
     const visible = (tasksQuery.data ?? []).filter((task) => !task.subject_id || !archived.has(task.subject_id));
     const list = tasksForDay(visible, today, today);
-    return setup.filterBySubject && setup.subjectId ? list.filter((entry) => entry.task.subject_id === setup.subjectId) : list;
-  }, [tasksQuery.data, subjects, today, setup.filterBySubject, setup.subjectId]);
+    const shown = setup.filterBySubject && setup.subjectId ? list.filter((entry) => entry.task.subject_id === setup.subjectId) : list;
+    return sortDayTasks(shown, sort, sortContext);
+  }, [tasksQuery.data, subjects, today, setup.filterBySubject, setup.subjectId, sort, sortContext]);
   const pending = useMemo(() => entries.map((entry) => entry.task).filter((task) => !isCompleted(task)), [entries]);
   const pendingIds = pending.map((task) => task.id);
   const done = entries.length - pending.length;
@@ -60,6 +90,13 @@ export function TodayTasks() {
       else next.delete(taskId);
       return next;
     });
+
+  /** Deja el criterio elegido como orden propio de las pendientes de hoy y vuelve a "Mi orden". */
+  function saveSortAsMine() {
+    mutations.reorder(sortOrderPatches(pending, sort, sortContext));
+    setTaskSort("manual");
+    toast(t("sort_saved"));
+  }
 
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return;
@@ -84,10 +121,13 @@ export function TodayTasks() {
     <>
       <div className="side-panel-head">
         <div className="t">
-          <span>{t("today_tasks")}</span>
-          <span className="badge tnum">
-            {done}/{entries.length}
+          <span className="flex items-center gap-2">
+            {t("today_tasks")}
+            <span className="badge tnum">
+              {done}/{entries.length}
+            </span>
           </span>
+          <TaskSortMenu sort={sort} onSave={saveSortAsMine} canSave={pending.length > 0} compact />
         </div>
         {chosen ? (
           <Switch checked={setup.filterBySubject} onChange={(value) => studyStore.setFilterBySubject(value)}>
@@ -95,6 +135,14 @@ export function TodayTasks() {
           </Switch>
         ) : (
           <span className="field-hint">{t("pick_subject_to_filter")}</span>
+        )}
+        {manual ? null : (
+          <p className="sort-note" role="status">
+            <span className="field-hint">{t("sort_hint", { name: t(`sort_${sort}`) })}</span>
+            <Button variant="ghost" size="sm" onClick={() => setTaskSort("manual")}>
+              {t("sort_back")}
+            </Button>
+          </p>
         )}
       </div>
       <div className="side-panel-body">
@@ -112,6 +160,7 @@ export function TodayTasks() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          modifiers={[withinList]}
           onDragEnd={onDragEnd}
           accessibility={{
             screenReaderInstructions: { draggable: t("today_tasks_dnd") },
@@ -127,9 +176,16 @@ export function TodayTasks() {
           }}
         >
           <SortableContext items={pendingIds} strategy={verticalListSortingStrategy}>
-            {pending.map((task) => (
-              <SortableMiniTask key={task.id} {...rowProps(task)} />
-            ))}
+            {/* El contenedor de las pendientes: hasta acá llega el arrastre (ver withinList). */}
+            <div className="mini-sortable">
+              {pending.map((task) =>
+                manual ? (
+                  <SortableMiniTask key={task.id} {...rowProps(task)} />
+                ) : (
+                  <MiniTask key={task.id} {...rowProps(task)} grip={<span className="grip mini-grip" aria-disabled="true" />} />
+                ),
+              )}
+            </div>
           </SortableContext>
         </DndContext>
         {entries

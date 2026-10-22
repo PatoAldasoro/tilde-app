@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { typicalWeek, type ScheduleBlock, type ScheduleEvent } from "./schedule";
-import { isPortrait, isWallpaperFormat, normalizeHexColor, WALLPAPER_FORMAT_KEYS, WALLPAPER_FORMATS, wallpaperLayout, wallpaperRange } from "./wallpaper";
+import {
+  deviceWallpaperSize,
+  hasOffGridTimes,
+  isPortrait,
+  isWallpaperFormat,
+  normalizeHexColor,
+  WALLPAPER_FORMAT_KEYS,
+  WALLPAPER_FORMATS,
+  wallpaperLayout,
+  wallpaperRange,
+  wallpaperSize,
+} from "./wallpaper";
 
 const block = (id: string, weekday: number, start_time: string, end_time: string): ScheduleBlock => ({ id, subject_id: "s1", weekday, start_time, end_time, room: null });
 const activity = (id: string, patch: Partial<ScheduleEvent>): ScheduleEvent => ({
@@ -82,17 +93,18 @@ describe("wallpaperLayout", () => {
     expect(ratio("16x10")).toBeCloseTo(16 / 10, 5);
     expect(ratio("9x16")).toBeCloseTo(9 / 16, 5);
     expect(ratio("9x19.5")).toBeCloseTo(9 / 19.5, 5);
-    expect(WALLPAPER_FORMAT_KEYS.map(isPortrait)).toEqual([false, false, true, true]);
+    expect(WALLPAPER_FORMAT_KEYS.map((format) => isPortrait(WALLPAPER_FORMATS[format]))).toEqual([false, false, true, true]);
     expect(isWallpaperFormat("9x16")).toBe(true);
+    expect(isWallpaperFormat("device")).toBe(true);
     expect(isWallpaperFormat("4x3")).toBe(false);
   });
 
   for (const format of WALLPAPER_FORMAT_KEYS) {
     const size = WALLPAPER_FORMATS[format];
-    const portrait = isPortrait(format);
+    const portrait = isPortrait(size);
 
     it(`${format}: la tabla está centrada y ocupa casi toda la imagen`, () => {
-      const layout = wallpaperLayout(week, weekdays, format);
+      const layout = wallpaperLayout(week, weekdays, size);
       expect([layout.width, layout.height, layout.portrait]).toEqual([size.width, size.height, portrait]);
       const { table } = layout;
       expect(Math.abs(table.x + table.width / 2 - size.width / 2)).toBeLessThanOrEqual(2);
@@ -108,7 +120,7 @@ describe("wallpaperLayout", () => {
     });
 
     it(`${format}: una fila por media hora, con la de cierre, que llenan la tabla`, () => {
-      const layout = wallpaperLayout(week, weekdays, format);
+      const layout = wallpaperLayout(week, weekdays, size);
       // El sábado no es un día visible: su clase no se dibuja ni estira el rango horario.
       expect(layout.blocks.some(({ item }) => item.weekday === 6)).toBe(false);
       expect([layout.startMinutes, layout.endMinutes]).toEqual([8 * 60, 23 * 60]);
@@ -126,7 +138,7 @@ describe("wallpaperLayout", () => {
     });
 
     it(`${format}: cada bloque queda en su columna y arranca en la fila de su hora`, () => {
-      const layout = wallpaperLayout(week, weekdays, format);
+      const layout = wallpaperLayout(week, weekdays, size);
       for (const { item, rect } of layout.blocks) {
         const column = layout.columns.find((entry) => entry.weekday === item.weekday)!;
         expect(rect.x).toBeGreaterThanOrEqual(column.x);
@@ -145,17 +157,61 @@ describe("wallpaperLayout", () => {
   }
 
   it("sin nada cargado igual arma una grilla de 08:00 a 18:00", () => {
-    const layout = wallpaperLayout([], weekdays, "16x9");
+    const layout = wallpaperLayout([], weekdays, WALLPAPER_FORMATS["16x9"]);
     expect(layout.blocks).toEqual([]);
     expect(layout.rows).toHaveLength(21);
     expect(layout.columns).toHaveLength(5);
   });
 
   it("con más días las columnas se achican, pero la tabla ocupa lo mismo", () => {
-    const five = wallpaperLayout(week, weekdays, "9x19.5");
-    const seven = wallpaperLayout(week, [1, 2, 3, 4, 5, 6, 7], "9x19.5");
+    const five = wallpaperLayout(week, weekdays, WALLPAPER_FORMATS["9x19.5"]);
+    const seven = wallpaperLayout(week, [1, 2, 3, 4, 5, 6, 7], WALLPAPER_FORMATS["9x19.5"]);
     expect(seven.table).toEqual(five.table);
     expect(seven.columns[0].width).toBeLessThan(five.columns[0].width);
+  });
+});
+
+describe("la medida de este dispositivo", () => {
+  it("es la pantalla en píxeles reales", () => {
+    expect(deviceWallpaperSize({ width: 393, height: 852 }, 3)).toEqual({ width: 1179, height: 2556 });
+    expect(deviceWallpaperSize({ width: 1440, height: 900 }, 2)).toEqual({ width: 2880, height: 1800 });
+    expect(deviceWallpaperSize({ width: 1366, height: 768 }, 1)).toEqual({ width: 1366, height: 768 });
+    // Escala de Windows al 150 %: 1707 × 960 de CSS son 2560 × 1440.
+    expect(deviceWallpaperSize({ width: 1706.67, height: 960 }, 1.5)).toEqual({ width: 2560, height: 1440 });
+  });
+
+  it("una pantalla enorme se achica hasta lo que entra en un canvas, sin cambiar la proporción", () => {
+    const size = deviceWallpaperSize({ width: 3008, height: 1692 }, 2)!;
+    expect(size.width * size.height).toBeLessThanOrEqual(16_777_216);
+    expect(size.width / size.height).toBeCloseTo(3008 / 1692, 2);
+    const tall = deviceWallpaperSize({ width: 600, height: 6000 }, 2)!;
+    expect(Math.max(tall.width, tall.height)).toBeLessThanOrEqual(8192);
+  });
+
+  it("sin datos de la pantalla no hay medida, y el formato cae en 16:9", () => {
+    expect(deviceWallpaperSize({ width: 0, height: 0 }, 2)).toBeNull();
+    expect(deviceWallpaperSize({ width: 390, height: 844 }, Number.NaN)).toEqual({ width: 390, height: 844 });
+    expect(wallpaperSize("device", null)).toEqual(WALLPAPER_FORMATS["16x9"]);
+    expect(wallpaperSize("device", { width: 1179, height: 2556 })).toEqual({ width: 1179, height: 2556 });
+    expect(wallpaperSize("9x16", { width: 1179, height: 2556 })).toEqual(WALLPAPER_FORMATS["9x16"]);
+  });
+
+  it("una medida cualquiera arma la tabla igual que los formatos fijos", () => {
+    const layout = wallpaperLayout(typicalWeek([block("b1", 1, "18:50", "21:33")], [], "2026-10-05"), [1, 2, 3, 4, 5], { width: 1179, height: 2556 });
+    expect(layout.portrait).toBe(true);
+    expect(layout.table.x + layout.table.width).toBeLessThan(1179);
+    const [{ rect }] = layout.blocks;
+    // 18:50 cae a dos tercios de la fila de las 18:30.
+    const row = layout.rows.find((entry) => entry.minutes === 18 * 60 + 30)!;
+    expect(rect.y).toBeGreaterThan(row.y + row.height * 0.6);
+    expect(rect.y).toBeLessThan(row.y + row.height * 0.75);
+  });
+});
+
+describe("horarios fuera de la media hora", () => {
+  it("se detectan para escribirlos en los bloques", () => {
+    expect(hasOffGridTimes([{ start: 8 * 60, end: 10 * 60 + 30 }])).toBe(false);
+    expect(hasOffGridTimes([{ start: 8 * 60, end: 10 * 60 }, { start: 18 * 60 + 50, end: 21 * 60 + 33 }])).toBe(true);
   });
 });
 

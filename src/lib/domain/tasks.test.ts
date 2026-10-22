@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canComplete,
   canDropOnDay,
+  agendaDays,
   daysInRange,
   dueStatus,
   moveItem,
@@ -9,6 +10,7 @@ import {
   orderPatches,
   sortDayTasks,
   sortOrderPatches,
+  tasksInRange,
   tasksForDay,
   taskComparator,
   TASK_SORTS,
@@ -382,5 +384,50 @@ describe("daysInRange", () => {
     ]);
     expect(daysInRange("date", TODAY, "2026-11-02")).toEqual(["2026-11-02"]);
     expect(daysInRange("date", TODAY, null)).toEqual([TODAY]);
+  });
+});
+
+describe("filtros largos: agenda", () => {
+  const daily = (title: string, planned_date: string, extra: Partial<Task> & { done?: string } = {}) => task({ title, planned_date, ...extra });
+  const due = (title: string, due_date: string, lead_days: number) => task({ title, planned_date: null, due_date, lead_days });
+  const titles = (days: Map<string, { task: Task }[]>) => Object.fromEntries([...days].map(([day, entries]) => [day, entries.map((entry) => entry.task.title)]));
+
+  it("hoy, como siempre; después cada pendiente una sola vez, en su día, y solo los días con algo", () => {
+    const tasks = [
+      daily("Atrasada", "2026-10-10"),
+      daily("Mañana", "2026-10-14"),
+      daily("En dos semanas", "2026-10-27"),
+      // En su ventana desde el 11/10: se ve hoy y no se repite el 16.
+      due("TP en ventana", "2026-10-16", 5),
+      // Su ventana empieza el 20/10: va el día de la entrega, una vez.
+      due("Parcial", "2026-10-25", 5),
+      daily("Hecha hoy", "2026-10-13", { done: "2026-10-13" }),
+      daily("Hecha antes", "2026-10-20", { done: "2026-10-12" }),
+    ];
+    expect(titles(agendaDays(tasks, TODAY, null))).toEqual({
+      "2026-10-13": ["Atrasada", "TP en ventana", "Hecha hoy"],
+      "2026-10-14": ["Mañana"],
+      "2026-10-25": ["Parcial"],
+      "2026-10-27": ["En dos semanas"],
+    });
+    expect([...agendaDays(tasks, TODAY, "2026-10-25").keys()]).toEqual(["2026-10-13", "2026-10-14", "2026-10-25"]);
+  });
+
+  it("sin nada más adelante, queda solo hoy", () => {
+    expect([...agendaDays([], TODAY, null).keys()]).toEqual([TODAY]);
+  });
+
+  it("cada filtro con sus días", () => {
+    const tasks = [daily("En 29 días", "2026-11-11"), daily("En 30 días", "2026-11-12"), daily("En 20 días", "2026-11-02")];
+    const picked = { date: null, until: null };
+    expect([...tasksInRange(tasks, "week", TODAY, picked).keys()]).toHaveLength(7);
+    expect([...tasksInRange(tasks, "today", TODAY, picked).keys()]).toEqual([TODAY]);
+    expect([...tasksInRange(tasks, "date", TODAY, { date: "2026-11-02", until: null }).keys()]).toEqual(["2026-11-02"]);
+    // Próximos 30 días: hoy y los 29 siguientes.
+    expect([...tasksInRange(tasks, "month", TODAY, picked).keys()]).toEqual([TODAY, "2026-11-02", "2026-11-11"]);
+    expect([...tasksInRange(tasks, "all", TODAY, picked).keys()]).toEqual([TODAY, "2026-11-02", "2026-11-11", "2026-11-12"]);
+    // Hasta una fecha: por defecto, dos semanas; si no, la elegida (incluida).
+    expect([...tasksInRange(tasks, "until", TODAY, picked).keys()]).toEqual([TODAY]);
+    expect([...tasksInRange(tasks, "until", TODAY, { date: null, until: "2026-11-02" }).keys()]).toEqual([TODAY, "2026-11-02"]);
   });
 });

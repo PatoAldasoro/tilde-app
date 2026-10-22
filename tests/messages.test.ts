@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import en from "../messages/en.json";
 import es from "../messages/es.json";
 import { CALENDAR_CATEGORIES } from "../src/lib/domain/calendar";
-import { ICON_KEYS, iconLabelKey } from "../src/lib/domain/icons";
+import { ICON_GROUPS, ICON_KEYS, iconLabelKey } from "../src/lib/domain/icons";
 
 const placeholders = (message: string) =>
   [...message.matchAll(/\{(\w+)\s*[,}]/g)].map((m) => m[1]).sort();
@@ -22,6 +22,7 @@ describe("mensajes", () => {
   it("cada ícono y cada categoría del calendario tienen su nombre", () => {
     const missing = [
       ...ICON_KEYS.map((icon) => iconLabelKey(icon)),
+      ...ICON_GROUPS.flatMap((group) => [`icon_group_${group.key}`, `icon_tags_${group.key}`]),
       ...CALENDAR_CATEGORIES.flatMap((category) => [`cat_${category}`, `cat_hint_${category}`]),
     ].filter((key) => !(key in es));
     expect(missing).toEqual([]);

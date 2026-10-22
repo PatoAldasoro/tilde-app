@@ -11,10 +11,10 @@ import { DateField } from "@/components/ui/date-field";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
-import { TimeSelect } from "@/components/ui/time-select";
+import { TimeField } from "@/components/ui/time-field";
 import { toast } from "@/components/ui/toast";
 import type { IsoDate } from "@/lib/domain/dates";
-import { GRID_END, GRID_START, GRID_STEP, type Recurrence } from "@/lib/domain/schedule";
+import { GRID_END, GRID_START, type Recurrence } from "@/lib/domain/schedule";
 import type { IconKey } from "@/lib/domain/icons";
 import { isArchived, subjectClass, type ColorKey } from "@/lib/domain/subjects";
 import { minutesToTime, normalizeTime, timeToMinutes } from "@/lib/domain/time";
@@ -183,7 +183,7 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
                   ))}
                 </select>
               </Field>
-              <Field label={t("class_slots")}>
+              <Field label={t("class_slots")} hint={t("time_any_hint")}>
                 <div className="slot-rows">
                   {rows.map((row, index) => (
                     <div key={row.key}>
@@ -203,21 +203,21 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
                           </select>
                         </Field>
                         <Field label={t("from")} htmlFor={`${id}-start-${row.key}`}>
-                          <TimeSelect
+                          <TimeField
                             id={`${id}-start-${row.key}`}
                             value={row.start}
                             from={GRID_START}
-                            to={GRID_END - GRID_STEP}
+                            to={GRID_END - 1}
                             onChange={(value) => updateRow(row.key, { start: value })}
                           />
                         </Field>
                         <Field label={t("to")} htmlFor={`${id}-end-${row.key}`} className={rowError === index ? "is-invalid" : undefined}>
-                          <TimeSelect
+                          <TimeField
                             id={`${id}-end-${row.key}`}
                             className={rowError === index ? "is-invalid" : undefined}
                             aria-invalid={rowError === index || undefined}
                             value={row.end}
-                            from={GRID_START + GRID_STEP}
+                            from={GRID_START + 1}
                             to={GRID_END}
                             onChange={(value) => updateRow(row.key, { end: value })}
                           />
@@ -338,11 +338,11 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
               </Field>
             ) : null}
             <Field label={t("from")} htmlFor={`${id}-from`}>
-              <TimeSelect
+              <TimeField
                 id={`${id}-from`}
                 value={start}
                 from={GRID_START}
-                to={GRID_END - GRID_STEP}
+                to={GRID_END - 1}
                 onChange={(value) => {
                   setStart(value);
                   setErrors((current) => ({ ...current, time: false }));
@@ -350,12 +350,12 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
               />
             </Field>
             <Field label={t("to")} htmlFor={`${id}-to`} className={cn(errors.time && "is-invalid")}>
-              <TimeSelect
+              <TimeField
                 id={`${id}-to`}
                 className={errors.time ? "is-invalid" : undefined}
                 aria-invalid={errors.time || undefined}
                 value={end}
-                from={GRID_START + GRID_STEP}
+                from={GRID_START + 1}
                 to={GRID_END}
                 onChange={(value) => {
                   setEnd(value);
@@ -367,7 +367,9 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
               <span className="field-error span-2" role="alert">
                 {t("end_after_start")}
               </span>
-            ) : null}
+            ) : (
+              <span className="field-hint span-2 -mt-2">{t("time_any_hint")}</span>
+            )}
             {recurrence !== "none" ? (
               <Field className="span-2" label={t("ends_on")} htmlFor={`${id}-until`} optionalLabel={t("optional")} hint={t("ends_on_hint")}>
                 <DateField id={`${id}-until`} className="max-w-[220px]" value={until} today={today} clearable onChange={setUntil} />

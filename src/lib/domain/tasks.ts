@@ -71,11 +71,68 @@ export function tasksForDay(tasks: readonly Task[], day: IsoDate, today: IsoDate
   return result.sort((a, b) => Number(isCompleted(a.task)) - Number(isCompleted(b.task)) || byOrder(a.task, b.task));
 }
 
-/** Los días que muestra cada filtro de fecha. */
+// ---------- filtros de fecha ----------
+
+/**
+ * Filtros de fecha de Tareas. Hoy, próximos 7 días y una fecha muestran cada día tal cual (una
+ * tarea con fecha límite se repite en todos los días de su ventana). Los largos (próximos 30 días,
+ * todas, hasta una fecha) son una agenda: ver `agendaDays`.
+ */
+export const TASK_RANGES = ["today", "week", "month", "all", "until", "date"] as const;
+export type TaskRange = (typeof TASK_RANGES)[number];
+
+/** "Próximos 30 días": hoy y los 29 siguientes. */
+const MONTH_DAYS = 30;
+/** "Hasta una fecha" arranca dos semanas adelante, hasta que se elija otra. */
+export const UNTIL_DEFAULT_DAYS = 14;
+
+export const isAgendaRange = (range: TaskRange): boolean => range === "month" || range === "all" || range === "until";
+
+/** Los días que muestra cada filtro corto. */
 export function daysInRange(range: "today" | "week" | "date", today: IsoDate, pickedDate: IsoDate | null): IsoDate[] {
   if (range === "today") return [today];
   if (range === "date") return [pickedDate ?? today];
   return Array.from({ length: 7 }, (_, index) => addDays(today, index));
+}
+
+/**
+ * Agenda de hoy a `until` (null: sin límite). Hoy, lo que se ve hoy (arrastradas, vencidas y las de
+ * fecha límite que ya están en su ventana); después, cada pendiente una sola vez, en su día: la
+ * fecha límite o, si no tiene, el día planeado. Solo los días que tienen algo; hoy, siempre.
+ */
+export function agendaDays(tasks: readonly Task[], today: IsoDate, until: IsoDate | null): Map<IsoDate, DayTask[]> {
+  const todayEntries = tasksForDay(tasks, today, today);
+  const seen = new Set(todayEntries.map((entry) => entry.task.id));
+  const later = new Map<IsoDate, DayTask[]>();
+  for (const task of tasks) {
+    if (isCompleted(task) || seen.has(task.id)) continue;
+    const day = task.due_date ?? task.planned_date;
+    if (!day || day <= today || (until !== null && day > until)) continue;
+    const list = later.get(day);
+    if (list) list.push({ task, carriedDays: 0 });
+    else later.set(day, [{ task, carriedDays: 0 }]);
+  }
+  const days = [...later.keys()].sort();
+  return new Map([[today, todayEntries], ...days.map((day) => [day, later.get(day)!.sort((a, b) => byOrder(a.task, b.task))] as const)]);
+}
+
+/** Los días que muestra un filtro, cada uno con sus tareas (en el orden propio). */
+export function tasksInRange(
+  tasks: readonly Task[],
+  range: TaskRange,
+  today: IsoDate,
+  picked: { date: IsoDate | null; until: IsoDate | null },
+): Map<IsoDate, DayTask[]> {
+  switch (range) {
+    case "month":
+      return agendaDays(tasks, today, addDays(today, MONTH_DAYS - 1));
+    case "all":
+      return agendaDays(tasks, today, null);
+    case "until":
+      return agendaDays(tasks, today, picked.until ?? addDays(today, UNTIL_DEFAULT_DAYS));
+    default:
+      return new Map(daysInRange(range, today, picked.date).map((day) => [day, tasksForDay(tasks, day, today)]));
+  }
 }
 
 // ---------- fecha límite ----------

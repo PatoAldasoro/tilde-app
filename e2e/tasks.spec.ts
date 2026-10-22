@@ -104,6 +104,47 @@ test("arrastre, ventana de fecha límite y vencidas", async ({ page }) => {
   expect(await titles(page.locator("section.day-group"))).toEqual(["Para el jueves"]);
 });
 
+test("filtros largos: próximos 30 días, todas y hasta una fecha, con cada tarea una sola vez", async ({ page }) => {
+  await insertTasks([
+    { title: "Para el jueves", planned_date: "2026-03-12", sort_order: 1 },
+    // En su ventana desde el 08/03: ya se ve hoy.
+    { title: "Entrega en ventana", due_date: "2026-03-13", lead_days: 5, sort_order: 2 },
+    { title: "Parcial", due_date: "2026-03-25", lead_days: 3, sort_order: 3 },
+    { title: "En un mes y medio", planned_date: "2026-04-25", sort_order: 4 },
+  ]);
+  await page.goto("/app/todo");
+  const groups = page.locator("section.day-group");
+  const shownDays = () => groups.evaluateAll((sections) => sections.map((section) => section.getAttribute("data-day")));
+  const titlesOn = (date: string) => titles(page.locator(`section.day-group[data-day="${date}"]`));
+
+  // Próximos 7 días: los siete, y la entrega se repite en cada día de su ventana.
+  await expect(groups).toHaveCount(7);
+  await expect.poll(() => titlesOn("2026-03-11")).toEqual(["Entrega en ventana"]);
+
+  // Próximos 30 días: una agenda, solo los días con algo y cada tarea una vez.
+  await page.getByRole("radio", { name: "Próximos 30 días" }).click();
+  await expect(page.getByText("Cada tarea aparece una sola vez, en su día (o en hoy, si ya hay que hacerla), y los días sin tareas no se muestran.")).toBeVisible();
+  await expect.poll(shownDays).toEqual(["2026-03-10", "2026-03-12", "2026-03-25"]);
+  expect(await titlesOn("2026-03-10")).toEqual(["Entrega en ventana"]);
+  expect(await titlesOn("2026-03-12")).toEqual(["Para el jueves"]);
+  expect(await titlesOn("2026-03-25")).toEqual(["Parcial"]);
+
+  // Todas: también lo que está a más de un mes.
+  await page.getByRole("radio", { name: "Todas", exact: true }).click();
+  await expect.poll(shownDays).toEqual(["2026-03-10", "2026-03-12", "2026-03-25", "2026-04-25"]);
+
+  // Hasta una fecha: arranca en dos semanas (24/03) y se elige otra.
+  await page.getByRole("radio", { name: "Hasta una fecha" }).click();
+  await expect.poll(shownDays).toEqual(["2026-03-10", "2026-03-12"]);
+  await page.getByRole("button", { name: "Hasta qué fecha" }).click();
+  await page.getByRole("button", { name: "miércoles, 25 de marzo de 2026" }).click();
+  await expect.poll(shownDays).toEqual(["2026-03-10", "2026-03-12", "2026-03-25"]);
+
+  // Se puede tildar y agregar desde la agenda, como en cualquier día.
+  await page.locator('section.day-group[data-day="2026-03-12"]').getByRole("checkbox", { name: "Marcar como completada: Para el jueves" }).click();
+  await expect.poll(async () => (await db.from("tasks").select("completed_at").eq("title", "Para el jueves").single()).data?.completed_at).not.toBeNull();
+});
+
 test("subtareas: bloquean la tarea, la completan sola y la reabren", async ({ page }) => {
   const task = await db.from("tasks").insert({ title: "TP de circuitos", planned_date: "2026-03-10", sort_order: 1 }).select("id").single();
   await db.from("subtasks").insert([

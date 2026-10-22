@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { minutesToTime, normalizeTime, parseTimeInput, timeToMinutes } from "./time";
+import { matchTimeOption, minutesToTime, normalizeTime, parseTimeInput, timeOptions, timeToMinutes } from "./time";
 
 describe("horas", () => {
   it("minutos ↔ texto", () => {
@@ -23,5 +23,16 @@ describe("horas", () => {
 
   it("parseTimeInput rechaza lo que no es una hora", () => {
     for (const text of ["25:00", "12:60", "tarde", "12:3", "1:2:3", "-1"]) expect(parseTimeInput(text), text).toBe("invalid");
+  });
+
+  it("matchTimeOption resalta la opción que empieza con lo escrito", () => {
+    const options = timeOptions(7 * 60, 23 * 60);
+    expect(options[matchTimeOption(options, "18")]).toBe("18:00");
+    expect(options[matchTimeOption(options, "18:3")]).toBe("18:30");
+    expect(options[matchTimeOption(options, "183")]).toBe("18:30");
+    expect(options[matchTimeOption(options, "9")]).toBe("09:00");
+    expect(options[matchTimeOption(options, "93")]).toBe("09:30");
+    expect(matchTimeOption(options, "18:50")).toBe(-1);
+    expect(matchTimeOption(options, "")).toBe(-1);
   });
 });

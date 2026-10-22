@@ -13,7 +13,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ArrowDownWideNarrow, Calendar, CircleCheckBig, Ellipsis, GripVertical, Import, ListChecks, Pin, SquareCheck, Trash2 } from "lucide-react";
+import { Calendar, CalendarRange, CircleCheckBig, Ellipsis, GripVertical, Import, ListChecks, SquareCheck, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useToday } from "@/components/providers";
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { confirm } from "@/components/ui/confirm";
 import { DateField } from "@/components/ui/date-field";
 import { Empty } from "@/components/ui/empty";
-import { Menu, MenuContent, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { Progress } from "@/components/ui/progress";
 import { LoadError, Skeletons } from "@/components/ui/query-state";
 import { Segmented } from "@/components/ui/segmented";
@@ -35,18 +35,19 @@ import { progressOf } from "@/lib/domain/progress";
 import { activeSubjects, subjectClass } from "@/lib/domain/subjects";
 import {
   canDropOnDay,
-  daysInRange,
+  isAgendaRange,
   isCompleted,
   isDaily,
   moveItem,
   orderPatches,
   sortDayTasks,
   sortOrderPatches,
-  TASK_SORTS,
   tasksForDay,
+  tasksInRange,
+  UNTIL_DEFAULT_DAYS,
   type DayTask,
   type SortContext,
-  type TaskSort,
+  type TaskRange,
 } from "@/lib/domain/tasks";
 import type { Task } from "@/lib/domain/types";
 import { useCalendarEvents } from "@/lib/queries/calendar";
@@ -58,11 +59,11 @@ import { DayGroup, type RowHandlers } from "./day-group";
 import { useDayLabel } from "./labels";
 import { TaskImportDialog } from "./task-import-dialog";
 import { TaskRow } from "./task-row";
+import { TaskSortMenu } from "./task-sort-menu";
 import { TaskSheet } from "./task-sheet";
 import { taskCollision, taskKeyboardCoordinates, type DragData, type DropData } from "./tasks-dnd";
 
 type Mode = "general" | "subject";
-type Range = "today" | "week" | "date";
 type DropTarget = { day: IsoDate; index: number };
 type DragState = { taskId: string; fromDay: IsoDate; target: DropTarget | null; blockedDay: IsoDate | null };
 
@@ -97,8 +98,9 @@ export function TasksView() {
 
   const [mode, setMode] = useState<Mode>("general");
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
-  const [range, setRange] = useState<Range>("week");
+  const [range, setRange] = useState<TaskRange>("week");
   const [pickedDate, setPickedDate] = useState<IsoDate | null>(null);
+  const [untilDate, setUntilDate] = useState<IsoDate | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -125,7 +127,6 @@ export function TasksView() {
   );
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
 
-  const days = daysInRange(range, today, pickedDate);
   const sortContext = useMemo<SortContext>(
     () => ({
       subjectRank: new Map(active.map((subject, index) => [subject.id, index])),
@@ -134,9 +135,10 @@ export function TasksView() {
     [active, calendarQuery.data, today],
   );
   const lists = useMemo(() => {
-    const visibleDays = daysInRange(range, today, pickedDate);
-    return new Map(visibleDays.map((day) => [day, sortDayTasks(tasksForDay(tasks, day, today), sort, sortContext)]));
-  }, [tasks, range, today, pickedDate, sort, sortContext]);
+    const days = tasksInRange(tasks, range, today, { date: pickedDate, until: untilDate });
+    return new Map([...days].map(([day, entries]) => [day, sortDayTasks(entries, sort, sortContext)]));
+  }, [tasks, range, today, pickedDate, untilDate, sort, sortContext]);
+  const days = [...lists.keys()];
   const todayEntries = useMemo(() => tasksForDay(tasks, today, today), [tasks, today]);
   const todayProgress = progressOf(todayEntries.map((entry) => entry.task));
   const allDone = todayProgress.total > 0 && todayProgress.done === todayProgress.total;
@@ -303,31 +305,7 @@ export function TasksView() {
       actions={
         selecting ? null : (
           <>
-            <Menu>
-              <MenuTrigger className="btn btn-ghost" aria-label={t("sort_current", { name: t(`sort_${sort}`) })}>
-                <ArrowDownWideNarrow size={18} />
-                <span className="btn-label">{t("sort")}</span>
-                {manual ? null : <span className="badge badge-accent">{t(`sort_${sort}`)}</span>}
-              </MenuTrigger>
-              <MenuContent>
-                <MenuLabel>{t("sort_heading")}</MenuLabel>
-                <MenuRadioGroup value={sort} onValueChange={(value) => setTaskSort(value as TaskSort)}>
-                  {TASK_SORTS.map((key) => (
-                    <MenuRadioItem key={key} value={key}>
-                      {t(`sort_${key}`)}
-                    </MenuRadioItem>
-                  ))}
-                </MenuRadioGroup>
-                {manual ? null : (
-                  <>
-                    <MenuSeparator />
-                    <MenuItem icon={<Pin size={18} />} disabled={tasks.length === 0} onSelect={saveSortAsMine}>
-                      {t("sort_save")}
-                    </MenuItem>
-                  </>
-                )}
-              </MenuContent>
-            </Menu>
+            <TaskSortMenu sort={sort} onSave={saveSortAsMine} canSave={tasks.length > 0} />
             <Button
               disabled={visibleIds.length === 0}
               onClick={() => {
@@ -372,14 +350,36 @@ export function TasksView() {
           onChange={setRange}
           options={[
             { value: "today", label: t("f_today") },
-            { value: "week", label: t("f_week") },
+            { value: "week", label: <NextDays n={7} /> },
+            { value: "month", label: <NextDays n={30} /> },
+            { value: "all", label: t("f_all") },
+            {
+              value: "until",
+              label: (
+                <>
+                  {t("f_until")}
+                  <span className="visually-hidden"> {t("f_until_more")}</span>
+                </>
+              ),
+              icon: <CalendarRange size={16} />,
+            },
             { value: "date", label: t("f_date"), icon: <Calendar size={16} /> },
           ]}
         />
         {range === "date" ? (
           <DateField className="w-[180px]" aria-label={t("pick_date")} value={pickedDate ?? today} today={today} onChange={(day) => setPickedDate(day)} />
         ) : null}
+        {range === "until" ? (
+          <DateField
+            className="w-[180px]"
+            aria-label={t("pick_until")}
+            value={untilDate ?? addDays(today, UNTIL_DEFAULT_DAYS)}
+            today={today}
+            onChange={(day) => setUntilDate(day)}
+          />
+        ) : null}
       </div>
+      {isAgendaRange(range) ? <p className="field-hint -mt-2 mb-4">{t("agenda_hint")}</p> : null}
 
       {mode === "subject" ? (
         active.length > 0 ? (
@@ -548,5 +548,16 @@ export function TasksView() {
       <TaskImportDialog open={importing} onOpenChange={setImporting} subjects={subjects} />
       <TaskSheet task={openTask} subjects={subjects} onClose={() => setOpenTaskId(null)} onDelete={(task) => void deleteTasks([task.id])} />
     </PageFrame>
+  );
+}
+
+/** "7 días" a la vista y "Próximos 7 días" para el lector de pantalla. */
+function NextDays({ n }: { n: number }) {
+  const t = useTranslations();
+  return (
+    <>
+      <span className="visually-hidden">{t("f_next")} </span>
+      {t("f_days", { n })}
+    </>
   );
 }
