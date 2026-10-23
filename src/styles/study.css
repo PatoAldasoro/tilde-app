@@ -30,10 +30,8 @@
 .custom-row { display: flex; gap: var(--space-3); align-items: end; flex-wrap: wrap; justify-content: center; }
 .side-panel-head { padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-border); display: flex; flex-direction: column; gap: var(--space-2); }
 .side-panel-head .t { display: flex; align-items: center; justify-content: space-between; font-weight: var(--weight-semibold); }
-/* Orden de las tareas: el botón chico a la derecha del título y, si no es "Mi orden", el aviso debajo. */
+/* Orden de las tareas: el botón chico a la derecha del título (con el criterio, si no es "Mi orden"). */
 .side-panel-head .t .sort-trigger { margin: -6px -8px -6px 0; padding: 0 var(--space-2); font-weight: var(--weight-medium); }
-.sort-note { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-2); flex-wrap: wrap; }
-.sort-note .btn { margin-left: auto; }
 .side-panel-body { overflow: auto; padding: var(--space-2) var(--space-3) var(--space-3); }
 .mini-task:hover { background: var(--color-surface-hover); }
 .mini-task .mt-title { flex: 1; min-width: 0; font-size: var(--text-body-s); }

@@ -183,7 +183,7 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
                   ))}
                 </select>
               </Field>
-              <Field label={t("class_slots")} hint={t("time_any_hint")}>
+              <Field label={t("class_slots")}>
                 <div className="slot-rows">
                   {rows.map((row, index) => (
                     <div key={row.key}>
@@ -367,9 +367,7 @@ function ScheduleForm({ target, subjects, onDone }: { target: ScheduleFormTarget
               <span className="field-error span-2" role="alert">
                 {t("end_after_start")}
               </span>
-            ) : (
-              <span className="field-hint span-2 -mt-2">{t("time_any_hint")}</span>
-            )}
+            ) : null}
             {recurrence !== "none" ? (
               <Field className="span-2" label={t("ends_on")} htmlFor={`${id}-until`} optionalLabel={t("optional")} hint={t("ends_on_hint")}>
                 <DateField id={`${id}-until`} className="max-w-[220px]" value={until} today={today} clearable onChange={setUntil} />

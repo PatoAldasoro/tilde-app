@@ -104,7 +104,7 @@ test("tareas de hoy, resumen, guardado e historial", async ({ page }) => {
   // Panel de tareas de hoy; con materia elegida se puede filtrar por ella.
   const panel = page.getByRole("complementary", { name: "Tareas de hoy" });
   await expect(panel.locator(".mini-task")).toHaveCount(2);
-  await expect(panel).toContainText("Con una materia elegida se pueden filtrar.");
+  await expect(panel.getByRole("switch")).toHaveCount(0);
   await card(page).getByRole("combobox", { name: "Materia" }).selectOption(subjectId);
   await panel.getByRole("switch", { name: "Solo Física II" }).click();
   await expect(panel.locator(".mini-task")).toHaveCount(1);

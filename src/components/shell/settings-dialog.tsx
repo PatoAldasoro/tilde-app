@@ -20,7 +20,7 @@ import { outbox } from "@/lib/offline/outbox";
 import { purgeSavedPages } from "@/lib/offline/service-worker";
 import { getSupabase } from "@/lib/supabase/client";
 import { AccentSwatches } from "./accent-swatches";
-import { LocaleSegmented, ThemeSegmented } from "./preferences";
+import { LocaleSelect, ThemeSegmented } from "./preferences";
 
 const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 
@@ -103,13 +103,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         }}
       >
         <DialogBody>
-          <Field label={t("language")}>
-            <LocaleSegmented onSaved={(next) => updateProfile.mutate({ locale: next })} />
+          <Field label={t("language")} htmlFor="settings-language">
+            <LocaleSelect id="settings-language" onSaved={(next) => updateProfile.mutate({ locale: next })} />
           </Field>
-          <Field label={t("theme")} hint={t("theme_hint")}>
-            <ThemeSegmented onSaved={(theme) => updateProfile.mutate({ theme })} />
+          <Field label={t("theme")}>
+            <ThemeSegmented className="seg-fill" onSaved={(theme) => updateProfile.mutate({ theme })} />
           </Field>
-          <Field label={t("accent_color")} labelId="settings-accent" hint={t("accent_color_hint")}>
+          <Field label={t("accent_color")} labelId="settings-accent">
             <AccentSwatches
               value={accent}
               labelledBy="settings-accent"

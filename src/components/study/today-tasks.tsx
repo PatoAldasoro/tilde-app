@@ -10,7 +10,6 @@ import { useToday } from "@/components/providers";
 import { SubjectChip } from "@/components/subject-chip";
 import { TaskCheckbox } from "@/components/tasks/task-row";
 import { TaskSortMenu } from "@/components/tasks/task-sort-menu";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeletons } from "@/components/ui/query-state";
 import { Switch } from "@/components/ui/switch";
@@ -133,17 +132,7 @@ export function TodayTasks() {
           <Switch checked={setup.filterBySubject} onChange={(value) => studyStore.setFilterBySubject(value)}>
             {t("only_subject", { name: chosen.name })}
           </Switch>
-        ) : (
-          <span className="field-hint">{t("pick_subject_to_filter")}</span>
-        )}
-        {manual ? null : (
-          <p className="sort-note" role="status">
-            <span className="field-hint">{t("sort_hint", { name: t(`sort_${sort}`) })}</span>
-            <Button variant="ghost" size="sm" onClick={() => setTaskSort("manual")}>
-              {t("sort_back")}
-            </Button>
-          </p>
-        )}
+        ) : null}
       </div>
       <div className="side-panel-body">
         {tasksQuery.isError ? (

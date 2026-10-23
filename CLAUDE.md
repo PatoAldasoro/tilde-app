@@ -51,7 +51,9 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
 2. **RLS en todas las tablas.** Cada fila lleva `user_id` y las políticas solo permiten `auth.uid() = user_id`.
    Las FK entre tablas son compuestas `(id, user_id)`. Toda tabla nueva entra al bucle de políticas de la migración
    y a `tests/rls.test.ts`.
-3. **Íconos: solo `lucide-react`.** Sin emojis, sin otras librerías, sin SVG a mano. Excepciones: la "G" de
+3. **Íconos: solo Lucide** (`lucide-react` y, para los deportes que no tiene, `@lucide/lab`, su set
+   complementario con el mismo trazo, dibujado con el componente de `lucide-react`). Sin emojis, sin otras
+   librerías, sin SVG a mano. Excepciones: la "G" de
    Google (`google-button.tsx`) y el logo (`logo.tsx`). Los gráficos (barras del historial, anillo del timer) no son íconos.
    Los íconos que se pueden elegir para una materia o actividad son una lista cerrada, agrupada por área:
    `src/lib/domain/icons.ts` (clave y grupo) + `src/components/subject-icon.tsx` (componente) + un mensaje
@@ -99,6 +101,10 @@ Con Podman: `systemctl --user start podman.socket` y `export DOCKER_HOST=unix://
   (`public/sw.js`). Lo que dependa de datos guardados en el dispositivo se muestra recién después de hidratar
   (`useHydrated`, ya resuelto dentro de `useRows` y `useProfile`).
 - Los ids se generan en el cliente (`crypto.randomUUID()`), así el optimista y la base coinciden.
+- **Nada de textos que expliquen lo obvio** (ayudas debajo de un campo, avisos que repiten lo que ya se ve): ensucian
+  la pantalla. Una ayuda solo si dice algo que no se ve ni se deduce (qué pasa después, qué no se puede deshacer).
+- Los globos (`PopoverContent`) abiertos desde un diálogo se dibujan dentro del diálogo (`portal-container.tsx`):
+  afuera, el diálogo les bloquea la rueda, el touchpad y el dedo.
 - Confirmaciones con `confirm()` y avisos con `toast()` (`src/components/ui`). Borrados de tareas: toast "Deshacer" de 8 s.
 - Horas: `TimeField` (`src/components/ui/time-field.tsx`), una lista de medias horas en la que también se escribe
   cualquier hora. Nada de `<input type="time">` (depende del formato del sistema).

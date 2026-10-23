@@ -209,13 +209,18 @@ test("horarios intermedios: cualquier minuto, escrito o elegido de la lista", as
   const dialog = page.getByRole("dialog", { name: "Agregar al horario" });
   const from = dialog.getByLabel("Desde");
   const to = dialog.getByLabel("Hasta");
-  await expect(dialog.getByText("Se puede elegir de la lista o escribir cualquier hora (por ejemplo, 18:50).")).toBeVisible();
 
   // La lista ofrece las medias horas: con las flechas se recorre y Enter elige.
   await from.click();
   const list = page.getByRole("listbox", { name: "Horarios" });
   await expect(list).toBeVisible();
   await expect(from).toHaveAttribute("aria-expanded", "true");
+  // La lista se desplaza con la rueda o el touchpad, aunque esté dentro del diálogo.
+  const scroller = page.locator(".time-scroll");
+  const before = await scroller.evaluate((element) => element.scrollTop);
+  await scroller.hover();
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(before + 100);
   await list.getByRole("option", { name: "17:30" }).click();
   await expect(from).toHaveValue("17:30");
   await expect(list).toBeHidden();

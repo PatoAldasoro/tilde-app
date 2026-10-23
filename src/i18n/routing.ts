@@ -13,6 +13,9 @@ export const routing = defineRouting({
 
 export type Locale = (typeof routing.locales)[number];
 
+/** El nombre de cada idioma en ese mismo idioma (así se reconoce aunque la app esté en otro). */
+export const LOCALE_NAMES: Record<Locale, string> = { es: "Español", en: "English" };
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (routing.locales as readonly string[]).includes(value);
 }

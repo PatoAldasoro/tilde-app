@@ -123,7 +123,6 @@ test("filtros largos: próximos 30 días, todas y hasta una fecha, con cada tare
 
   // Próximos 30 días: una agenda, solo los días con algo y cada tarea una vez.
   await page.getByRole("radio", { name: "Próximos 30 días" }).click();
-  await expect(page.getByText("Cada tarea aparece una sola vez, en su día (o en hoy, si ya hay que hacerla), y los días sin tareas no se muestran.")).toBeVisible();
   await expect.poll(shownDays).toEqual(["2026-03-10", "2026-03-12", "2026-03-25"]);
   expect(await titlesOn("2026-03-10")).toEqual(["Entrega en ventana"]);
   expect(await titlesOn("2026-03-12")).toEqual(["Para el jueves"]);
@@ -226,11 +225,14 @@ test("reordenar y mover entre días con el teclado", async ({ page }) => {
   await grip("Dos").first().focus();
   await page.keyboard.press("Space");
   await expect(page.locator(".task.is-lifted")).toBeVisible();
+  // Cada flecha se espera hasta que la línea de inserción llega a su lugar: con la página lenta, una
+  // flecha apretada antes de que dnd-kit termine de medir se pierde.
+  const lineAfter = () =>
+    today.locator(".task-list").evaluate((list) => list.querySelector(".insert-line")?.previousElementSibling?.querySelector(".task-title")?.textContent ?? null);
   await page.keyboard.press("ArrowDown");
-  await expect(today.locator(".insert-line")).toBeVisible();
-  await page.waitForTimeout(150);
+  await expect.poll(lineAfter).toBe("Tres");
   await page.keyboard.press("ArrowDown");
-  await page.waitForTimeout(150);
+  await expect.poll(lineAfter).toBe("Entrega");
   await page.keyboard.press("Space");
   await expect.poll(() => titles(today)).toEqual(["Tres", "Entrega", "Dos", "Uno"]);
 

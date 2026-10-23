@@ -311,7 +311,6 @@ function SubjectDocuments({ subject, documents, onPickingChange }: SubjectDocume
           <Field
             label={t("drive_link")}
             htmlFor={`${id}-url`}
-            hint={t("paste_hint")}
             error={invalid ? t("link_invalid") : undefined}
             errorId={`${id}-url-error`}
           >

@@ -116,6 +116,9 @@
 :root[data-theme="dark"] .seg-item[aria-pressed="true"], :root[data-theme="dark"] .seg-item[aria-checked="true"], :root[data-theme="dark"] .seg-item[aria-selected="true"] { background: var(--color-surface-active); box-shadow: none; }
 .seg-item:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 .seg-item:disabled { color: var(--color-text-disabled); cursor: not-allowed; }
+/* Segmentado a todo el ancho de su fila, con las opciones repartidas en partes iguales. */
+.seg.seg-fill { display: flex; flex-wrap: nowrap; width: 100%; }
+.seg-fill .seg-item { flex: 1 1 0; min-width: 0; justify-content: center; padding: 0 var(--space-2); }
 /* Tabs */
 .tabs { display: flex; gap: var(--space-6); border-bottom: 1px solid var(--color-border); }
 .tab { position: relative; height: 44px; padding: 0 2px; border: 0; background: transparent; color: var(--color-text-muted); font-size: var(--text-body); font-weight: var(--weight-medium); display: inline-flex; align-items: center; gap: var(--space-2); text-decoration: none; white-space: nowrap; }

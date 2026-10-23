@@ -172,10 +172,10 @@ function SubjectForm({ subject, activeColors, onDone }: { subject: SubjectRow | 
               }}
             />
           </Field>
-          <Field className="span-2" label={t("color")} labelId={`${id}-color`} hint={t("color_hint")}>
+          <Field className="span-2" label={t("color")} labelId={`${id}-color`}>
             <ColorSwatches value={color} onChange={setColor} labelledBy={`${id}-color`} />
           </Field>
-          <Field className="span-2" label={t("icon")} labelId={`${id}-icon-label`} optionalLabel={t("optional")} hint={t("icon_hint")}>
+          <Field className="span-2" label={t("icon")} labelId={`${id}-icon-label`} optionalLabel={t("optional")}>
             <IconPicker id={`${id}-icon`} value={icon} onChange={setIcon} colorClass={subjectClass(color)} labelledBy={`${id}-icon-label`} />
           </Field>
         </div>

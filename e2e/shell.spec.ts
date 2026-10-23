@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import type { TestUser } from "../scripts/lib/test-session";
 import { adminClient, removeUser, signInFreshUser } from "./session";
 
@@ -77,7 +77,15 @@ test.describe("shell con sesión", () => {
     await expect(drawer.getByRole("radiogroup", { name: "Idioma" })).toHaveCount(0);
     await expect(drawer.getByRole("radio", { name: "English" })).toHaveCount(0);
     await page.getByRole("button", { name: "Ajustes" }).click();
-    await page.getByRole("dialog", { name: "Ajustes" }).getByRole("radio", { name: "English" }).click();
+    const settings = page.getByRole("dialog", { name: "Ajustes" });
+    // El tema ocupa todo el ancho de su fila; el idioma es una lista desplegable.
+    // (Se mide cuando el diálogo terminó de aparecer: la animación lo achica un poco.)
+    const widthOf = async (locator: Locator) => (await locator.boundingBox())!.width;
+    await expect
+      .poll(async () => Math.abs((await widthOf(settings.getByRole("radiogroup", { name: "Tema" }))) - (await widthOf(settings.getByLabel("Idioma")))))
+      .toBeLessThanOrEqual(1);
+    await expect(settings.getByLabel("Idioma").locator("option")).toHaveText(["Español", "English"]);
+    await settings.getByLabel("Idioma").selectOption("en");
     await expect(page).toHaveURL(/\/en\/app$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Home");

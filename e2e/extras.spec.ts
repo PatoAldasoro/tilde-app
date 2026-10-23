@@ -347,7 +347,6 @@ test("horario: el día manda en el encabezado y se exporta como fondo de pantall
   const size = () => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height]);
   const device = await page.evaluate(() => [Math.round(screen.width * devicePixelRatio), Math.round(screen.height * devicePixelRatio)]);
   await expect(dialog.getByRole("radio", { name: "Este dispositivo" })).toHaveAttribute("aria-checked", "true");
-  await expect(dialog.getByText(`La pantalla de este dispositivo, en su resolución real: ${device[0]} × ${device[1]} px.`)).toBeVisible();
   await expect(dialog.getByText(`${device[0]} × ${device[1]} px · PNG`)).toBeVisible();
   await expect.poll(size).toEqual(device);
   const themes = dialog.getByRole("radiogroup", { name: "Tema" });
@@ -532,7 +531,19 @@ test("íconos: se eligen en la materia y en la actividad, y aparecen donde se mu
   await expect(trigger).toContainText("Sin ícono");
   await trigger.click();
   const grid = page.getByRole("radiogroup", { name: "Ícono" });
-  await expect(grid.getByRole("radio")).toHaveCount(259);
+  await expect(grid.getByRole("radio")).toHaveCount(278);
+  // Se desplaza con la rueda o el touchpad aunque esté dentro de un diálogo.
+  const scroller = page.locator(".icon-scroll");
+  await scroller.hover();
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(200);
+  await page.mouse.wheel(0, -2000);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(0);
+  // Deportes: buscar pádel trae la raqueta primero.
+  await page.getByRole("searchbox", { name: "Buscar un ícono" }).fill("padel");
+  await expect(grid.getByRole("radio").first()).toHaveAccessibleName("Raqueta");
+  await page.getByRole("searchbox", { name: "Buscar un ícono" }).fill("");
+  await page.getByRole("searchbox", { name: "Buscar un ícono" }).focus();
   // Con mouse y teclado se arranca en el buscador.
   const search = page.getByRole("searchbox", { name: "Buscar un ícono" });
   await expect(search).toBeFocused();

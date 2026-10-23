@@ -35,7 +35,6 @@ import { progressOf } from "@/lib/domain/progress";
 import { activeSubjects, subjectClass } from "@/lib/domain/subjects";
 import {
   canDropOnDay,
-  isAgendaRange,
   isCompleted,
   isDaily,
   moveItem,
@@ -379,7 +378,6 @@ export function TasksView() {
           />
         ) : null}
       </div>
-      {isAgendaRange(range) ? <p className="field-hint -mt-2 mb-4">{t("agenda_hint")}</p> : null}
 
       {mode === "subject" ? (
         active.length > 0 ? (

@@ -433,3 +433,29 @@ Pedidos directos del usuario. Donde chocan con el diseño o con la consigna orig
     día planeado), sin los días vacíos. Decisión propia: en 30 días o más, repetir cada entrega en todos los días de su
     ventana llenaría la lista de copias; "Próximos 7 días" sigue como antes.
 
+## Sexta tanda de cambios (22/10/2026)
+
+65. **Más íconos de deporte.** Pelotas y raquetas de los deportes que juega cualquiera: fútbol (pelota y cancha),
+    básquet, vóley, tenis (pelota y raqueta), hockey, rugby, béisbol, golf, bowling, natación, running, fuerza,
+    patinaje, esquí, snowboard, surf, kayak y silbato. Lucide casi no tiene pelotas: la mayoría viene de **Lucide
+    Lab** (`@lucide/lab`), el set complementario oficial de Lucide, con el mismo trazo, que se dibuja con
+    `createLucideIcon` de `lucide-react`. Cambia la regla de la consigna ("solo `lucide-react`") porque lo pidió el
+    usuario después de la entrega. Pádel y ping-pong no tienen ícono en ninguno de los dos: la raqueta es la primera
+    del grupo y la palabra está entre las del grupo, así que buscar "pádel" la trae primero.
+66. **Ajustes: el tema ocupa todo el ancho de su fila y el idioma es una lista desplegable** (la misma de la landing),
+    armada con los idiomas de `src/i18n/routing.ts`: uno nuevo aparece solo.
+67. **Los globos de un diálogo se desplazan con el touchpad, la rueda y el dedo.** El diálogo (modal) bloquea el
+    desplazamiento de todo lo que está fuera de él, y los globos se dibujaban al final de la página: la grilla de
+    íconos y la lista de horas no se movían con el touchpad (ni con el dedo en el teléfono). Ahora un globo abierto
+    desde un diálogo se dibuja dentro del diálogo.
+68. **Menos textos de ayuda.** Pedido del usuario: nada que explique lo que no hace falta explicar. Se sacaron los
+    agregados en la quinta tanda (la nota de la agenda en Tareas, la de escribir cualquier hora, la de los horarios en
+    el exportador, la de "Este dispositivo", el aviso de orden en el panel de la sesión) y otros que ya estaban: qué
+    es el color de acento, el color y el ícono de la materia, «Sistema» en el tema, el color del fondo exportado,
+    "con una materia elegida se pueden filtrar", que el tipo de documento se detecta del link y la de "Agregar un
+    ciclo". Quedan las que dicen algo que no se ve (qué pasa con una tarea sin completar, para qué sirven los
+    créditos, que borrar la cuenta no se deshace, cómo funciona el modo examen).
+69. **Arrastre con teclado en Tareas: la primera flecha a veces no movía la tarea.** Si al levantarla la página se
+    desplazaba para mostrarla, la propia fila (ya medida en su nuevo lugar) quedaba como destino "de abajo". La
+    propia fila ya no es un destino. Era el test que fallaba de a ratos desde el 14/10.
+

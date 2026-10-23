@@ -1,7 +1,8 @@
 /**
  * Íconos que se pueden elegir para una materia o una actividad, agrupados como en el selector.
- * Son nombres de Lucide en kebab-case; el componente de cada uno está en
- * `src/components/subject-icon.tsx` y su nombre, en el mensaje `icon_<clave>` de cada idioma.
+ * Son nombres de Lucide en kebab-case (algunos deportes, de Lucide Lab: el set complementario de
+ * Lucide, con el mismo trazo); el componente de cada uno está en `src/components/subject-icon.tsx` y
+ * su nombre, en el mensaje `icon_<clave>` de cada idioma.
  * Una clave guardada no se puede sacar de la lista: ya hay materias que la usan
  * ("building-2" es el nombre viejo de "building-complex" en Lucide y se queda así).
  */
@@ -86,8 +87,11 @@ export const ICON_GROUPS = [
   {
     key: "sports",
     icons: [
-      "dumbbell", "volleyball", "bike", "trophy", "medal", "footprints", "goal", "tent-tree", "person-standing",
-      "swords", "chess-knight", "weight",
+      // La raqueta va primera: es la que aparece al buscar pádel o ping-pong (no hay ícono propio).
+      "tennis-racket", "soccer-ball", "soccer-pitch", "basketball", "volleyball", "tennis-ball", "hockey", "rugby-ball",
+      "baseball", "golf-driver", "bowling", "waves-ladder", "sport-shoe", "bike", "dumbbell", "biceps-flexed", "weight",
+      "ice-skate", "skis", "snowboard", "surfboard", "kayak", "whistle", "trophy", "medal", "footprints", "goal",
+      "tent-tree", "person-standing", "swords", "chess-knight",
     ],
   },
   {

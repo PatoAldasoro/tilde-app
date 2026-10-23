@@ -17,7 +17,7 @@ horario, tareas, calendario, notas y sesiones de estudio. El color de cada mater
   subtareas), historial editable y un "Wrapped" de la semana, el mes o el cuatrimestre.
 
 Las materias se ordenan arrastrándolas en Inicio. Cada materia (y cada actividad del horario) puede llevar un ícono además de su color
-(más de 250, agrupados por área y con buscador). El color de acento de la
+(más de 270, agrupados por área y con buscador). El color de acento de la
 app se elige en Ajustes entre los de la paleta.
 
 Mobile first: se usa desde un teléfono de 320 px hasta el escritorio, se puede instalar y sigue funcionando sin conexión

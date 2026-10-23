@@ -12,7 +12,7 @@ const LABELS: Partial<Record<IconKey, string>> = {
   "chart-candlestick": "Bolsa",
   "shopping-bag": "Bolsa de compras",
 };
-const GROUP_WORDS: Record<string, string> = { math: "Matemática álgebra análisis cálculo", science: "Ciencias química física" };
+const GROUP_WORDS: Record<string, string> = { math: "Matemática álgebra análisis cálculo", science: "Ciencias química física", sports: "Deporte fútbol tenis pádel ping pong" };
 const textOf = (icon: IconKey) => ({ label: LABELS[icon] ?? icon, keywords: GROUP_WORDS[iconGroup(icon)] ?? "" });
 
 describe("íconos", () => {
@@ -59,6 +59,11 @@ describe("buscar íconos", () => {
     expect(results.every((icon) => iconGroup(icon) === "math")).toBe(true);
     const sum = searchIcons("suma", textOf);
     expect(sum[0]).toBe("square-sigma");
+  });
+
+  it("pádel y ping-pong no tienen ícono propio: la raqueta va primera entre los deportes", () => {
+    expect(searchIcons("padel", textOf)[0]).toBe("tennis-racket");
+    expect(searchIcons("ping pong", textOf)[0]).toBe("tennis-racket");
   });
 
   it("encuentra por la clave en inglés de Lucide", () => {

@@ -86,7 +86,6 @@ test("al completar todos los ciclos hay que decidir, y se puede agregar un ciclo
   // Terminó sola: guardar, descartar o seguir. No hay "volver" y no se cierra por error.
   await expect(summary(page)).toBeVisible();
   await expect(summary(page)).not.toContainText("Quedó incompleta");
-  await expect(summary(page)).toContainText("Un ciclo más suma un descanso y otro foco.");
   await expect(summary(page).getByRole("button", { name: "Volver a la sesión" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await page.mouse.click(8, 8);

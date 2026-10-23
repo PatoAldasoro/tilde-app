@@ -5,18 +5,20 @@ import { useLocale, useTranslations } from "next-intl";
 import { Segmented } from "@/components/ui/segmented";
 import { setThemePreference, useThemePreference } from "@/hooks/use-theme";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import type { Locale } from "@/i18n/routing";
+import { LOCALE_NAMES, routing, type Locale } from "@/i18n/routing";
 import { writeLocaleCookie } from "@/lib/locale";
 import type { ThemePreference } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
-type ThemeSegmentedProps = { onSaved?: (theme: ThemePreference) => void };
+type ThemeSegmentedProps = { onSaved?: (theme: ThemePreference) => void; className?: string };
 
 /** Selector de tema: claro, oscuro o sistema. */
-export function ThemeSegmented({ onSaved }: ThemeSegmentedProps) {
+export function ThemeSegmented({ onSaved, className }: ThemeSegmentedProps) {
   const t = useTranslations();
   const theme = useThemePreference();
   return (
     <Segmented
+      className={className}
       label={t("theme")}
       value={theme}
       onChange={(next) => {
@@ -45,19 +47,19 @@ export function useSwitchLocale(onSaved?: (locale: Locale) => void) {
   };
 }
 
-export function LocaleSegmented({ onSaved }: { onSaved?: (locale: Locale) => void }) {
-  const t = useTranslations();
+type LocaleSelectProps = { id: string; className?: string; onSaved?: (locale: Locale) => void };
+
+/** Selector de idioma: una lista desplegable con todos los idiomas de la app. */
+export function LocaleSelect({ id, className, onSaved }: LocaleSelectProps) {
   const locale = useLocale();
   const switchLocale = useSwitchLocale(onSaved);
   return (
-    <Segmented
-      label={t("language")}
-      value={locale}
-      onChange={switchLocale}
-      options={[
-        { value: "es", label: "Español", lang: "es" },
-        { value: "en", label: "English", lang: "en" },
-      ]}
-    />
+    <select id={id} className={cn("select", className)} value={locale} onChange={(event) => switchLocale(event.target.value as Locale)}>
+      {routing.locales.map((code) => (
+        <option key={code} value={code} lang={code}>
+          {LOCALE_NAMES[code]}
+        </option>
+      ))}
+    </select>
   );
 }

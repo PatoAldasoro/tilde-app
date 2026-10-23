@@ -185,14 +185,14 @@ test("sesión de estudio: las tareas de hoy se ordenan con los mismos criterios 
   await expect.poll(names).toEqual(["Bravo", "Alfa", "Charlie"]);
   await expect(panel.locator("button.mini-grip")).toHaveCount(3);
 
-  // Por prioridad: sin asas para arrastrar, con el aviso y la vuelta a «Mi orden».
+  // Por prioridad: el botón muestra el criterio y no hay asas para arrastrar. Se vuelve desde el mismo menú.
   await panel.getByRole("button", { name: "Ordenar. Ahora: Mi orden" }).click();
   await page.getByRole("menuitemradio", { name: "Prioridad", exact: true }).click();
   await expect.poll(names).toEqual(["Alfa", "Charlie", "Bravo"]);
   await expect(panel.getByRole("button", { name: "Ordenar. Ahora: Prioridad" })).toContainText("Prioridad");
   await expect(panel.locator("button.mini-grip")).toHaveCount(0);
-  await expect(panel.getByText("Orden: Prioridad. Para arrastrar las tareas, volver a «Mi orden».")).toBeVisible();
-  await panel.getByRole("button", { name: "Volver a mi orden" }).click();
+  await panel.getByRole("button", { name: "Ordenar. Ahora: Prioridad" }).click();
+  await page.getByRole("menuitemradio", { name: "Mi orden", exact: true }).click();
   await expect.poll(names).toEqual(["Bravo", "Alfa", "Charlie"]);
   await expect(panel.locator("button.mini-grip")).toHaveCount(3);
 

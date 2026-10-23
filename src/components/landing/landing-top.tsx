@@ -1,19 +1,18 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { GoogleButton } from "@/components/google-button";
 import { Logo } from "@/components/logo";
-import { useSwitchLocale } from "@/components/shell/preferences";
+import { LocaleSelect } from "@/components/shell/preferences";
 import { toast } from "@/components/ui/toast";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { setThemePreference } from "@/hooks/use-theme";
 import { Link } from "@/i18n/navigation";
 import { clearCache } from "@/lib/offline/cache";
 import { purgeSavedPages } from "@/lib/offline/service-worker";
-import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
 /** Avisa si el login volvió con error (/?error=auth) o si se acaba de borrar la cuenta (/?deleted=1). */
@@ -45,9 +44,7 @@ function ForgetAccountData() {
 /** Barra superior fija de la landing: logo, idioma, tema y "Continuar con Google". */
 export function LandingTop() {
   const t = useTranslations();
-  const locale = useLocale();
   const scrolled = useScrolled();
-  const switchLocale = useSwitchLocale();
 
   return (
     <header className={cn("landing-top", scrolled && "is-scrolled")}>
@@ -58,19 +55,7 @@ export function LandingTop() {
       <label className="visually-hidden" htmlFor="landing-lang">
         {t("language")}
       </label>
-      <select
-        id="landing-lang"
-        className="select lang-select w-auto"
-        value={locale}
-        onChange={(event) => switchLocale(event.target.value as Locale)}
-      >
-        <option value="es" lang="es">
-          Español
-        </option>
-        <option value="en" lang="en">
-          English
-        </option>
-      </select>
+      <LocaleSelect id="landing-lang" className="lang-select w-auto" />
       <button
         type="button"
         className="btn btn-ghost btn-icon"

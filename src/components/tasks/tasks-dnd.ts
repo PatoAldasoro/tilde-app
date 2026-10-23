@@ -52,6 +52,9 @@ export const taskKeyboardCoordinates: KeyboardCoordinateGetter = (event, { conte
     const rect = droppableRects.get(container.id);
     if (!data || !rect) continue;
     if (data.type === "day" && !data.empty) continue;
+    // La propia fila no es un destino: si al levantarla la página se desplazó para mostrarla, su
+    // lugar ya medido de nuevo quedaba "adelante" y la primera flecha no la movía.
+    if (data.type === "row" && origin && data.taskId === origin.taskId && data.day === origin.day) continue;
     // Las tareas con fecha límite no salen de su día.
     if (origin && !origin.daily && data.day !== origin.day) continue;
     const center = rect.top + rect.height / 2;

@@ -192,10 +192,8 @@ function WallpaperForm({ week, subjects, weekdays, onDone }: Omit<WallpaperDialo
         {t(`wallpaper_ratio_${key.replace(".", "_") as "16x9" | "16x10" | "9x16" | "9x19_5"}`)}
       </>
     );
-  const formatHint =
-    format === "device"
-      ? t("wallpaper_hint_device", { width: String(size.width), height: String(size.height) })
-      : t(`wallpaper_hint_${format.replace(".", "_") as "16x9" | "16x10" | "9x16" | "9x19_5"}`);
+  // "Este dispositivo" no necesita explicación: su medida está al pie.
+  const formatHint = format === "device" ? undefined : t(`wallpaper_hint_${format.replace(".", "_") as "16x9" | "16x10" | "9x16" | "9x19_5"}`);
   const formats: WallpaperFormat[] = device ? ["device", ...WALLPAPER_FORMAT_KEYS] : WALLPAPER_FORMAT_KEYS;
 
   return (
@@ -243,7 +241,7 @@ function WallpaperForm({ week, subjects, weekdays, onDone }: Omit<WallpaperDialo
               />
             </Field>
             {background === "custom" ? (
-              <Field label={t("wallpaper_color")} htmlFor={`${id}-hex`} hint={t("wallpaper_color_hint")}>
+              <Field label={t("wallpaper_color")} htmlFor={`${id}-hex`}>
                 <div className="color-field">
                   <input
                     type="color"
@@ -268,12 +266,9 @@ function WallpaperForm({ week, subjects, weekdays, onDone }: Omit<WallpaperDialo
                 </div>
               </Field>
             ) : null}
-            <div className="field">
-              <Switch checked={showTimes} onChange={(next) => update({ times: next })}>
-                {t("wallpaper_times")}
-              </Switch>
-              <span className="field-hint">{t("wallpaper_times_hint")}</span>
-            </div>
+            <Switch checked={showTimes} onChange={(next) => update({ times: next })}>
+              {t("wallpaper_times")}
+            </Switch>
           </div>
         </div>
         {isEmpty ? (

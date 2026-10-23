@@ -3,8 +3,9 @@
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import type { ComponentProps, ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { PortalContainerContext } from "./portal-container";
 import { useReturnFocus } from "./use-return-focus";
 
 export const Dialog = DialogPrimitive.Root;
@@ -24,6 +25,8 @@ type DialogContentProps = Omit<ComponentProps<typeof DialogPrimitive.Content>, "
 export function DialogContent({ title, description, size = "md", hideClose, className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }: DialogContentProps) {
   const t = useTranslations();
   const returnFocus = useReturnFocus();
+  // Los globos que se abren desde el diálogo se dibujan adentro (ver portal-container.tsx).
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   return (
     <DialogPrimitive.Portal>
       <div className={cn("dialog-layer", size === "full" && "is-full")} role="presentation">
@@ -40,6 +43,7 @@ export function DialogContent({ title, description, size = "md", hideClose, clas
             returnFocus.onCloseAutoFocus(event);
           }}
           {...props}
+          ref={setContainer}
         >
           <div className="dialog-head">
             <div>
@@ -54,7 +58,7 @@ export function DialogContent({ title, description, size = "md", hideClose, clas
               </DialogPrimitive.Close>
             )}
           </div>
-          {children}
+          <PortalContainerContext.Provider value={container}>{children}</PortalContainerContext.Provider>
         </DialogPrimitive.Content>
       </div>
     </DialogPrimitive.Portal>

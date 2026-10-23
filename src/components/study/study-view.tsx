@@ -417,7 +417,6 @@ function SummaryDialog({ state }: { state: FinishedTimer }) {
           ) : (
             <p className="field-hint">{t("summary_tasks_none")}</p>
           )}
-          {extendable ? <p className="field-hint">{t("add_cycle_hint")}</p> : null}
         </DialogBody>
         <DialogFooter>
           {undoable ? (
